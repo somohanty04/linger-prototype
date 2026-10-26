@@ -208,7 +208,7 @@
 
   const header = `<div class="top">
     <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="13" fill="#14161F"/><circle cx="14" cy="14" r="5" fill="#FFC861"/><circle cx="14" cy="14" r="9" fill="none" stroke="#FFC861" stroke-width="1.5" opacity="0.5"/></svg>Linger</div>
-    <div class="pair"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="14" r="4"/><circle cx="18" cy="14" r="4"/><path d="M10 14h4M2 12l2-5M22 12l-2-5"/></svg>Phone mode · glasses not paired</div>
+    <a class="pair" href="glasses.html" aria-label="Phone mode, glasses not paired. Open the glasses simulation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="14" r="4"/><circle cx="18" cy="14" r="4"/><path d="M10 14h4M2 12l2-5M22 12l-2-5"/></svg>Phone mode · glasses not paired</a>
   </div>`;
 
   // ---------- render ----------

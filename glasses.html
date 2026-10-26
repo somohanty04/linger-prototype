@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F7FB">
+<title>Linger · glasses simulation</title>
+<meta name="description" content="What a Linger wearer sees: eye tracking notices a pause on a word and the glasses show its meaning.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="glasses.css?v=3">
+</head>
+<body>
+<div class="page">
+  <header class="head">
+    <div>
+      <a class="back" href="./">← Phone app prototype</a>
+      <p class="eyebrow">Linger · smart glasses simulation</p>
+      <h1>What you see through the glasses</h1>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="What you are reading">
+        <button type="button" data-source="cafe" aria-pressed="true">Café sign</button>
+        <button type="button" data-source="lease" aria-pressed="false">Lease letter</button>
+      </div>
+      <button type="button" class="play" id="play">Play demo</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="main">
+      <div class="lens" id="lens">
+        <div class="board"></div>
+        <div class="paper" id="paper"></div>
+
+        <div class="hud hud-left">
+          <span class="eye" id="eye"></span>
+          <strong>Eye tracking</strong>
+          <span class="hud-status" id="status">Ready</span>
+          <span class="meter"><span id="meter"></span></span>
+        </div>
+        <div class="hud hud-right" id="where">Lawrenceville · Pittsburgh</div>
+
+        <div class="toast" id="toast" hidden></div>
+
+        <div class="bubble" id="prompt" role="dialog" aria-label="Pause detected" hidden>
+          <div>You paused on <strong id="prompt-word"></strong>. Show what it means?</div>
+          <div class="bubble-actions">
+            <button type="button" class="b-yes" id="prompt-yes">Nod · show me</button>
+            <button type="button" class="b-no" id="prompt-no">Look away · not now</button>
+          </div>
+        </div>
+
+        <div class="bubble card" id="card" role="dialog" aria-label="Word meaning" hidden>
+          <div class="card-head"><span class="card-word" id="card-word"></span><span class="card-tag" id="card-tag"></span></div>
+          <div class="card-meaning" id="card-meaning"></div>
+          <div class="card-local" id="card-local"></div>
+          <div class="bubble-actions">
+            <button type="button" class="b-save" id="card-save">Tap temple · save</button>
+            <button type="button" class="b-no" id="card-close">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div><strong>Pause</strong><span>Your eyes stay on one word for over a second.</span></div>
+        <div><strong>Re-read</strong><span>Your eyes jump back to a word you just passed.</span></div>
+        <div><strong>Hard word</strong><span>Explained right away, without asking.</span></div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="panel">
+        <strong>Try it</strong>
+        <p>Press <b>Play demo</b> to watch someone read the sign. Or rest your cursor on a word, the way your eyes would. On a phone, tap a word.</p>
+        <p class="muted">Glasses controls: nod to show, look away to dismiss, tap the temple to save.</p>
+      </div>
+      <div class="phone">
+        <div class="phone-head"><strong>Phone · Your words</strong><span class="synced">● Glasses synced</span></div>
+        <div id="saved"><div class="phone-empty">Words you save from the glasses show up here, with the sentence and the place you saw them.</div></div>
+      </div>
+      <p class="muted small">Simulated: eye tracking is stood in for by your cursor or a scripted reader, and meanings are written for these two samples.</p>
+    </aside>
+  </div>
+</div>
+<script src="glasses.js?v=1"></script>
+</body>
+</html>

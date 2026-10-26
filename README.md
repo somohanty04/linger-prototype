@@ -13,6 +13,12 @@ This repository is a clickable prototype of the phone app. It runs entirely in t
 - **Local**: Pittsburgh slang, local customs, and a "pause map" of where newcomers get stuck (sample data).
 - **Review**: flashcards that quiz you with the real sentence where you first saw each word.
 
+## Glasses simulation
+
+`glasses.html` shows what the wearer sees through the glasses. Press **Play demo** to watch a scripted reader: the eye-tracking meter fills when they pause on a word, re-reading counts as a pause, hard words are explained right away, and a temple tap saves the word to the phone. Or rest your cursor on a word (tap on a phone) to stand in for your own eyes.
+
+What is simulated today: eye tracking (cursor, tap or script), the glasses display (drawn on screen), nod and temple-tap controls (buttons), and the meanings (written for these two samples). The final prototype needs real eye tracking and a real AI lookup.
+
 ## Run it locally
 
 Open `index.html` in a browser, or serve the folder:
