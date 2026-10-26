@@ -74,7 +74,7 @@
     const toks = tokens().map((raw, i) => {
       const k = keyOf(raw), e = D[k];
       let cls = 'tok';
-      if (e && e.kind === 'hard' && S.autoHard) cls += ' hard';
+      if (e && (e.kind !== 'hard' || S.autoHard)) cls += ' hard';
       if (active && k === active) cls += ' on';
       return `<button type="button" class="${cls}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
     }).join('');
@@ -89,7 +89,7 @@
         <div class="lens-label">${S.source === 'cafe' ? 'Camera · café notice board' : 'Camera · letter from landlord'}</div>
         <div class="paper">${toks}</div>
       </div>
-      <p class="small" style="margin: -4px 4px 0">Tap a word you would pause on. On the glasses, your eyes do this part: Linger notices when you stop or re-read.</p>
+      <p class="small" style="margin: -4px 4px 0">Tap a word you would pause on. On the glasses, your eyes do this part: Linger notices when you stop or re-read. <span class="dotted-key">Dotted</span> words are ones newcomers often pause on.</p>
       <div class="card">
         <div class="switch-row"><div><strong>Ask before showing</strong><span class="small">When you linger, Linger checks first</span></div>
           <button type="button" class="switch" role="switch" aria-label="Ask before showing" aria-checked="${S.askFirst}" data-action="ask"></button></div>

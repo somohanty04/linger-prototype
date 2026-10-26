@@ -56,7 +56,8 @@ h2.title { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
 .lens-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); margin-bottom: 10px; }
 .paper { background: var(--paper); border-radius: 10px; padding: 16px 14px; display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 6px; font-size: 17px; line-height: 1.6; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
 .tok { background: transparent; border: 0; margin: 0; padding: 1px 3px; font: inherit; color: var(--ink); border-radius: 6px; }
-.tok.hard { text-decoration: underline dotted #C77700 2px; text-underline-offset: 5px; }
+.tok.hard { text-decoration: underline dotted #F2A33A 2px; text-underline-offset: 5px; }
+.dotted-key { text-decoration: underline dotted #F2A33A 2px; text-underline-offset: 4px; color: var(--ink-2); font-weight: 600; }
 .tok.on { background: var(--amber-glow); box-shadow: 0 0 0 3px rgba(255, 190, 70, 0.45); }
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
