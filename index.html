@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F7FB">
+<title>Linger · clickable prototype</title>
+<meta name="description" content="Linger: smart glasses and a companion app that notice when you pause on a word and explain what it means here.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="stage">
+  <div class="device">
+    <div class="screen">
+      <div class="scroll" id="scroll"></div>
+      <div id="overlay"></div>
+      <nav class="tabbar" aria-label="Main">
+        <button type="button" data-action="tab" data-tab="lens"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Lens</button>
+        <button type="button" data-action="tab" data-tab="words"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 8h6"/></svg>Words</button>
+        <button type="button" data-action="tab" data-tab="local"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Local</button>
+        <button type="button" data-action="tab" data-tab="review"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="14" height="15" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/></svg>Review</button>
+      </nav>
+    </div>
+  </div>
+  <aside class="about">
+    <h1>Linger</h1>
+    <p class="lede">Your pause is the search bar.</p>
+    <p>Smart glasses and a companion app for people who are new somewhere. Linger notices when you get stuck on a word, explains what it means in that sentence and how people use it locally, and turns what newcomers get stuck on into a shared guide to the area.</p>
+    <p class="hint">Try it: tap a word on the café sign, like <strong>yinz</strong> or <strong>jumbo</strong>. On the glasses, your eyes do this part. Then check the Words, Local and Review tabs.</p>
+    <p class="note">Clickable prototype with sample content set in Pittsburgh. Pause-map numbers are sample data.</p>
+  </aside>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
