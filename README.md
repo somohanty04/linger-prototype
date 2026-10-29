@@ -8,10 +8,14 @@ This repository is a clickable prototype of the phone app. It runs entirely in t
 
 ## What you can try
 
-- **Lens**: tap a word on the café sign or lease letter. Tapping stands in for your eyes pausing on it. Linger asks first, then shows the meaning in context and a local note. Hard words are underlined and explained automatically.
-- **Words**: your saved words, with the sentence, place and date you met each one.
+- **Lens**: tap a word on the lease letter or café sign. Tapping stands in for your eyes pausing on it. Linger asks first, then shows the meaning in context and a local note. Hard words are underlined and explained automatically.
+  - **Explain this letter**: a plain-English summary of what the letter or sign wants from you, with key dates.
+  - **Read aloud**: reads the text with the browser's built-in voice and highlights each word as it is read.
+- **Words**: your saved words, with the sentence, place and date you met each one. **Start Activity** opens Fill in the story.
 - **Local**: Pittsburgh slang, local customs, and a "pause map" of where newcomers get stuck (sample data).
-- **Review**: flashcards that quiz you with the real sentence where you first saw each word.
+- **Review**: practice activities.
+  - **Fill in the story**: put your saved words back into three short stories, then see which ones you got right.
+  - **Flashcards**: quiz yourself with the real sentence where you first saw each word.
 
 ## Glasses simulation
 
