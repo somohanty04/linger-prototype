@@ -1,0 +1,15 @@
+rules_version = '2';
+// Linger live sync: each paired laptop + phone share one document, pairs/{code}.
+// The 12-character random code is the only key, so only people with the code can read or write it.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /pairs/{code} {
+      allow read: if code.size() >= 10;
+      allow create, update: if code.size() >= 10
+        && request.resource.data.keys().hasOnly(['words', 'updated'])
+        && request.resource.data.words is map
+        && request.resource.data.words.size() <= 300;
+      allow delete: if false;
+    }
+  }
+}

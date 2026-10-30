@@ -316,3 +316,13 @@ button { cursor: pointer; }
 .share-card .ic { font-size: 20px; }
 
 .toast { position: absolute; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 30; background: var(--indigo-900); color: #FFFFFF; border-radius: 99px; padding: 10px 16px; font-size: 14px; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); animation: up 0.2s ease-out; }
+
+/* Live sync card on Words */
+.sync-card { background: var(--indigo-50); border: 1px solid var(--indigo-100); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.sync-card.on { background: var(--ok-bg); border-color: #BDE8D7; }
+.sync-h { display: flex; align-items: center; gap: 8px; color: var(--indigo-900); }
+.sync-card.on .sync-h { color: var(--ok-ink); }
+.dot-live { width: 9px; height: 9px; border-radius: 50%; background: #1DB954; box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.2); flex: none; }
+.sync-code { align-self: flex-start; font-size: 22px; font-weight: 800; letter-spacing: 0.06em; color: var(--indigo-900); background: #FFFFFF; border: 1px dashed var(--indigo-300); border-radius: 12px; padding: 6px 14px; font-variant-numeric: tabular-nums; }
+.sync-acts { display: flex; gap: 16px; }
+.small-btn { height: 42px; align-self: flex-start; font-size: 14px; }

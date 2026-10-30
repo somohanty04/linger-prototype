@@ -26,6 +26,18 @@ This repository is a clickable prototype of the phone app. It runs entirely in t
 
 **Send words to your phone:** when the Reader explains a line, tap **＋ Save** on a word (or **Save all to phone**). The **Words for your phone** list keeps them in the browser. **Send to my phone** shows a QR code: scan it with the phone camera and the words are added to the phone app's Words tab (and Flashcards), with the sentence and "Laptop · Linger Reader" as where you met them. Nothing goes through a server; the words travel inside the link. The phone app now keeps saved words between visits (localStorage).
 
+## Live sync between laptop and phone (Firebase)
+
+With Firebase set up, the phone app's **Words** tab shows **Turn on live sync** and a 12-character code. Enter the code in the Reader's **Words for your phone** card (or open the Reader link from the phone) and words saved or removed on either side appear on the other right away. Until Firebase is set up, live sync is hidden and the QR code still works.
+
+Setup (about 5 minutes, free Spark plan):
+1. Go to console.firebase.google.com → **Add project** (Analytics can be off).
+2. **Build → Firestore Database → Create database** (production mode, a US location).
+3. In Firestore's **Rules** tab, paste the contents of `firestore.rules` and **Publish**.
+4. **Project settings → General → Your apps → Web (</>)**, register an app, and copy the `firebaseConfig` values into `firebase-config.js` as `window.LINGER_FIREBASE = { … }`. Commit and push.
+
+Testing without Firebase: open `index.html?synctest=1` and `reader.html` in two tabs of the same browser; they sync through localStorage.
+
 ## Glasses simulation
 
 `glasses.html` shows what the wearer sees through the glasses. Press **Play demo** to watch a scripted reader: the eye-tracking meter fills when they pause on a word, re-reading counts as a pause, hard words are explained right away, and a temple tap saves the word to the phone. Or rest your cursor on a word (tap on a phone) to stand in for your own eyes.

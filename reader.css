@@ -137,3 +137,9 @@ button { font-family: inherit; cursor: pointer; }
 .qr-card p { margin: 0 0 14px; font-size: 14px; color: var(--ink-2); }
 .qr-box { display: grid; place-items: center; padding: 12px; margin: 0 auto 12px; width: fit-content; border: 1px solid var(--line); border-radius: 14px; background: #FFFFFF; }
 .qr-acts { justify-content: center; }
+.sync-box { border-top: 1px solid var(--line); margin: 4px 0 12px; padding-top: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.sync-form { display: flex; flex-direction: column; gap: 8px; }
+.sync-form input { flex: 1; min-width: 0; height: 36px; border: 1px solid var(--indigo-300); border-radius: 99px; padding: 0 14px; font: inherit; font-size: 14px; letter-spacing: 0.04em; }
+.sync-live { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--ok-ink); }
+.dot-live { width: 9px; height: 9px; border-radius: 50%; background: #1DB954; box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.2); flex: none; }
+.sync-box .small { margin: 0; }

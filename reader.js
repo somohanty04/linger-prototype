@@ -142,12 +142,50 @@
   const PHONE_KEY = 'lingerReaderPhone';
   let phone = (() => { try { return JSON.parse(localStorage.getItem(PHONE_KEY) || '[]'); } catch { return []; } })();
   const isOnPhone = (w) => phone.some((p) => p.w === w);
+  const savePhone = () => { try { localStorage.setItem(PHONE_KEY, JSON.stringify(phone)); } catch {} };
+  const today = () => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const asShared = (p) => ({ w: p.w, m: p.m || '', s: p.s || '', p: p.p || '', place: 'Laptop · Linger Reader', date: p.date || today() });
   function toggleWord(w, i) {
-    if (isOnPhone(w)) phone = phone.filter((p) => p.w !== w);
-    else phone.unshift({ w, m: HARD[w], s: LINES[i].t, p: LINES[i].plain || '' });
-    try { localStorage.setItem(PHONE_KEY, JSON.stringify(phone)); } catch {}
-    renderPhone();
+    if (isOnPhone(w)) { phone = phone.filter((p) => p.w !== w); if (conn) conn.remove(w); }
+    else { const it = { w, m: HARD[w], s: LINES[i].t, p: LINES[i].plain || '', date: today() }; phone.unshift(it); if (conn) conn.put(w, asShared(it)); }
+    savePhone(); renderPhone();
   }
+
+  // ---------- live sync with the phone (Firebase; see sync.js) ----------
+  let conn = null, firstSnap = true;
+  const SYNC_KEY = 'lingerReader.sync.code';
+  // While connected, the shared list is the truth: words saved or removed on the phone show up here too.
+  function onRemote(map) {
+    if (firstSnap) { // first contact: send words saved here before pairing
+      firstSnap = false;
+      const mine = {}; phone.forEach((p) => { if (!map[p.w]) mine[p.w] = asShared(p); });
+      conn.putMany(mine);
+      Object.assign(map, mine);
+    }
+    phone = Object.entries(map).filter(([, v]) => v && v.w).map(([, v]) => ({ w: v.w, m: v.m, s: v.s, p: v.p, date: v.date }));
+    savePhone(); renderPhone();
+  }
+  async function pair(code) {
+    if (!window.LingerSync || !LingerSync.available()) return;
+    $('syncMsg').textContent = 'Connecting…';
+    try {
+      firstSnap = true;
+      conn = await LingerSync.connect(code, onRemote, () => { $('syncMsg').textContent = 'Sync stopped. Check your connection.'; });
+      try { localStorage.setItem(SYNC_KEY, conn.code); } catch {}
+      $('syncMsg').textContent = '';
+    } catch (e) { conn = null; $('syncMsg').textContent = e.message === 'bad-code' ? 'That code looks too short. It has 12 letters and numbers.' : 'Couldn’t connect. Check the code and your connection.'; }
+    renderSync();
+  }
+  function unpair() { if (conn) conn.stop(); conn = null; try { localStorage.removeItem(SYNC_KEY); } catch {} renderSync(); }
+  function renderSync() {
+    const box = $('syncBox');
+    if (!window.LingerSync || !LingerSync.available()) { box.hidden = true; return; }
+    box.hidden = false;
+    $('syncForm').hidden = !!conn; $('syncOn').hidden = !conn;
+    if (conn) $('syncCode').textContent = LingerSync.pretty(conn.code);
+  }
+  $('syncForm').addEventListener('submit', (e) => { e.preventDefault(); const c = $('syncInput').value; if (c.trim()) pair(c); });
+  $('syncDisconnect').addEventListener('click', unpair);
   function renderPhone() {
     $('phoneCount').textContent = phone.length;
     $('phoneList').innerHTML = phone.length
@@ -155,7 +193,7 @@
       : '<li class="empty-li">When Linger explains a line, tap <b>＋ Save</b> on a word to send it to your phone for practice.</li>';
     $('sendPhone').disabled = !phone.length;
   }
-  $('phoneList').addEventListener('click', (e) => { const b = e.target.closest('[data-rm]'); if (!b) return; phone = phone.filter((p) => p.w !== b.dataset.rm); try { localStorage.setItem(PHONE_KEY, JSON.stringify(phone)); } catch {} renderPhone(); });
+  $('phoneList').addEventListener('click', (e) => { const b = e.target.closest('[data-rm]'); if (!b) return; phone = phone.filter((p) => p.w !== b.dataset.rm); if (conn) conn.remove(b.dataset.rm); savePhone(); renderPhone(); });
   function phoneLink() {
     const pack = (withPlain) => phone.slice(0, 8).map((p) => ({ w: p.w, m: p.m.slice(0, 80), s: p.s.slice(0, 90), ...(withPlain && p.p ? { p: p.p.slice(0, 90) } : {}) }));
     const enc = (list) => btoa(unescape(encodeURIComponent(JSON.stringify(list)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -179,6 +217,9 @@
     setTimeout(() => { $('qrCopy').textContent = 'Copy link'; }, 1600);
   });
   renderPhone();
+  renderSync();
+  { const q = new URLSearchParams(location.search).get('pair'); const saved = (() => { try { return localStorage.getItem(SYNC_KEY); } catch { return null; } })();
+    if (q || saved) pair(q || saved); }
 
   // ---------- results ----------
   function renderLog() {

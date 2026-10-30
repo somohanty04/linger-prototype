@@ -104,7 +104,7 @@
     game: null,
     speaking: null, // which text is being read aloud
     scan: { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }, // camera: idle | live | reading | done | error; origin: camera | share | paste
-    paste: false, shareHelp: false, toast: '',
+    paste: false, shareHelp: false, toast: '', sync: { status: 'off', code: '', msg: '' },
     chat: { msgs: [], busy: false }
   };
   let camStream = null;
@@ -125,6 +125,7 @@
     if (i >= 0) S.saved.splice(i, 1);
     else { S.saved.unshift(k); S.savedDates[k] = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
     persist();
+    if (syncConn) { if (isSaved(k)) syncConn.put(k, wordData(k)); else syncConn.remove(k); }
   }
   // Saved words live in this browser only (localStorage), so they survive a reload.
   const STORE = 'linger.words.v1';
@@ -141,6 +142,57 @@
     S.saved = data.saved.filter((k) => D[k]);
     S.savedDates = data.savedDates || {};
   })();
+  // ---------- live sync with the laptop Reader (Firebase; see sync.js) ----------
+  let syncConn = null;
+  const SYNC_KEY = 'linger.sync.code';
+  const today = () => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // The shape both apps share for one saved word. Firestore rejects undefined, so every field is a string.
+  function wordData(k) {
+    const e = D[k] || { word: k };
+    const plain = e.ctx && e.ctx.startsWith('In plain English: ') ? e.ctx.slice(18) : '';
+    return { w: String(e.word || k), m: String(e.meaning || ''), s: String(e.sentence || ''), p: plain, place: String(e.place || PLACES[e.src] || ''), date: String(S.savedDates[k] || today()) };
+  }
+  function onRemoteWords(map) {
+    let n = 0;
+    Object.entries(map || {}).forEach(([k, it]) => {
+      if (!it || !it.w) return;
+      if (!D[k]) D[k] = { word: String(it.w).toLowerCase(), kind: 'hard', meaning: String(it.m || ''), ctx: it.p ? 'In plain English: ' + it.p : 'Saved on your laptop.', sentence: String(it.s || ''), place: String(it.place || 'Laptop · Linger Reader'), imported: true };
+      if (!isSaved(k)) { S.saved.unshift(k); S.savedDates[k] = it.date || today(); n++; }
+    });
+    if (S.sync.first) { // first contact: send the phone's own words up too
+      S.sync.first = false;
+      const mine = {}; S.saved.forEach((k) => { if (!map[k]) mine[k] = wordData(k); });
+      syncConn.putMany(mine);
+    }
+    if (n) { persist(); showToast(`${n} ${n === 1 ? 'word' : 'words'} arrived from your laptop`); }
+    render();
+  }
+  function showToast(t) { S.toast = t; clearTimeout(showToast.t); showToast.t = setTimeout(() => { S.toast = ''; render(); }, 3500); }
+  async function startSync(code) {
+    if (!window.LingerSync || !LingerSync.available()) return;
+    S.sync = { status: 'connecting', code, msg: '', first: true }; render();
+    try {
+      syncConn = await LingerSync.connect(code, onRemoteWords, () => { S.sync.status = 'error'; S.sync.msg = 'Sync stopped. Check your connection and try again.'; render(); });
+      S.sync.status = 'on'; S.sync.code = syncConn.code;
+      try { localStorage.setItem(SYNC_KEY, syncConn.code); } catch {}
+    } catch { S.sync.status = 'error'; S.sync.msg = 'Couldn’t start sync. Check your connection and try again.'; }
+    render();
+  }
+  function stopSync() { if (syncConn) syncConn.stop(); syncConn = null; S.sync = { status: 'off', code: '', msg: '' }; try { localStorage.removeItem(SYNC_KEY); } catch {} }
+  function syncCard() {
+    if (!window.LingerSync || !LingerSync.available()) return '';
+    const sy = S.sync, readerUrl = new URL('reader.html', location.href).href;
+    if (sy.status === 'on') return `<div class="sync-card on"><div class="sync-h"><span class="dot-live"></span><strong>Live sync with your laptop is on</strong></div>
+      <div class="small">On your laptop, open <b>Linger Reader</b> and enter this code. Words you save there appear here right away.</div>
+      <div class="sync-code">${esc(LingerSync.pretty(sy.code))}</div>
+      <div class="sync-acts"><button type="button" class="link-btn" data-action="sync-copy">Copy Reader link</button><button type="button" class="link-btn" data-action="sync-off">Turn off</button></div>
+      <span hidden id="readerUrl">${esc(readerUrl + '?pair=' + sy.code)}</span></div>`;
+    if (sy.status === 'connecting') return '<div class="sync-card"><strong>Connecting…</strong></div>';
+    return `<div class="sync-card"><div class="sync-h">💻 <strong>Sync with your laptop</strong></div>
+      <div class="small">${sy.status === 'error' ? esc(sy.msg) : 'Save words while reading on your laptop and practice them here.'}</div>
+      <button type="button" class="btn primary small-btn" data-action="sync-on">${sy.status === 'error' ? 'Try again' : 'Turn on live sync'}</button></div>`;
+  }
+
   // Words sent from the laptop Reader arrive as ?import=<base64 JSON> (from its QR code).
   function importWords(code) {
     let list = [];
@@ -498,6 +550,7 @@
     <div class="body">
       <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" aria-label="Search your words"></label>
       <div class="chips">${filters.map(([id, l]) => `<button type="button" class="chip ${S.wordFilter === id ? 'on' : ''}" data-action="filter" data-v="${id}">${esc(l)}</button>`).join('')}</div>
+      ${syncCard()}
       ${list.length ? list.map((k) => { const e = D[k]; return `<button type="button" class="item" data-action="open" data-k="${k}">
         <span class="item-head"><span class="word">${esc(cap(e.word))}</span>${badge(e.kind)}</span>
         <span style="font-size: 14px">${esc(e.meaning)}</span>
@@ -765,6 +818,9 @@
     'paste-open': () => { stopSpeaking(); S.paste = true; S.pending = null; S.sheet = null; S.explain = false; },
     'paste-go': () => { const t = (document.getElementById('pasteBox') || {}).value || ''; S.paste = false; if (t.trim()) handleText(t, 'paste'); },
     'share-help': () => { S.shareHelp = true; },
+    'sync-on': () => { startSync(S.sync.code || LingerSync.newCode()); },
+    'sync-off': () => { stopSync(); },
+    'sync-copy': async () => { const u = (document.getElementById('readerUrl') || {}).textContent || ''; try { await navigator.clipboard.writeText(u); showToast('Reader link copied'); } catch { window.prompt('Open this on your laptop:', u); } },
     'share-try': () => { S.shareHelp = false; handleText(SHARE_SAMPLE, 'share'); },
     install: async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; },
     'cam-text': () => { closeCamera(); S.activity = 'chat'; openChat(); },
@@ -841,6 +897,7 @@
   const params = new URLSearchParams(location.search);
   const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join(' ');
   if (shared) { handleText(shared, 'share'); history.replaceState(null, '', location.pathname); }
+  { const saved = (() => { try { return localStorage.getItem(SYNC_KEY); } catch { return null; } })(); if (saved) startSync(saved); }
   if (params.get('import')) {
     const n = importWords(params.get('import'));
     S.tab = 'words';

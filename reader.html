@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Source+Serif+4:wght@500;600&display=swap">
-<link rel="stylesheet" href="reader.css?v=3">
+<link rel="stylesheet" href="reader.css?v=4">
 </head>
 <body>
 <header class="top">
@@ -81,7 +81,14 @@
     <div class="card phone-card">
       <h3>📱 Words for your phone <span class="count" id="phoneCount">0</span></h3>
       <ul class="phone-list" id="phoneList"></ul>
-      <button type="button" class="btn primary small" id="sendPhone" disabled>Send to my phone</button>
+      <div class="sync-box" id="syncBox" hidden>
+        <form id="syncForm" class="sync-form"><label for="syncInput">Live sync: enter the code from the phone app’s <b>Words</b> tab</label>
+          <div class="row"><input id="syncInput" placeholder="xxxx-xxxx-xxxx" autocomplete="off" autocapitalize="off" spellcheck="false"><button type="submit" class="btn primary small">Connect</button></div></form>
+        <div id="syncOn" hidden><div class="sync-live"><span class="dot-live"></span> Connected to your phone · <span id="syncCode"></span></div>
+          <p class="small">Words you save here appear on your phone right away.</p><button type="button" class="btn ghost small" id="syncDisconnect">Disconnect</button></div>
+        <p class="small" id="syncMsg" role="status"></p>
+      </div>
+      <button type="button" class="btn ghost small" id="sendPhone" disabled>Send by QR code instead</button>
     </div>
 
     <div class="card">
@@ -120,6 +127,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/webgazer@3.4.0/dist/webgazer.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="reader.js?v=3"></script>
+<script src="firebase-config.js?v=1"></script>
+<script src="sync.js?v=1"></script>
+<script src="reader.js?v=4"></script>
 </body>
 </html>
