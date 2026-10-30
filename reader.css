@@ -118,3 +118,22 @@ button { font-family: inherit; cursor: pointer; }
 #webgazerGazeDot { z-index: 60 !important; }
 
 @media (prefers-reduced-motion: reduce) { .ln, .meter span { transition: none; } }
+
+/* Words for the phone */
+.phone-card h3 { display: flex; align-items: center; gap: 8px; }
+.phone-card .count { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: var(--indigo-100); color: var(--indigo-900); font-size: 12px; display: inline-grid; place-items: center; }
+.phone-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; max-height: 200px; overflow-y: auto; }
+.phone-list li { display: flex; align-items: flex-start; gap: 6px; background: var(--indigo-50); border-radius: 10px; padding: 8px 10px; }
+.phone-list li b { color: var(--indigo-900); }
+.phone-list .rm { margin-left: auto; border: 0; background: none; color: var(--muted); padding: 0 2px; }
+.phone-list .empty-li { background: none; color: var(--muted); padding: 0; display: block; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.pop .expl dd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sv { flex: none; height: 30px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--indigo-500); background: var(--indigo-500); color: #FFFFFF; font-size: 12px; font-weight: 700; }
+.sv.done { background: #FFFFFF; color: var(--indigo-500); }
+.qr-modal { position: fixed; inset: 0; z-index: 70; background: rgba(16, 20, 50, 0.55); display: grid; place-items: center; padding: 16px; }
+.qr-card { background: var(--surface); border-radius: 20px; padding: 24px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 20px 50px rgba(16, 20, 50, 0.35); }
+.qr-card h2 { margin: 0 0 8px; font-size: 22px; color: var(--indigo-900); }
+.qr-card p { margin: 0 0 14px; font-size: 14px; color: var(--ink-2); }
+.qr-box { display: grid; place-items: center; padding: 12px; margin: 0 auto 12px; width: fit-content; border: 1px solid var(--line); border-radius: 14px; background: #FFFFFF; }
+.qr-acts { justify-content: center; }

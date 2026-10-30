@@ -104,7 +104,7 @@
     game: null,
     speaking: null, // which text is being read aloud
     scan: { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }, // camera: idle | live | reading | done | error; origin: camera | share | paste
-    paste: false, shareHelp: false,
+    paste: false, shareHelp: false, toast: '',
     chat: { msgs: [], busy: false }
   };
   let camStream = null;
@@ -123,7 +123,36 @@
   function toggleSave(k) {
     const i = S.saved.indexOf(k);
     if (i >= 0) S.saved.splice(i, 1);
-    else { S.saved.unshift(k); S.savedDates[k] = 'Today'; }
+    else { S.saved.unshift(k); S.savedDates[k] = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+    persist();
+  }
+  // Saved words live in this browser only (localStorage), so they survive a reload.
+  const STORE = 'linger.words.v1';
+  function persist() {
+    const custom = {};
+    S.saved.forEach((k) => { const e = D[k]; if (e && (e.scanned || e.imported)) { const { pending, ...rest } = e; custom[k] = rest; } });
+    try { localStorage.setItem(STORE, JSON.stringify({ saved: S.saved, savedDates: S.savedDates, custom })); } catch {}
+  }
+  (function restore() {
+    let data = null;
+    try { data = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch {}
+    if (!data || !Array.isArray(data.saved)) return;
+    Object.entries(data.custom || {}).forEach(([k, e]) => { if (!D[k]) D[k] = e; });
+    S.saved = data.saved.filter((k) => D[k]);
+    S.savedDates = data.savedDates || {};
+  })();
+  // Words sent from the laptop Reader arrive as ?import=<base64 JSON> (from its QR code).
+  function importWords(code) {
+    let list = [];
+    try { list = JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g, '+').replace(/_/g, '/'))))); } catch { return 0; }
+    let n = 0;
+    (Array.isArray(list) ? list : []).slice(0, 20).forEach((it) => {
+      const k = keyOf(String(it.w || '')); if (!k) return;
+      if (!D[k]) D[k] = { word: String(it.w).toLowerCase(), kind: 'hard', meaning: String(it.m || ''), ctx: it.p ? 'In plain English: ' + String(it.p) : 'Saved on your laptop.', sentence: String(it.s || ''), place: 'Laptop · Linger Reader', imported: true };
+      if (!isSaved(k)) { S.saved.unshift(k); S.savedDates[k] = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); n++; }
+    });
+    persist();
+    return n;
   }
   const tokens = () => TEXTS[S.source].split(' ');
   const shuffle = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
@@ -648,6 +677,7 @@
           <div class="small">${esc(s.note)} ${n} words on this page are underlined. Tap one for its meaning.</div>
           <button type="button" class="btn primary" data-action="close">Got it</button></div></div>`;
     }
+    if (S.toast) html += `<div class="toast" role="status">💻 → 📱 ${esc(S.toast)}</div>`;
     if (S.sheet) {
       const e = D[S.sheet];
       let inner;
@@ -811,6 +841,13 @@
   const params = new URLSearchParams(location.search);
   const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join(' ');
   if (shared) { handleText(shared, 'share'); history.replaceState(null, '', location.pathname); }
+  if (params.get('import')) {
+    const n = importWords(params.get('import'));
+    S.tab = 'words';
+    S.toast = n ? `${n} ${n === 1 ? 'word' : 'words'} added from your laptop` : 'These words are already in your list';
+    history.replaceState(null, '', location.pathname);
+    setTimeout(() => { S.toast = ''; render(); }, 3500);
+  }
 
   // Installing the app is what puts Linger in Android's Share menu.
   let installEvt = null;

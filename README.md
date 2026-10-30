@@ -24,6 +24,8 @@ This repository is a clickable prototype of the phone app. It runs entirely in t
 
 `reader.html` tests whether a laptop webcam (WebGazer.js) can tell when you are stuck on a line of a landlord letter. It calibrates in about 15 seconds, asks "Stuck on this line?" after a long look or a re-read, and logs whether each prompt was right.
 
+**Send words to your phone:** when the Reader explains a line, tap **＋ Save** on a word (or **Save all to phone**). The **Words for your phone** list keeps them in the browser. **Send to my phone** shows a QR code: scan it with the phone camera and the words are added to the phone app's Words tab (and Flashcards), with the sentence and "Laptop · Linger Reader" as where you met them. Nothing goes through a server; the words travel inside the link. The phone app now keeps saved words between visits (localStorage).
+
 ## Glasses simulation
 
 `glasses.html` shows what the wearer sees through the glasses. Press **Play demo** to watch a scripted reader: the eye-tracking meter fills when they pause on a word, re-reading counts as a pause, hard words are explained right away, and a temple tap saves the word to the phone. Or rest your cursor on a word (tap on a phone) to stand in for your own eyes.

@@ -114,9 +114,10 @@
   }
   function explain(i) {
     const words = LINES[i].t.split(' ').map(clean).filter((w, k, a) => HARD[w] && a.indexOf(w) === k);
+    const btn = (w) => isOnPhone(w) ? `<button type="button" class="sv done" data-save="${w}" data-line="${i}">Saved ✓</button>` : `<button type="button" class="sv" data-save="${w}" data-line="${i}">＋ Save</button>`;
     pop.innerHTML = `<div class="expl"><div class="plain">${esc(LINES[i].plain)}</div>
-      ${words.length ? `<dl>${words.map((w) => `<dt>${esc(w)}</dt><dd>${esc(HARD[w])}</dd>`).join('')}</dl>` : ''}</div>
-      <div class="acts"><button type="button" class="yes" data-ans="done">Got it</button></div>`;
+      ${words.length ? `<dl>${words.map((w) => `<dt>${esc(w)}</dt><dd><span>${esc(HARD[w])}</span>${btn(w)}</dd>`).join('')}</dl>` : ''}</div>
+      <div class="acts">${words.length > 1 ? `<button type="button" class="no" data-saveall="${i}">Save all to phone</button>` : ''}<button type="button" class="yes" data-ans="done">Got it</button></div>`;
     placePop(i);
   }
   function closePop() {
@@ -126,12 +127,58 @@
     S.lineSince = performance.now(); // restart the dwell clock so it doesn't fire again at once
   }
   pop.addEventListener('click', (e) => {
+    const sv = e.target.closest('[data-save]'), all = e.target.closest('[data-saveall]');
+    if (sv) { toggleWord(sv.dataset.save, Number(sv.dataset.line)); return explain(Number(sv.dataset.line)); }
+    if (all) { const i = Number(all.dataset.saveall); LINES[i].t.split(' ').map(clean).filter((w) => HARD[w] && !isOnPhone(w)).forEach((w) => toggleWord(w, i)); return explain(i); }
     const b = e.target.closest('[data-ans]'); if (!b) return;
     if (b.dataset.ans === 'done') return closePop();
     S.current.answer = b.dataset.ans;
     S.events.push(S.current); renderLog();
     if (b.dataset.ans === 'yes') explain(S.current.line - 1); else closePop();
   });
+
+  // ---------- words for the phone ----------
+  // Saved words are kept in this browser and sent to the phone through a QR code (no account or server).
+  const PHONE_KEY = 'lingerReaderPhone';
+  let phone = (() => { try { return JSON.parse(localStorage.getItem(PHONE_KEY) || '[]'); } catch { return []; } })();
+  const isOnPhone = (w) => phone.some((p) => p.w === w);
+  function toggleWord(w, i) {
+    if (isOnPhone(w)) phone = phone.filter((p) => p.w !== w);
+    else phone.unshift({ w, m: HARD[w], s: LINES[i].t, p: LINES[i].plain || '' });
+    try { localStorage.setItem(PHONE_KEY, JSON.stringify(phone)); } catch {}
+    renderPhone();
+  }
+  function renderPhone() {
+    $('phoneCount').textContent = phone.length;
+    $('phoneList').innerHTML = phone.length
+      ? phone.map((p) => `<li><b>${esc(p.w)}</b> · ${esc(p.m)} <button type="button" class="rm" data-rm="${esc(p.w)}" aria-label="Remove ${esc(p.w)}">✕</button></li>`).join('')
+      : '<li class="empty-li">When Linger explains a line, tap <b>＋ Save</b> on a word to send it to your phone for practice.</li>';
+    $('sendPhone').disabled = !phone.length;
+  }
+  $('phoneList').addEventListener('click', (e) => { const b = e.target.closest('[data-rm]'); if (!b) return; phone = phone.filter((p) => p.w !== b.dataset.rm); try { localStorage.setItem(PHONE_KEY, JSON.stringify(phone)); } catch {} renderPhone(); });
+  function phoneLink() {
+    const pack = (withPlain) => phone.slice(0, 8).map((p) => ({ w: p.w, m: p.m.slice(0, 80), s: p.s.slice(0, 90), ...(withPlain && p.p ? { p: p.p.slice(0, 90) } : {}) }));
+    const enc = (list) => btoa(unescape(encodeURIComponent(JSON.stringify(list)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    let code = enc(pack(true));
+    if (code.length > 600) code = enc(pack(false)); // keep the QR code small enough to scan easily
+    return new URL('./', location.href).href + '?import=' + code;
+  }
+  $('sendPhone').addEventListener('click', () => {
+    const url = phoneLink();
+    const box = $('qrBox'); box.innerHTML = '';
+    if (window.QRCode) new QRCode(box, { text: url, width: 240, height: 240, colorDark: '#14161F', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.L });
+    else box.textContent = 'QR code library didn’t load. Use Copy link instead.';
+    $('qrCount').textContent = Math.min(phone.length, 8) + (Math.min(phone.length, 8) === 1 ? ' word' : ' words');
+    $('qrLocal').hidden = !/^(localhost|127\.)/.test(location.hostname);
+    $('qrModal').hidden = false; $('qrModal').dataset.url = url;
+  });
+  $('qrClose').addEventListener('click', () => { $('qrModal').hidden = true; });
+  $('qrCopy').addEventListener('click', async () => {
+    const url = $('qrModal').dataset.url;
+    try { await navigator.clipboard.writeText(url); $('qrCopy').textContent = 'Link copied ✓'; } catch { window.prompt('Copy this link:', url); }
+    setTimeout(() => { $('qrCopy').textContent = 'Copy link'; }, 1600);
+  });
+  renderPhone();
 
   // ---------- results ----------
   function renderLog() {
@@ -319,7 +366,7 @@
     if (again) again.addEventListener('click', calibrate);
   }
 
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.popOpen) closePop(); });
+  document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('qrModal').hidden) $('qrModal').hidden = true; else if (S.popOpen) closePop(); });
 
   // Test hook: feed fake gaze points without a webcam (used for checking the detection logic).
   window.lingerTest = {

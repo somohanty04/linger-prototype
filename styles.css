@@ -314,3 +314,5 @@ button { cursor: pointer; }
 .url { display: block; margin-top: 4px; padding: 6px 8px; border-radius: 8px; background: #FFFFFF; border: 1px solid var(--indigo-100); font-size: 12px; word-break: break-all; }
 .link-btn { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--indigo-500); text-decoration: underline; cursor: pointer; }
 .share-card .ic { font-size: 20px; }
+
+.toast { position: absolute; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 30; background: var(--indigo-900); color: #FFFFFF; border-radius: 99px; padding: 10px 16px; font-size: 14px; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); animation: up 0.2s ease-out; }
