@@ -98,7 +98,7 @@
     tab: 'lens', source: 'lease', askFirst: true, autoHard: true,
     pending: null, pendingRaw: '', sheet: null, sheetRaw: '', explain: false,
     saved: ['arrears', 'jitney', 'nebby'], savedDates: { arrears: 'Oct 24', jitney: 'Oct 23', nebby: 'Oct 22' },
-    wordFilter: 'all', query: '', localSeg: 'slang',
+    wordFilter: 'all', query: '', localSeg: 'slang', city: (() => { try { return localStorage.getItem('linger.city') || 'pgh'; } catch { return 'pgh'; } })(), cityPick: false,
     activity: null, // 'story' | 'cards'
     cards: { idx: 0, revealed: false },
     game: null,
@@ -131,7 +131,7 @@
   const STORE = 'linger.words.v1';
   function persist() {
     const custom = {};
-    S.saved.forEach((k) => { const e = D[k]; if (e && (e.scanned || e.imported)) { const { pending, ...rest } = e; custom[k] = rest; } });
+    S.saved.forEach((k) => { const e = D[k]; if (e && (e.scanned || e.imported || e.city)) { const { pending, ...rest } = e; custom[k] = rest; } });
     try { localStorage.setItem(STORE, JSON.stringify({ saved: S.saved, savedDates: S.savedDates, custom })); } catch {}
   }
   (function restore() {
@@ -164,7 +164,7 @@
       const mine = {}; S.saved.forEach((k) => { if (!map[k]) mine[k] = wordData(k); });
       syncConn.putMany(mine);
     }
-    if (n) { persist(); showToast(`${n} ${n === 1 ? 'word' : 'words'} arrived from your laptop`); }
+    if (n) { persist(); showToast(`💻 → 📱 ${n} ${n === 1 ? 'word' : 'words'} arrived from your laptop`); }
     render();
   }
   function showToast(t) { S.toast = t; clearTimeout(showToast.t); showToast.t = setTimeout(() => { S.toast = ''; render(); }, 3500); }
@@ -561,30 +561,74 @@
     </div>`;
   }
 
+  // ---------- Local: city guides (cities.js) ----------
+  const CITIES = window.LINGER_CITIES || {};
+  const PGH_IC = { Winter: '🪑', 'Getting around': '🧭', Celebrations: '🍪', Sports: '🏈', Driving: '🚗' };
+  const city = () => CITIES[S.city] || CITIES.pgh;
+  const cityName = (c) => `${c.name}, ${c.state}`;
+  // Slang from other cities becomes a normal word entry, so Save and Words work the same everywhere.
+  function citySlang(id) {
+    if (id === 'pgh') return SLANG;
+    const c = CITIES[id];
+    return (c.slang || []).map((it) => { if (!D[it.k]) D[it.k] = { word: it.word, kind: 'slang', say: it.say, meaning: it.meaning, ctx: it.meaning, local: it.local, sentence: it.sentence, place: cityName(c), city: true }; return it.k; });
+  }
+  const cityCustoms = (id) => (id === 'pgh' ? CUSTOMS.map((x) => ({ ...x, ic: PGH_IC[x.tag] || '📌' })) : CITIES[id].customs || []);
+  function cityHotspots(id) {
+    if (id === 'pgh') return HOTSPOTS;
+    const c = CITIES[id];
+    return (c.slang || []).slice(0, 4).map((it, i) => ({ label: '“' + it.word + '”', where: c.name, n: [184, 131, 96, 58][i], note: it.meaning }));
+  }
+  const distKm = (a, b, c2, d) => { const r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c2) / 2 * r), y = (c2 - a) * r; return Math.sqrt(x * x + y * y) * 6371; };
+  function locateCity() {
+    if (!navigator.geolocation) { showToast('Location isn’t available on this device'); return; }
+    showToast('Finding where you are…');
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude: la, longitude: lo } = pos.coords;
+      const [best, km] = Object.entries(CITIES).map(([id, c]) => [id, distKm(la, lo, c.lat, c.lon)]).sort((p, q) => p[1] - q[1])[0];
+      setCity(best);
+      showToast(km < 120 ? `📍 Showing ${CITIES[best].name}, near you` : `📍 No guide here yet. Closest: ${CITIES[best].name}`);
+      render();
+    }, () => { showToast('Couldn’t get your location. Pick a city instead.'); render(); }, { timeout: 10000, maximumAge: 600000 });
+  }
+  function setCity(id) { if (!CITIES[id]) return; S.city = id; S.cityPick = false; try { localStorage.setItem('linger.city', id); } catch {} }
+
   function viewLocal() {
-    const segs = [['slang', 'Slang'], ['customs', 'Customs'], ['hotspots', 'Pause map']];
+    const c = city(), id = CITIES[S.city] ? S.city : 'pgh';
+    const segs = [['slang', '💬', 'Slang'], ['customs', '🤝', 'Customs'], ['around', '🚌', 'Getting around'], ['hotspots', '📍', 'Pause map']];
     let body = '';
     if (S.localSeg === 'slang') {
-      body = SLANG.map((k) => { const e = D[k], s = isSaved(k); return `<div class="item">
-        <div class="item-head"><div><span class="word sm">${esc(e.word)}</span> <span class="small">/${esc(e.say)}/</span></div>
-        <button type="button" class="save ${s ? 'saved' : ''}" data-action="save" data-k="${k}">${s ? 'Saved ✓' : 'Save'}</button></div>
-        <div style="font-size: 14px">${esc(e.meaning)}</div><div class="quote">“${esc(e.sentence)}”</div></div>`; }).join('');
+      body = `<p class="sec-note">Words you’ll hear around ${esc(c.name)}. Tap 🔊 to hear how they sound.</p>` + citySlang(id).map((k) => { const e = D[k], sv = isSaved(k); return `<article class="phrase">
+        <div class="ph-top"><div class="ph-name"><span class="ph-word">${esc(e.word)}</span>${e.say ? `<span class="ph-say">/${esc(e.say)}/</span>` : ''}</div>
+          <div class="ph-acts"><button type="button" class="hear" data-action="hear" data-k="${k}" aria-label="Hear ${esc(e.word)}">${speaker}</button>
+          <button type="button" class="save ${sv ? 'saved' : ''}" data-action="save" data-k="${k}">${sv ? 'Saved ✓' : 'Save'}</button></div></div>
+        <div class="ph-mean">${esc(e.meaning)}</div>
+        <div class="ph-ex">“${esc(e.sentence)}”</div>
+        ${e.local ? `<div class="ph-local">${pin}<span>${esc(e.local)}</span></div>` : ''}</article>`; }).join('');
     } else if (S.localSeg === 'customs') {
-      body = CUSTOMS.map((c) => `<div class="item"><span class="tag">${esc(c.tag)}</span><div class="word sm">${esc(c.title)}</div><div style="font-size: 14px; color: var(--ink-2)">${esc(c.body)}</div></div>`).join('');
+      body = `<p class="sec-note">Unwritten rules that help you fit in.</p>` + cityCustoms(id).map((t) => `<article class="tip"><span class="tip-ic" aria-hidden="true">${t.ic}</span><div><span class="tip-tag">${esc(t.tag)}</span><div class="tip-title">${esc(t.title)}</div><div class="tip-body">${esc(t.body)}</div></div></article>`).join('');
+    } else if (S.localSeg === 'around') {
+      body = `<p class="sec-note">How people move around ${esc(c.name)}, and the words on the signs.</p><div class="routes">` + (c.around || []).map((r) => `<div class="route"><span class="route-ic" aria-hidden="true">${r.ic}</span><div><div class="tip-title">${esc(r.title)}</div><div class="tip-body">${esc(r.body)}</div></div></div>`).join('') + '</div>';
     } else {
-      const max = Math.max(...HOTSPOTS.map((h) => h.n));
-      body = `<div class="dark"><div style="font-weight: 800; font-size: 16px; margin-bottom: 4px">Where newcomers pause</div>When lots of people new to the area linger on the same word in the same neighborhood, Linger adds it to this guide. Only the word and the area are shared, never your eye data.</div>`
-        + HOTSPOTS.map((h) => `<div class="item">
-          <div class="item-head" style="align-items: baseline"><span class="word sm" style="font-size: 16px">${esc(h.label)}</span><span class="count">${h.n} paused</span></div>
-          <div class="small" style="font-size: 12px">${esc(h.where)}</div>
-          <div class="bar"><span style="width: ${Math.round(h.n / max * 100)}%"></span></div>
-          <div style="font-size: 14px">${esc(h.note)}</div></div>`).join('')
+      const hs = cityHotspots(id), max = Math.max(...hs.map((h) => h.n));
+      body = `<div class="dark local-dark"><div style="font-weight: 800; font-size: 16px; margin-bottom: 4px">Where newcomers pause in ${esc(c.name)}</div>When lots of people new to the area linger on the same word, Linger adds it here. Only the word and the area are shared, never your eye data.</div>`
+        + hs.map((h) => `<div class="tip hot"><div style="flex: 1"><div class="item-head" style="align-items: baseline"><span class="tip-title">${esc(h.label)}</span><span class="count local-count">${h.n} paused</span></div>
+          <div class="small" style="font-size: 12px">${esc(h.where)}</div><div class="bar local-bar"><span style="width: ${Math.round(h.n / max * 100)}%"></span></div>
+          <div class="tip-body">${esc(h.note)}</div></div></div>`).join('')
         + '<div class="small" style="font-size: 12px; text-align: center">Sample data for the prototype</div>';
     }
-    return `${hero('Pittsburgh, PA', null, 'Based on where you are')}
-    <div class="body">
-      <div class="seg">${segs.map(([id, l]) => `<button type="button" class="${S.localSeg === id ? 'on' : ''}" data-action="seg" data-v="${id}">${l}</button>`).join('')}</div>
-      <div style="display: flex; flex-direction: column; gap: 10px">${body}</div>
+    const ess = [['🚨', '911', 'Emergencies: police, fire, ambulance'], ['☎️', '311', 'City help: trash, noise, potholes'], ['🚌', 'Transit', c.transit], ['💵', 'Tipping', '18–20% at sit-down restaurants']];
+    return `<header class="hero local-hero">${rings([['ring', 'width:200px;height:200px;right:-60px;top:-60px;border-color:rgba(155,227,196,0.45)'], ['dot', 'width:80px;height:80px;right:22px;top:-16px;background:rgba(155,227,196,0.5)']])}
+      <div class="hero-top">${logo}${pairPill}</div>
+      <div class="over">${pin}Your city guide</div>
+      <button type="button" class="city-btn" data-action="city-pick" aria-haspopup="dialog"><span class="city-emoji" aria-hidden="true">${c.emoji}</span>
+        <span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span><span class="chev" aria-hidden="true">▾</span></button>
+      <button type="button" class="locate" data-action="city-locate">◎ Use my location</button>
+    </header>
+    <div class="body local-body">
+      <div class="ess" role="list">${ess.map(([ic, t, d]) => `<div class="ess-card" role="listitem"><span class="ess-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</div>
+      <nav class="ltabs" aria-label="City guide sections">${segs.map(([v, ic, l]) => `<button type="button" class="ltab ${S.localSeg === v ? 'on' : ''}" data-action="seg" data-v="${v}" aria-pressed="${S.localSeg === v}"><span aria-hidden="true">${ic}</span>${l}</button>`).join('')}</nav>
+      <div class="lcontent">${body}</div>
+      <div class="talk"><span class="talk-ic" aria-hidden="true">🗨️</span><div><strong>Easy small talk</strong><div class="tip-body">${esc(c.talk)}</div></div></div>
     </div>`;
   }
 
@@ -692,6 +736,14 @@
           <div style="font-size: 14px">You lingered on <strong>“${esc(S.pendingRaw)}”</strong> for ${secs}s. Want the meaning?</div></div>
         <div class="prompt-actions"><button type="button" class="p-no" data-action="dismiss">Not now</button><button type="button" class="p-yes" data-action="accept">Show me</button></div></div>`;
     }
+    if (S.cityPick) {
+      html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
+        <div class="panel" role="dialog" aria-label="Choose a city"><div class="grab"></div>
+          <div class="sum-title">Where are you?</div>
+          <button type="button" class="btn ghost" data-action="city-locate">◎ Use my location</button>
+          <div class="city-list">${Object.entries(CITIES).map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${c.emoji}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>
+          <div class="small">More cities coming. Each guide has slang, customs, getting around and a pause map.</div></div></div>`;
+    }
     if (S.paste) {
       html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
         <div class="panel" role="dialog" aria-label="Paste text"><div class="grab"></div>
@@ -730,7 +782,7 @@
           <div class="small">${esc(s.note)} ${n} words on this page are underlined. Tap one for its meaning.</div>
           <button type="button" class="btn primary" data-action="close">Got it</button></div></div>`;
     }
-    if (S.toast) html += `<div class="toast" role="status">💻 → 📱 ${esc(S.toast)}</div>`;
+    if (S.toast) html += `<div class="toast" role="status">${esc(S.toast)}</div>`;
     if (S.sheet) {
       const e = D[S.sheet];
       let inner;
@@ -802,7 +854,7 @@
     open: (d) => { S.sheet = d.k; S.sheetRaw = d.k; S.pending = null; },
     accept: () => { S.sheet = S.pending; S.sheetRaw = S.pendingRaw; S.pending = null; },
     dismiss: () => { S.pending = null; },
-    close: () => { S.paste = false; S.shareHelp = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
+    close: () => { S.paste = false; S.shareHelp = false; S.cityPick = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
     explain: () => { stopSpeaking(); S.explain = true; S.pending = null; S.sheet = null; },
     read: () => { readLens(); },
     'speak-summary': () => { speak('summary', summaryText(SUMMARY[S.source])); },
@@ -812,6 +864,10 @@
     save: (d) => { toggleSave(d.k); },
     filter: (d) => { S.wordFilter = d.v; },
     seg: (d) => { S.localSeg = d.v; },
+    'city-pick': () => { S.cityPick = true; },
+    'city-set': (d) => { stopSpeaking(); setCity(d.v); },
+    'city-locate': () => { S.cityPick = false; locateCity(); },
+    hear: (d) => { const e = D[d.k]; if (e) speak('hear-' + d.k, `${e.word}. ${e.sentence}`); },
     play: (d) => { stopSpeaking(); S.sheet = null; S.explain = false; S.activity = d.v; if (d.v === 'story') newGame(0); else if (d.v === 'chat') openChat(); else S.cards = { idx: 0, revealed: false }; },
     'cam-start': () => { startCamera(); },
     'cam-close': () => { closeCamera(); },
@@ -867,7 +923,7 @@
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
-    if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; render(); }
+    if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp || S.cityPick) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; S.cityPick = false; render(); }
     else if (S.activity) { closeCamera(); S.activity = null; S.game = null; render(); }
   });
 
@@ -901,7 +957,7 @@
   if (params.get('import')) {
     const n = importWords(params.get('import'));
     S.tab = 'words';
-    S.toast = n ? `${n} ${n === 1 ? 'word' : 'words'} added from your laptop` : 'These words are already in your list';
+    S.toast = n ? `💻 → 📱 ${n} ${n === 1 ? 'word' : 'words'} added from your laptop` : 'These words are already in your list';
     history.replaceState(null, '', location.pathname);
     setTimeout(() => { S.toast = ''; render(); }, 3500);
   }
