@@ -20,6 +20,10 @@ This repository is a clickable prototype of the phone app. It runs entirely in t
   - **Fill in the story**: put your saved words back into three short stories, then see which ones you got right.
   - **Flashcards**: quiz yourself with the real sentence where you first saw each word.
 
+## Linger for Mac
+
+`mac/` is a menu-bar app that works in any Mac app: ⌃⌥L explains the word under the mouse, ⌃⌥E explains the window you're reading, and saved words sync to the phone. Download `linger-mac.zip`, or build it with `mac/build.sh` (no Xcode needed). See `mac/README.md`.
+
 ## Chrome extension
 
 `extension/` is the Linger Chrome extension: it underlines hard words on any website, explains them on click, explains whole pages, saves words to the phone app (Firebase), and has an optional webcam eye-tracking switch. Download `linger-extension.zip` from the site, then load it in `chrome://extensions` (Developer mode → Load unpacked). See `extension/README.md`.
