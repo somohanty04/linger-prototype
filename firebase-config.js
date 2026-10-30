@@ -1,14 +1,10 @@
-// Paste your Firebase web app config here to turn on live sync between the laptop Reader and the phone app.
-// Firebase console → Project settings → General → Your apps → Web app → SDK setup and configuration → Config.
-// These values identify the project; they are not secret. Access is limited by the Firestore rules (see README).
-window.LINGER_FIREBASE = null;
-/* Example:
+// Firebase web app config for live sync between the laptop Reader and the phone app.
+// These values identify the project; they are not secret. Access is limited by the Firestore rules in firestore.rules.
 window.LINGER_FIREBASE = {
-  apiKey: '...',
-  authDomain: 'your-project.firebaseapp.com',
-  projectId: 'your-project',
-  storageBucket: 'your-project.appspot.com',
-  messagingSenderId: '...',
-  appId: '...'
+  apiKey: 'AIzaSyDxWUp1eTp8bXZV-GV13XQAHI_Q4fL0GCU',
+  authDomain: 'linger-f41a7.firebaseapp.com',
+  projectId: 'linger-f41a7',
+  storageBucket: 'linger-f41a7.firebasestorage.app',
+  messagingSenderId: '447298576875',
+  appId: '1:447298576875:web:0b78399b6509daabaeb9ae'
 };
-*/

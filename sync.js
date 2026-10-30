@@ -62,13 +62,22 @@
       const b = backend(); if (!b) throw new Error('not-configured');
       code = tidy(code);
       if (code.length < 10) throw new Error('bad-code');
-      const stop = await b.listen(code, onWords, onError);
+      // A Firestore listener ends for good after any error, so reconnect a few times before giving up.
+      let stop = null, tries = 0, closed = false;
+      const start = async () => {
+        stop = await b.listen(code, (m) => { tries = 0; onWords(m); }, (e) => {
+          if (closed) return;
+          if (++tries <= 5) setTimeout(() => { if (!closed) start().catch(() => {}); }, 1500 * tries);
+          else if (onError) onError(e);
+        });
+      };
+      await start();
       return {
         code,
         put: (key, word) => b.put(code, { [key]: word }).catch(onError || (() => {})),
         putMany: (words) => (Object.keys(words).length ? b.put(code, words).catch(onError || (() => {})) : Promise.resolve()),
         remove: (key) => b.remove(code, key).catch(onError || (() => {})),
-        stop: () => { try { stop && stop(); } catch {} }
+        stop: () => { closed = true; try { stop && stop(); } catch {} }
       };
     }
   };
