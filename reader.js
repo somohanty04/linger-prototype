@@ -63,37 +63,50 @@
     lineEls.forEach((el, i) => { const r = el.getBoundingClientRect(); const d = Math.abs((r.top + r.bottom) / 2 - y); if (d < bestD) { bestD = d; best = i; } });
     return best;
   }
-  function onGaze(data, t) {
+  // Webcam gaze is noisy (often more than a line off), so judge the last few seconds as a whole:
+  // reading = eyes sweep across lines and drift down; stuck = they stay in one place.
+  const H = [], trail = [];
+  let lastSettle = 0;
+  const q = (a, f) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor((s.length - 1) * f)]; };
+  const lineGap = () => { const r = lineEls.map((l) => l.getBoundingClientRect()); return Math.max(20, (r[r.length - 1].top - r[0].top) / (r.length - 1)); };
+  function onGaze(data) {
     if (!data || S.calibrating) return;
     const now = performance.now();
-    S.samples.push({ x: data.x, y: data.y, t: now });
+    if (S.lastSample && now - S.lastSample > 700) { H.length = 0; trail.length = 0; } // a gap: start fresh
     S.lastSample = now;
-    // Short window = quicker response; "smoother" mode trades a little lag for less jitter.
-    const win = S.fast ? 150 : 250;
-    while (S.samples.length && now - S.samples[0].t > win) S.samples.shift();
-    if (S.samples.length < 2) return;
-    const x = median(S.samples.map((s) => s.x)), y = median(S.samples.map((s) => s.y));
-    track(lineAt(x, y), now);
-  }
-  // Switch lines only after the eyes stay on the new one briefly, so noise doesn't flicker.
-  function track(cand, now) {
-    if (cand !== S.candidate) { S.candidate = cand; S.candSince = now; }
-    if (cand === S.line || now - S.candSince < (S.fast ? 90 : 160)) return checkPause(now);
-    if (S.line !== null) { S.prevLine = S.line; S.prevDwell = now - S.lineSince; }
-    S.line = cand; S.lineSince = S.candSince;
-    if (cand !== null) S.maxLine = Math.max(S.maxLine, cand);
-    lineEls.forEach((el, i) => el.classList.toggle('look', i === cand && !S.manual));
+    H.push({ t: now, x: data.x, y: data.y + scrollY });
+    while (H.length && now - H[0].t > S.thresholdMs) H.shift();
+    // Every ~0.4 s, settle on a line (drives the highlight and the live meter).
+    if (now - lastSettle > 400) {
+      lastSettle = now;
+      const rec = H.filter((s) => now - s.t < (S.fast ? 500 : 800));
+      if (rec.length >= 6) {
+        const my = median(rec.map((s) => s.y)), li = lineAt(median(rec.map((s) => s.x)), my - scrollY);
+        if (li !== S.line) { S.line = li; S.lineSince = now; }
+        lineEls.forEach((el, i) => el.classList.toggle('look', i === li && !S.manual));
+        trail.push({ t: now, y: my, li });
+        while (trail.length && now - trail[0].t > 8000) trail.shift();
+      }
+    }
     checkPause(now);
   }
   function checkPause(now) {
-    if (S.popOpen || S.line === null || now < S.cooldownUntil || panel.hidden || !$('calib').hidden) return;
-    if (!LINES[S.line].plain) return; // greeting and sign-off have nothing to explain
-    if (S.lastPrompted[S.line] && now - S.lastPrompted[S.line] < 10000) return;
-    const dwell = now - S.lineSince;
-    if (dwell >= S.thresholdMs) return prompt(S.line, 'long look', dwell);
-    // Re-read: eyes jumped back above a line they had already moved past, and stayed a moment.
-    const back = S.prevLine !== null && S.line < S.prevLine && S.maxLine > S.line && S.prevDwell > 400;
-    if (back && dwell >= 900) return prompt(S.line, 're-read', dwell);
+    if (S.popOpen || now < S.cooldownUntil || panel.hidden || !$('calib').hidden || H.length < 15) return;
+    const gap = lineGap(), ok = (li) => li !== null && LINES[li].plain && !(S.lastPrompted[li] && now - S.lastPrompted[li] < 10000);
+    // Long look: neither moved down a line nor swept across one for the whole pause time.
+    if (now - H[0].t >= S.thresholdMs * 0.9) {
+      const third = Math.max(5, Math.floor(H.length / 3));
+      const dy = Math.abs(median(H.slice(-third).map((s) => s.y)) - median(H.slice(0, third).map((s) => s.y)));
+      const xs = H.map((s) => s.x), spread = q(xs, 0.75) - q(xs, 0.25);
+      const li = lineAt(median(xs), median(H.map((s) => s.y)) - scrollY);
+      if (dy < gap * 0.6 && spread < letter.getBoundingClientRect().width * 0.3 && ok(li)) return prompt(li, 'long look', now - H[0].t);
+    }
+    // Re-read: settled clearly above where the eyes had already been, twice in a row.
+    const n = trail.length;
+    if (n >= 4) {
+      const cur = trail[n - 1], prev = trail[n - 2];
+      if (cur.li === prev.li && ok(cur.li) && Math.max(...trail.slice(0, n - 2).map((t) => t.y)) - cur.y > gap * 1.2) return prompt(cur.li, 're-read', 900);
+    }
   }
 
   // ---------- prompt ----------
@@ -104,6 +117,7 @@
   function prompt(i, trigger, dwell) {
     S.popOpen = true;
     S.lastPrompted[i] = performance.now();
+    H.length = 0; trail.length = 0;
     S.current = { t: new Date(), mode: S.mode, line: i + 1, trigger, dwell: Math.round(dwell), answer: null };
     lineEls.forEach((el, j) => el.classList.toggle('stuck', j === i));
     const why = trigger === 're-read' ? 'went back to re-read this line' : trigger === 'click' ? 'clicked this line' : `looked at this line for ${(dwell / 1000).toFixed(1)}s`;
@@ -134,7 +148,12 @@
     if (b.dataset.ans === 'done') return closePop();
     S.current.answer = b.dataset.ans;
     S.events.push(S.current); renderLog();
-    if (b.dataset.ans === 'yes') explain(S.current.line - 1); else closePop();
+    if (b.dataset.ans === 'yes') {
+      // They were looking at this line: use it as one more calibration point.
+      const r = lineEls[S.current.line - 1].getBoundingClientRect();
+      if (S.tracking && window.webgazer) for (let k = 0; k < 6; k++) webgazer.recordScreenPosition((r.left + r.right) / 2, (r.top + r.bottom) / 2, 'click');
+      explain(S.current.line - 1);
+    } else { closePop(); S.cooldownUntil = performance.now() + 6000; } // don't nag
   });
 
   // ---------- words for the phone ----------
@@ -288,7 +307,7 @@
       // A smaller camera frame means less work per frame, so predictions arrive faster.
       webgazer.params.camConstraints = { video: { width: { ideal: 480 }, height: { ideal: 360 }, facingMode: 'user' } };
       webgazer.saveDataAcrossSessions(remember);
-      webgazer.setRegression('ridge');
+      webgazer.setRegression('weightedRidge'); // recent calibration and clicks count more
       webgazer.setGazeListener(onGaze);
       await webgazer.begin();
       // Mouse movement while reading isn't where you're looking, so don't learn from it.
@@ -407,6 +426,8 @@
     if (again) again.addEventListener('click', calibrate);
   }
 
+  // People look where they click, so clicks on the page keep teaching the tracker (mouse movement doesn't).
+  document.addEventListener('click', (e) => { if (S.tracking && !S.calibrating && e.isTrusted && window.webgazer) webgazer.recordScreenPosition(e.clientX, e.clientY, 'click'); }, true);
   document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('qrModal').hidden) $('qrModal').hidden = true; else if (S.popOpen) closePop(); });
 
   // Test hook: feed fake gaze points without a webcam (used for checking the detection logic).

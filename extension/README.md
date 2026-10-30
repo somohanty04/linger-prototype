@@ -16,7 +16,7 @@ Underlines hard English words on any website, explains them in plain words, and 
 - **Click an underlined word** (or double-click any word) for a card: meaning, the sentence in plain English, local note for slang, 🔊 Hear it, ★ Save to Linger.
 - **Explain this page** (toolbar menu): "What this page wants from you" with key dates and amounts. Select text first to explain only that part.
 - **Save to Linger** keeps the word in the menu's Saved list and, once paired, sends it to the phone app's Words tab right away (Firebase).
-- **Eye tracking** (toolbar menu, off by default): uses the webcam with WebGazer. Follow the dot for about 15 seconds, then read. If you stay on a line for a few seconds (adjustable) or go back to re-read it, Linger asks "Stuck on …?" and opens the card. Answers are logged on this computer so the team can see how often it was right. The video never leaves the laptop.
+- **Eye tracking** (toolbar menu, off by default): uses the webcam with WebGazer. Follow the dot through 16 spots (about 20 seconds); an accuracy check then says if it's ready. Reading normally won't trigger it: Linger looks at the last few seconds as a whole, and only asks "Stuck on …?" when your eyes stay in one place (no sweeping across or moving down) for the pause time, or go clearly back up to re-read. It keeps learning from your clicks and from every "Yes, explain". Options: **Show where I'm looking** (a light bar under the line it thinks you're reading) and **More space between lines** (easier for the webcam to tell lines apart). Answers are logged on this computer; the video never leaves the laptop.
 - **Toolbar menu**: underline on/off, turn off for this site, bigger words, eye tracking with sensitivity and recalibrate, phone pairing, saved words.
 
 ## Pair with the phone
@@ -38,4 +38,4 @@ In the Linger phone app, open **Words → Turn on live sync** and type the 12-ch
 - `background.js`: Wiktionary lookups, saving, sending words to Firestore
 - `popup.html/css/js`: the toolbar menu
 - `words.js`: word data generated from the phone app; `cities.js`: city slang
-- `test.html`: a test page that loads `content.js` without Chrome extension features
+- `test.html`, `gaze-sim.js`: test page and a noisy-gaze simulation (not included in the zip)

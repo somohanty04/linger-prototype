@@ -6,7 +6,7 @@
   if (window.__lingerGaze) { if (!window.__lingerGaze.on) window.__lingerGaze.start(); return; }
   const L = window.__lingerAPI;
   const wg = window.webgazer;
-  const G = { on: false, calibrating: false, secs: (L && L.settings.pauseSecs) || 3, samples: [], last: 0 };
+  const G = { on: false, calibrating: false, secs: (L && L.settings.pauseSecs) || 3, samples: [], last: 0, trained: !!window.__lingerSim, err: null };
   const BAND = 30; // px: one "line" of text for the webcam's accuracy
 
   // ---------- small UI (shadow DOM) ----------
@@ -19,6 +19,8 @@
     .chip { position: fixed; left: 16px; bottom: 16px; pointer-events: auto; display: flex; align-items: center; gap: 8px; background: #1F2AA8; color: #FFFFFF; border-radius: 99px; padding: 6px 8px 6px 12px; font-size: 13px; font-weight: 700; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); }
     .chip button { border: 0; border-radius: 99px; height: 28px; padding: 0 10px; font: inherit; font-size: 12px; cursor: pointer; background: rgba(255, 255, 255, 0.18); color: #FFFFFF; }
     .live { width: 8px; height: 8px; border-radius: 50%; background: #9BE3C4; }
+    .chip.lost { background: #A81F64; } .chip.lost .live { background: #FFD98A; }
+    .cursor { position: fixed; height: 3px; border-radius: 3px; background: rgba(109, 121, 255, 0.55); box-shadow: 0 0 8px rgba(109, 121, 255, 0.5); transition: top .25s ease, left .25s ease, width .25s ease; pointer-events: none; }
     .shade { position: fixed; inset: 0; background: rgba(246, 248, 255, 0.92); pointer-events: auto; }
     .msg { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 400px; text-align: center; background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 16px; padding: 20px; color: #14161F; font-size: 14px; }
     .msg h2 { margin: 0 0 6px; color: #1F2AA8; font-size: 20px; }
@@ -40,7 +42,7 @@
     let c = root.querySelector('.chip');
     if (!G.on) { if (c) c.remove(); return; }
     if (!c) { c = document.createElement('div'); c.className = 'chip'; ui.appendChild(c); }
-    c.innerHTML = '<span class="live"></span>Linger eye tracking<button data-a="recal">Recalibrate</button><button data-a="off">Turn off</button>';
+    c.innerHTML = '<span class="live"></span><span class="label">Linger eye tracking</span><button data-a="recal">Recalibrate</button><button data-a="off">Turn off</button>';
     c.onclick = (e) => { const a = e.target.dataset && e.target.dataset.a; if (a === 'recal') calibrate(); if (a === 'off') stop(); };
   }
 
@@ -51,7 +53,7 @@
     try {
       wg.params.camConstraints = { video: { width: { ideal: 480 }, height: { ideal: 360 }, facingMode: 'user' } };
       wg.saveDataAcrossSessions(true);
-      wg.setRegression('ridge').setGazeListener(onGaze);
+      wg.setRegression('weightedRidge').setGazeListener(onGaze); // weighted: recent clicks and calibration count more
       await wg.begin();
       wg.removeMouseEventListeners();
       wg.showVideoPreview(false).showFaceOverlay(false).showFaceFeedbackBox(false).showPredictionPoints(false).applyKalmanFilter(true);
@@ -65,7 +67,7 @@
     G.on = false; G.calibrating = false;
     try { wg.end(); } catch {}
     ui.querySelectorAll('.shade, .ask').forEach((n) => n.remove());
-    clearLine(); chip();
+    clearLine(); showCursor(null); chip();
   }
   function message(title, body) {
     const s = document.createElement('div'); s.className = 'shade';
@@ -74,98 +76,186 @@
     ui.appendChild(s);
   }
 
-  // ---------- calibration: follow a moving dot for ~15 s (no clicking) ----------
+  // ---------- calibration: follow a dot through 16 spots (~20 s), then a quick accuracy check ----------
+  const pts16 = () => { const W = innerWidth, H = innerHeight, out = []; [0.1, 0.37, 0.63, 0.9].forEach((fy, j) => { const xs = [0.08, 0.36, 0.64, 0.92].map((fx) => W * fx); (j % 2 ? xs.reverse() : xs).forEach((x) => out.push([Math.round(x), Math.round(H * fy)])); }); return out; };
   async function calibrate() {
     if (!G.on) return;
-    G.calibrating = true; closeAsk(); clearLine();
+    G.calibrating = true; closeAsk(); clearLine(); hist.length = 0;
     ui.querySelectorAll('.shade').forEach((n) => n.remove());
     const s = document.createElement('div'); s.className = 'shade';
-    s.innerHTML = '<div class="msg"><h2>Follow the dot</h2><div>Keep your eyes on the blue dot as it moves. Keep your head still. About 15 seconds.</div><button id="go">Start</button><button class="ghost" id="skip">Skip</button></div>';
+    s.innerHTML = `<div class="msg"><h2>Follow the dot</h2><div>Sit how you’ll read, about an arm’s length from the screen, face lit from the front. Keep your eyes on the dot and your head still. About 20 seconds.</div><button id="go">Start</button>${G.trained ? '<button class="ghost" id="skip">Skip</button>' : ''}</div>`;
     ui.appendChild(s);
-    const choice = await new Promise((res) => { s.querySelector('#go').onclick = () => res('go'); s.querySelector('#skip').onclick = () => res('skip'); });
+    const choice = await new Promise((res) => { s.querySelector('#go').onclick = () => res('go'); const k = s.querySelector('#skip'); if (k) k.onclick = () => res('skip'); });
     s.querySelector('.msg').remove();
     if (choice === 'go') {
-      const W = innerWidth, H = innerHeight, pts = [];
-      for (let j = 0; j < 4; j++) { const y = H * (0.12 + 0.76 * j / 3); const xs = [0.1, 0.5, 0.9].map((f) => W * f); (j % 2 ? xs.reverse() : xs).forEach((x) => pts.push([Math.round(x), Math.round(y)])); }
+      const pts = pts16();
       const dot = document.createElement('div'); dot.className = 'dot'; s.appendChild(dot);
       const bar = document.createElement('div'); bar.className = 'bar'; bar.innerHTML = '<span></span>'; s.appendChild(bar);
       dot.style.left = pts[0][0] + 'px'; dot.style.top = pts[0][1] + 'px';
-      await wait(600);
+      await wait(700);
       for (let k = 0; k < pts.length && G.on; k++) {
         const [x, y] = pts[k];
         dot.classList.remove('rec'); dot.style.left = x + 'px'; dot.style.top = y + 'px';
-        await wait(450); dot.classList.add('rec');
-        const end = performance.now() + 550;
-        while (performance.now() < end) { wg.recordScreenPosition(x, y, 'click'); await wait(40); }
+        await wait(420); dot.classList.add('rec'); // let the eyes land first
+        const end = performance.now() + 520;
+        while (performance.now() < end) { wg.recordScreenPosition(x, y, 'click'); await wait(35); }
         bar.firstChild.style.width = Math.round((k + 1) / pts.length * 100) + '%';
       }
+      G.trained = true;
+      // Accuracy check: up-and-down error is what matters for telling lines apart.
+      const checks = [[0.25, 0.5], [0.5, 0.5], [0.75, 0.5]].map(([fx, fy]) => [Math.round(innerWidth * fx), Math.round(innerHeight * fy)]);
+      bar.remove();
+      const errs = [];
+      for (const [x, y] of checks) {
+        dot.classList.remove('rec'); dot.style.left = x + 'px'; dot.style.top = y + 'px';
+        await wait(500);
+        const end = performance.now() + 900;
+        while (performance.now() < end) { const p = await wg.getCurrentPrediction(); if (p) errs.push(Math.abs(p.y - y)); await wait(60); }
+      }
+      dot.remove();
+      const err = errs.length ? Math.round(median(errs)) : null;
+      G.err = err;
+      const verdict = err === null ? ['Linger can’t see your eyes', 'Check that your face is in front of the camera with light on it.']
+        : err <= 45 ? ['Ready', `Gaze lands about ${err}px from where you look. That’s good enough to tell lines apart.`]
+        : err <= 90 ? ['Usable', `Gaze lands about ${err}px off. Turn on “More space between lines” in the Linger menu for better results.`]
+        : ['Too noisy', `Gaze lands about ${err}px off. Face a window or lamp, keep your head still, and calibrate again.`];
+      const m = document.createElement('div'); m.className = 'msg';
+      m.innerHTML = `<h2>${verdict[0]}</h2><div>${verdict[1]}</div><button id="ok">Start reading</button><button class="ghost" id="again">Calibrate again</button>`;
+      s.appendChild(m);
+      const again = await new Promise((res) => { m.querySelector('#ok').onclick = () => res(false); m.querySelector('#again').onclick = () => res(true); });
+      if (again) { s.remove(); G.calibrating = false; return calibrate(); }
     }
     s.remove();
-    G.calibrating = false; G.samples = []; G.cool = performance.now() + 1500; reset();
+    G.calibrating = false; G.samples = []; hist.length = 0; trail.length = 0; G.cool = performance.now() + 1500;
   }
 
   // ---------- pause detection ----------
+  // Webcam gaze jumps a line or two at a time, so don't time one exact line. Instead, look at the
+  // last few seconds as a whole: if most of the gaze landed on one line (or right next to it), that's a pause.
   const median = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
-  let cur = null, since = 0, cand = null, candSince = 0, prev = null, prevDwell = 0, maxBand = -1, curBlock = null;
-  const recent = new Map();
-  const reset = () => { cur = cand = prev = null; since = candSince = performance.now(); maxBand = -1; curBlock = null; };
-  function blockAt(x, y) {
+  const hist = [];   // recent samples: { t, x, y } with y in page coordinates (so scrolling doesn't matter)
+  const trail = [];  // where the eyes settled every ~0.5 s, for spotting re-reading
+  const fired = [];  // recent prompts, so the same line doesn't prompt again right away
+  let lastSettle = 0;
+  // Snap a point to the real line of text under it.
+  function lineAt(x, y) {
     host.style.display = 'none';
     const el = document.elementFromPoint(x, y);
+    const r = document.caretRangeFromPoint ? document.caretRangeFromPoint(x, y) : null;
     host.style.display = '';
     if (!el || el.closest('#linger-ui')) return null;
-    return el.closest('p, li, td, dd, blockquote, h1, h2, h3, h4, h5, h6, article, section, div');
-  }
-  function onGaze(d) {
-    if (!d || !G.on || G.calibrating || L.askOpen || document.hidden) return;
-    const now = performance.now();
-    G.samples.push({ x: d.x, y: d.y, t: now });
-    while (G.samples.length && now - G.samples[0].t > 200) G.samples.shift();
-    if (G.samples.length < 2) return;
-    const x = median(G.samples.map((s) => s.x)), y = median(G.samples.map((s) => s.y));
-    const block = blockAt(x, y);
-    const band = block ? Math.round((y + scrollY) / BAND) : null;
-    const key = block ? band : null;
-    if (key !== cand) { cand = key; candSince = now; }
-    if (key !== cur && now - candSince >= 120) { // eyes moved to another line
-      if (cur !== null) { prev = cur; prevDwell = now - since; }
-      if (block !== curBlock) maxBand = -1;
-      cur = key; since = candSince; curBlock = block;
-      if (key !== null) maxBand = Math.max(maxBand, key);
+    const block = el.closest('p, li, td, dd, blockquote, h1, h2, h3, h4, h5, h6, figcaption, article, section, div');
+    if (!block) return null;
+    let rect = null;
+    if (r && r.startContainer.nodeType === 3 && block.contains(r.startContainer)) {
+      const rr = document.createRange(), n = r.startContainer, o = Math.min(r.startOffset, n.length - 1);
+      if (o >= 0) { rr.setStart(n, o); rr.setEnd(n, Math.min(n.length, o + 1)); rect = rr.getBoundingClientRect(); }
     }
-    if (cur === null || now < (G.cool || 0)) return;
-    if (recent.get(cur) && now - recent.get(cur) < 10000) return;
-    const dwell = now - since;
-    if (dwell >= G.secs * 1000) return fire(x, y, 'You looked at this line for ' + (dwell / 1000).toFixed(1) + 's');
-    if (prev !== null && cur < prev && maxBand > cur && prevDwell > 400 && dwell >= 900) return fire(x, y, 'You went back to re-read this line');
+    if (!rect || !rect.height) return { block, top: Math.round((y + scrollY) / BAND) * BAND, h: BAND };
+    return { block, top: Math.round(rect.top + scrollY), h: Math.round(rect.height) };
+  }
+  const q = (a, f) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor((s.length - 1) * f)]; };
+  const recentNear = (top, h) => fired.some((f) => performance.now() - f.t < 12000 && Math.abs(f.top - top) < h);
+  // Webcam gaze is noisy (often more than a line off), so don't trust single points. Use medians:
+  // reading = eyes sweep across the line and drift down the page; stuck = they stay in one place.
+  function onGaze(d) {
+    if (!d || !G.on || G.calibrating || document.hidden) return;
+    const now = performance.now();
+    if (G.last && now - G.last > 700) { hist.length = 0; trail.length = 0; } // a gap: start fresh
+    G.last = now;
+    hist.push({ t: now, x: d.x, y: d.y + scrollY });
+    const W = G.secs * 1000;
+    while (hist.length && now - hist[0].t > W) hist.shift();
+    // Every half second, note where the eyes have settled (also drives the "where I'm looking" bar).
+    if (now - lastSettle > 500) {
+      lastSettle = now;
+      const recent = hist.filter((s) => now - s.t < 800);
+      if (recent.length >= 8) {
+        const mx = median(recent.map((s) => s.x)), my = median(recent.map((s) => s.y));
+        const ln = lineAt(mx, my - scrollY);
+        trail.push({ t: now, x: mx, y: my, ln });
+        showCursor(ln);
+      }
+      while (trail.length && now - trail[0].t > 8000) trail.shift();
+    }
+    if (L.askOpen || now < (G.cool || 0) || hist.length < 20) return;
+    // Long look: over the last few seconds the eyes neither moved down a line nor swept across it.
+    if (now - hist[0].t >= W * 0.9) {
+      const third = Math.max(5, Math.floor(hist.length / 3));
+      const yStart = median(hist.slice(0, third).map((s) => s.y)), yEnd = median(hist.slice(-third).map((s) => s.y));
+      const xs = hist.map((s) => s.x), spread = q(xs, 0.75) - q(xs, 0.25);
+      const mx = median(xs), my = median(hist.map((s) => s.y));
+      const ln = lineAt(mx, my - scrollY);
+      if (ln) {
+        const h = Math.max(ln.h, 18), width = ln.block.getBoundingClientRect().width;
+        const still = Math.abs(yEnd - yStart) < h * 0.8 && spread < Math.max(200, width * 0.3);
+        if (still && !recentNear(ln.top, h)) return fire(ln, mx, 'You looked at this spot for ' + G.secs + 's');
+      }
+    }
+    // Re-read: the eyes settled clearly higher than where they had already been, twice in a row (~1 s).
+    const n = trail.length;
+    if (n >= 4) {
+      const cur = trail[n - 1], prev = trail[n - 2];
+      const h = Math.max((cur.ln && cur.ln.h) || 24, 18);
+      if (cur.ln && Math.abs(cur.y - prev.y) < h * 0.7) {
+        const lowest = Math.max(...trail.slice(0, n - 2).map((t) => t.y));
+        if (lowest - cur.y > h * 1.5 && !recentNear(cur.ln.top, h)) return fire(cur.ln, cur.x, 'You went back to re-read this line');
+      }
+    }
+  }
+  // Light bar under the line Linger thinks you're reading (helps people trust and adjust the tracking).
+  function showCursor(b) {
+    let c = root.querySelector('.cursor');
+    if (!b || !L.settings.showGaze || !b.block) { if (c) c.remove(); return; }
+    if (!c) { c = document.createElement('div'); c.className = 'cursor'; ui.appendChild(c); }
+    const br = b.block.getBoundingClientRect();
+    c.style.left = br.left + 'px'; c.style.width = br.width + 'px';
+    c.style.top = (b.top - scrollY + b.h) + 'px';
   }
   let lineEl = null;
   const clearLine = () => { if (lineEl) lineEl.classList.remove('linger-line'); lineEl = null; };
-  // Find the underlined word on the line you're looking at, nearest to your gaze.
-  function fire(x, y, why) {
-    recent.set(cur, performance.now());
-    const words = curBlock ? [...curBlock.querySelectorAll('.linger-w')] : [];
+  // Pick the underlined word on that line (or the line next to it) nearest to where the eyes were.
+  function fire(b, x, why) {
+    fired.push({ t: performance.now(), top: b.top });
+    hist.length = 0; trail.length = 0;
+    const words = [...document.querySelectorAll('.linger-w')].filter((w) => { const r = w.getBoundingClientRect(); const top = r.top + scrollY; return r.height && Math.abs(top - b.top) <= b.h * 1.7; });
     let best = null, bestD = Infinity;
-    words.forEach((w) => { const r = w.getBoundingClientRect(); if (Math.abs((r.top + r.bottom) / 2 - y) > BAND * 1.4) return; const dd = Math.abs((r.left + r.right) / 2 - x); if (dd < bestD) { bestD = dd; best = w; } });
+    words.forEach((w) => { const r = w.getBoundingClientRect(); const dy = Math.abs(r.top + scrollY - b.top) / Math.max(b.h, 1); const dd = dy * 400 + Math.abs((r.left + r.right) / 2 - x); if (dd < bestD) { bestD = dd; best = w; } });
     if (!best) return; // nothing hard on this line: just reading
     clearLine(); lineEl = best; best.classList.add('linger-line');
     ask(best, why);
   }
   function closeAsk() { const a = root.querySelector('.ask'); if (a) a.remove(); if (L) L.askOpen = false; }
-  // Ask first (like the phone app); the answer is logged so the team can see how often it was right.
+  // Ask first (like the phone app); answers are logged so the team can see how often it was right.
   function ask(word, why) {
     closeAsk(); L.askOpen = true;
     const r = word.getBoundingClientRect();
-    const a = document.createElement('div'); a.className = 'ask';
-    a.innerHTML = `<span>👁 Stuck on <b>${word.textContent.replace(/[<>&]/g, '')}</b>?</span><button class="no">No</button><button class="yes">Yes, explain</button>`;
+    const a = document.createElement('div'); a.className = 'ask'; a.dataset.why = why;
+    const w = word.textContent.replace(/[<>&"]/g, '');
+    a.innerHTML = `<span>👁 Stuck on <b>${w}</b>?</span><button class="no">No</button><button class="yes">Yes, explain</button>`;
     a.style.left = Math.min(Math.max(8, r.left), innerWidth - 300) + 'px';
     a.style.top = Math.min(r.bottom + 8, innerHeight - 60) + 'px';
     ui.appendChild(a);
-    const log = (ans) => { try { chrome.storage.local.get({ gazeLog: [] }, (v) => chrome.storage.local.set({ gazeLog: [...v.gazeLog, { t: Date.now(), site: location.hostname, word: word.textContent, why, ans }].slice(-500) })); } catch {} };
-    a.querySelector('.no').onclick = () => { log('no'); closeAsk(); clearLine(); G.cool = performance.now() + 2000; since = performance.now(); };
-    a.querySelector('.yes').onclick = () => { log('yes'); closeAsk(); clearLine(); L.openCard(word, why); };
+    const log = (ans) => { try { chrome.storage.local.get({ gazeLog: [] }, (v) => chrome.storage.local.set({ gazeLog: [...v.gazeLog, { t: Date.now(), site: location.hostname, word: w, why, ans, err: G.err }].slice(-500) })); } catch {} };
+    a.querySelector('.no').onclick = () => { log('no'); closeAsk(); clearLine(); G.cool = performance.now() + 6000; hist.length = 0; trail.length = 0; }; // don't nag
+    a.querySelector('.yes').onclick = () => {
+      log('yes'); closeAsk(); clearLine();
+      // They were looking at this word: use it as one more calibration point.
+      const c = word.getBoundingClientRect(); for (let i = 0; i < 6; i++) wg.recordScreenPosition((c.left + c.right) / 2, (c.top + c.bottom) / 2, 'click');
+      L.openCard(word, why);
+    };
   }
-  window.addEventListener('linger-card-closed', () => { G.cool = performance.now() + 2000; since = performance.now(); });
+  window.addEventListener('linger-card-closed', () => { G.cool = performance.now() + 4000; hist.length = 0; trail.length = 0; });
+  // People look where they click, so every click on the page teaches the tracker a little more.
+  document.addEventListener('click', (e) => { if (G.on && !G.calibrating && e.isTrusted) wg.recordScreenPosition(e.clientX, e.clientY, 'click'); }, true);
+  // Tell people when the camera loses their eyes, instead of silently doing nothing.
+  setInterval(() => {
+    if (!G.on || G.calibrating) return;
+    const lost = performance.now() - (G.last || 0) > 1500;
+    const c = root.querySelector('.chip .label');
+    if (c) c.textContent = lost ? 'Can’t see your eyes. Face the camera.' : 'Linger eye tracking';
+    root.querySelector('.chip') && root.querySelector('.chip').classList.toggle('lost', lost);
+  }, 700);
 
   window.__lingerGaze = { get on() { return G.on; }, start, stop, calibrate, setSecs: (s) => { G.secs = s; } };
   start();

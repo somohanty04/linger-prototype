@@ -35,7 +35,7 @@
   }
 
   // ---------- settings ----------
-  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3 };
+  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false };
   const host = location.hostname || 'file';
   const active = () => S.highlight && !S.paused.includes(host);
 
@@ -45,6 +45,7 @@
     .linger-w { text-decoration: underline dotted #F2A33A 2px !important; text-underline-offset: 3px !important; cursor: help !important; border-radius: 3px; transition: background .12s; }
     .linger-w:hover, .linger-w.linger-on { background: rgba(255, 217, 138, 0.45) !important; }
     .linger-big .linger-w { font-size: 1.25em !important; padding: 0 2px !important; }
+    .linger-spread p, .linger-spread li, .linger-spread dd, .linger-spread td, .linger-spread blockquote { line-height: 2.1 !important; }
     .linger-line { background: rgba(255, 217, 138, 0.28) !important; box-shadow: 0 0 0 3px rgba(255, 190, 70, 0.25) !important; border-radius: 4px; }`;
   (document.head || document.documentElement).appendChild(style);
 
@@ -281,15 +282,16 @@
   // ---------- settings and messages ----------
   function apply() {
     document.documentElement.classList.toggle('linger-big', !!S.bigger);
+    document.documentElement.classList.toggle('linger-spread', !!S.spread);
     if (active()) { scan(document.body); mo.observe(document.body, { childList: true, subtree: true }); }
     else { mo.disconnect(); unwrapAll(); closeCard(); }
   }
   if (api) {
-    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3 }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
-      if (active() !== was || ch.bigger) apply();
+      if (active() !== was || ch.bigger || ch.spread) apply();
     });
     chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (msg.type === 'explain') { explainPage(); reply({ ok: true }); }

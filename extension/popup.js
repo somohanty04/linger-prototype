@@ -15,16 +15,20 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
   if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain', 'eye', 'recal', 'secs'].forEach((id) => { $(id).disabled = true; }); }
   if (usable && !status) $('blocked').textContent = 'Reload this page to start Linger here.';
 
-  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, pairCode: '', saved: [] });
+  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, pairCode: '', saved: [] });
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
   $('bigger').checked = st.bigger;
+  $('showGaze').checked = st.showGaze;
+  $('spread').checked = st.spread;
   $('secs').value = st.pauseSecs; $('secsOut').textContent = st.pauseSecs;
   $('eye').checked = !!(status && status.eye);
   $('recal').hidden = !$('eye').checked;
 
   $('highlight').onchange = (e) => chrome.storage.local.set({ highlight: e.target.checked });
   $('bigger').onchange = (e) => chrome.storage.local.set({ bigger: e.target.checked });
+  $('showGaze').onchange = (e) => chrome.storage.local.set({ showGaze: e.target.checked });
+  $('spread').onchange = (e) => chrome.storage.local.set({ spread: e.target.checked });
   $('site').onchange = async (e) => {
     const { paused } = await chrome.storage.local.get({ paused: [] });
     chrome.storage.local.set({ paused: e.target.checked ? paused.filter((h) => h !== host) : [...new Set([...paused, host])] });
