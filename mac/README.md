@@ -9,7 +9,7 @@ A menu-bar app that explains hard English words in **any app**: Mail, PDFs in Pr
 - **📱 Connect your phone** (menu): type the code from the phone app (Words → Turn on live sync); saved words appear on the phone right away.
 - Saved words are listed in the menu.
 
-Linger only reads the screen when you press a shortcut. Text recognition runs on the Mac (Apple Vision); only words you save are sent to your phone.
+Linger reads the front window only while Linger mode is on, or when you press a shortcut. Text recognition runs on the Mac (Apple Vision); only words you save are sent to your phone.
 
 ## Install
 
