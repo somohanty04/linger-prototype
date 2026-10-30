@@ -45,6 +45,9 @@
   };
   const PHRASES = [[/failure to (\w+) (may|will|could) result in/gi, 'if you don’t $1, it could lead to'], [/failure to/gi, 'if you don’t'], [/may result in/gi, 'could lead to'], [/termination of (your )?service/gi, 'your service being cut off'], [/for your records/gi, 'so you have it later'], [/prior written consent/gi, 'written permission first'], [/in full/gi, 'completely'], [/no later than/gi, 'by'], [/in accordance with/gi, 'following'], [/you are hereby notified that/gi, 'this letter tells you that'], [/is hereby/gi, 'is'], [/are hereby/gi, 'are']];
   const SCAN_PLACE = 'Camera scan';
+  const ORIGIN_LABEL = { camera: 'Your scan', share: 'Shared from another app', paste: 'Pasted text' };
+  const SHARE_URL = 'https://somohanty04.github.io/linger-prototype/';
+  const SHARE_SAMPLE = 'Your water bill has a past due balance of $86.40. Payment must be received no later than November 18 to avoid a late fee. Failure to pay may result in termination of service.';
   TEXTS.camera = '';
   const D = {
     yinz: { word: 'yinz', kind: 'slang', say: 'yinz', meaning: 'You all. Pittsburgh’s way of saying “you” to a group.', ctx: 'The sign is talking to everyone who reads it: “Heads up, all of you!”', local: 'Friendly and very local. Newcomers using it usually get a smile.', sentence: 'Heads up, yinz!', src: 'cafe' },
@@ -100,7 +103,8 @@
     cards: { idx: 0, revealed: false },
     game: null,
     speaking: null, // which text is being read aloud
-    scan: { status: 'idle', progress: 0, img: null, msg: '', conf: 0 }, // camera: idle | live | reading | done | error
+    scan: { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }, // camera: idle | live | reading | done | error; origin: camera | share | paste
+    paste: false, shareHelp: false,
     chat: { msgs: [], busy: false }
   };
   let camStream = null;
@@ -174,7 +178,8 @@
   function summarize(text) {
     const sents = sentencesOf(text);
     sents.forEach((x, i) => { sents[i] = x.replace(/^(dear [^,]{1,40}|hi|hello|hey|good (morning|afternoon|evening))( [^,]{1,25})?,\s*/i, ''); });
-    let acts = sents.filter((s) => !isHeading(s) && ACTION_RE.test(s));
+    // Important = asks you to do something, or has a date or an amount in it.
+    let acts = sents.filter((s) => !isHeading(s) && (ACTION_RE.test(s) || new RegExp(DATE_SRC, 'i').test(s) || /\$\s?\d/.test(s)));
     if (!acts.length) acts = sents.slice(0, 3);
     const points = acts.slice(0, 4).map((s) => [/\$/.test(s) ? '💵' : new RegExp(DATE_SRC, 'i').test(s) ? '📅' : /prohibit|not permitted|not allowed/i.test(s) ? '🚫' : '📌', `<b>${esc(plainify(s))}</b>`]);
     const dates = [...new Set([...(text.match(new RegExp(DATE_SRC, 'gi')) || []), ...(text.match(MONEY_RE) || [])].map((d) => d.trim()))].slice(0, 5);
@@ -280,7 +285,7 @@
     closeCamera(); stopSpeaking();
     S.tab = 'lens'; S.source = 'camera';
     S.pending = null; S.sheet = null; S.explain = false;
-    S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0 }; render();
+    S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0, origin: 'camera' }; render();
     try {
       const { text, conf } = await readImage(src, (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; });
       if (text.split(' ').length < 3) throw new Error('empty');
@@ -370,12 +375,12 @@
     if (cam && sc.status === 'reading') { hasText = false; inner = `<div class="lens-label">Reading your photo…</div><img class="cam" src="${sc.img}" alt="Your photo"><div class="scan-pct">Reading text <span id="scanPct">${sc.progress}%</span></div>`; }
     else if (cam && sc.status === 'error') { hasText = false; inner = `<div class="lens-label">Camera</div><div class="cam-empty"><p>${esc(sc.msg)}</p><div class="cam-buttons"><button type="button" class="btn primary" data-action="cam-start">📷 Try the camera again</button><label class="btn white">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label></div></div>`; }
     else {
-      const label = cam ? 'Your scan' : S.source === 'cafe' ? 'Sample · café notice board' : 'Sample · letter from landlord';
+      const label = cam ? ORIGIN_LABEL[sc.origin] : S.source === 'cafe' ? 'Sample · café notice board' : 'Sample · letter from landlord';
       inner = `<div class="lens-label">${label}</div><div class="paper">${toks}</div>
         ${cam && sc.conf && sc.conf < 60 ? '<p class="cam-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}
         ${cam ? '<button type="button" class="rescan" data-action="cam-start">📷 Scan something else</button>' : ''}`;
     }
-    const samples = [['lease', 'Lease letter'], ['cafe', 'Café sign']].concat(scanned || cam ? [['camera', '📷 Your scan']] : []);
+    const samples = [['lease', 'Lease letter'], ['cafe', 'Café sign']].concat(scanned || cam ? [['camera', sc.origin === 'camera' ? '📷 Your scan' : '📋 Your text']] : []);
     return `<header class="hero lens-hero">${heroDeco}
       <div class="hero-top">${logo}${pairPill}</div>
       <h1>What do you need to read?</h1>
@@ -384,7 +389,7 @@
         <button type="button" class="big" data-action="cam-start"><span class="big-ic" aria-hidden="true">📷</span><strong>Scan with camera</strong><span>Letters, signs, bills</span></button>
         <button type="button" class="big" data-action="play" data-v="chat"><span class="big-ic" aria-hidden="true">💬</span><strong>Text it to Linger</strong><span>Send a photo on WhatsApp</span></button>
       </div>
-      <label class="upload-link">or upload a photo<input type="file" accept="image/*" id="photo" hidden></label>
+      <div class="hero-links"><label class="upload-link">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label><span aria-hidden="true">·</span><button type="button" class="upload-link" data-action="paste-open">Paste text</button></div>
     </header>
     <div class="body">
       <div class="sample-row"><span class="label" style="color: var(--muted)">${cam ? 'Showing' : 'Or try a sample'}</span>
@@ -398,6 +403,7 @@
         <button type="button" class="btn ${reading ? 'deep' : 'ghost'}" data-action="read" ${canSpeak ? '' : 'disabled'}>${speaker}${reading ? 'Stop' : 'Read aloud'}</button>
       </div>
       <p class="small" style="margin: -2px 4px 0">Tap a word you would pause on. On the glasses, your eyes do this part. <span class="dotted-key">Dotted</span> words are ${cam ? 'ones Linger thinks are hard' : 'ones newcomers often pause on'}.</p>` : ''}
+      <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">Select text anywhere, tap Share, then “Explain with Linger”</span></span><span class="go">›</span></button>
       <div class="card">
         <div class="switch-row"><div><strong>Ask before showing</strong><span class="small">When you linger, Linger checks first</span></div>
           <button type="button" class="switch" role="switch" aria-label="Ask before showing" aria-checked="${S.askFirst}" data-action="ask"></button></div>
@@ -604,6 +610,31 @@
           <div style="font-size: 14px">You lingered on <strong>“${esc(S.pendingRaw)}”</strong> for ${secs}s. Want the meaning?</div></div>
         <div class="prompt-actions"><button type="button" class="p-no" data-action="dismiss">Not now</button><button type="button" class="p-yes" data-action="accept">Show me</button></div></div>`;
     }
+    if (S.paste) {
+      html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
+        <div class="panel" role="dialog" aria-label="Paste text"><div class="grab"></div>
+          <div class="sum-title">Paste text to explain</div>
+          <div class="small">Copy a confusing email, text message or web page, paste it here, and Linger explains it.</div>
+          <textarea id="pasteBox" class="paste-box" rows="7" placeholder="Paste text here…"></textarea>
+          <div class="grid2"><button type="button" class="btn" data-action="close">Cancel</button><button type="button" class="btn primary" data-action="paste-go">✦ Explain</button></div></div></div>`;
+    }
+    if (S.shareHelp) {
+      html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
+        <div class="panel" role="dialog" aria-label="Use Linger in any app"><div class="grab"></div>
+          <div class="sum-title">Use Linger in any app</div>
+          <div class="small">Select text in a text message, email, web page or PDF, tap <b>Share</b>, and pick Linger. It opens with the explanation ready.</div>
+          <div class="howto"><div class="howto-h">🤖 Android</div>
+            <ol><li>Install Linger: ${installEvt ? '<button type="button" class="link-btn" data-action="install">tap here to install</button>' : 'in Chrome, tap <b>⋮</b> then <b>Install app</b> (or <b>Add to Home screen</b>)'}.</li>
+            <li>In any app, select text and tap <b>Share</b>.</li><li>Choose <b>Linger</b>.</li></ol></div>
+          <div class="howto"><div class="howto-h">🍎 iPhone</div>
+            <div class="small" style="margin-bottom: 6px">iPhones don’t let websites join the Share menu, so a free Shortcut does it:</div>
+            <ol><li>Open the <b>Shortcuts</b> app and tap <b>+</b>. Name it <b>Explain with Linger</b>.</li>
+            <li>Tap the <b>ⓘ</b> button and turn on <b>Show in Share Sheet</b>, receiving <b>Text</b>.</li>
+            <li>Add the action <b>URL Encode</b> (it uses Shortcut Input).</li>
+            <li>Add <b>Open URLs</b> with this address, then put <b>URL Encoded Text</b> at the end:<code class="url">${esc(SHARE_URL)}?text=</code></li>
+            <li>Now select text anywhere, tap <b>Share</b>, then <b>Explain with Linger</b>.</li></ol></div>
+          <div class="grid2"><button type="button" class="btn" data-action="close">Close</button><button type="button" class="btn primary" data-action="share-try">Try a sample</button></div></div></div>`;
+    }
     if (S.explain) {
       const s = SUMMARY[S.source];
       const n = S.source === 'camera' ? new Set(tokens().map(keyOf).filter((k) => k && isHard(k))).size : Object.keys(D).filter((k) => D[k].src === S.source).length;
@@ -688,7 +719,7 @@
     open: (d) => { S.sheet = d.k; S.sheetRaw = d.k; S.pending = null; },
     accept: () => { S.sheet = S.pending; S.sheetRaw = S.pendingRaw; S.pending = null; },
     dismiss: () => { S.pending = null; },
-    close: () => { if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
+    close: () => { S.paste = false; S.shareHelp = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
     explain: () => { stopSpeaking(); S.explain = true; S.pending = null; S.sheet = null; },
     read: () => { readLens(); },
     'speak-summary': () => { speak('summary', summaryText(SUMMARY[S.source])); },
@@ -701,6 +732,11 @@
     play: (d) => { stopSpeaking(); S.sheet = null; S.explain = false; S.activity = d.v; if (d.v === 'story') newGame(0); else if (d.v === 'chat') openChat(); else S.cards = { idx: 0, revealed: false }; },
     'cam-start': () => { startCamera(); },
     'cam-close': () => { closeCamera(); },
+    'paste-open': () => { stopSpeaking(); S.paste = true; S.pending = null; S.sheet = null; S.explain = false; },
+    'paste-go': () => { const t = (document.getElementById('pasteBox') || {}).value || ''; S.paste = false; if (t.trim()) handleText(t, 'paste'); },
+    'share-help': () => { S.shareHelp = true; },
+    'share-try': () => { S.shareHelp = false; handleText(SHARE_SAMPLE, 'share'); },
+    install: async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; },
     'cam-text': () => { closeCamera(); S.activity = 'chat'; openChat(); },
     capture: () => { capture(); },
     voice: (d) => { const m = S.chat.msgs[Number(d.i)]; if (m) speak('voice' + d.i, m.voice); },
@@ -745,12 +781,41 @@
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
-    if (S.sheet || S.pending || S.explain) { S.sheet = null; S.pending = null; S.explain = false; render(); }
+    if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; render(); }
     else if (S.activity) { closeCamera(); S.activity = null; S.game = null; render(); }
   });
 
   // Test hook: feed an image to the scanner or chat without a camera.
   window.lingerTest = { scan: (src) => scanImage(src), chatPhoto: (src) => chatDocument(null, src), chatText: (t) => chatInput(t) };
+
+  // ---------- shared or pasted text ----------
+  // Text arrives from the phone's Share menu as ?text=… (Android share target, or the iPhone Shortcut).
+  function handleText(raw, origin) {
+    stopSpeaking(); closeCamera();
+    const t = raw.replace(/\s+/g, ' ').trim();
+    if (!t) return;
+    S.tab = 'lens'; S.activity = null; S.pending = null; S.sheet = null; S.explain = false;
+    const words = t.split(' ');
+    if (words.length <= 3) { // a word or short phrase: show its meaning
+      const k = keyOf(words.find((w) => keyOf(w).length > 2) || words[0]);
+      if (!k) return;
+      makeEntry(k, t, origin === 'share' ? 'Shared text' : 'Pasted text');
+      S.sheet = k; S.sheetRaw = k;
+      return;
+    }
+    Object.keys(D).forEach((k) => { if (D[k].scanned && !isSaved(k)) delete D[k]; });
+    TEXTS.camera = cleanText(t); SUMMARY.camera = summarize(TEXTS.camera);
+    S.source = 'camera'; S.scan = { status: 'done', progress: 100, img: null, msg: '', conf: 0, origin };
+    S.explain = true;
+  }
+  const params = new URLSearchParams(location.search);
+  const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join(' ');
+  if (shared) { handleText(shared, 'share'); history.replaceState(null, '', location.pathname); }
+
+  // Installing the app is what puts Linger in Android's Share menu.
+  let installEvt = null;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; });
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // Shrink the phone frame to fit shorter desktop windows.
   function fit() {
