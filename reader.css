@@ -37,6 +37,16 @@ button { font-family: inherit; cursor: pointer; }
 .card h3 { margin: 0 0 10px; font-size: 16px; color: var(--indigo-900); }
 .tips { margin: 0 0 16px; padding-left: 20px; color: var(--ink-2); display: flex; flex-direction: column; gap: 6px; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.choice { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 12px; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.choice legend { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--indigo-500); padding: 0 4px; }
+.choice label { display: flex; align-items: flex-start; gap: 8px; }
+.choice input { accent-color: var(--indigo-500); margin-top: 3px; }
+.calib.see { background: rgba(246, 248, 255, 0.8); }
+.mover { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--indigo-500); box-shadow: 0 0 0 10px rgba(109, 121, 255, 0.22); transition: left 0.35s ease, top 0.35s ease, transform 0.35s ease; }
+.mover::after { content: ""; position: absolute; inset: 11px; border-radius: 50%; background: #FFFFFF; }
+.mover.rec { transform: scale(0.7); }
+.calib-bar { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); width: min(360px, 80vw); height: 8px; border-radius: 99px; background: var(--indigo-100); overflow: hidden; }
+.calib-bar span { display: block; height: 100%; width: 0; background: var(--indigo-500); }
 .status { margin: 10px 0 0; font-size: 14px; color: var(--muted); min-height: 1.4em; }
 .status.err { color: var(--bad-ink); }
 .small { font-size: 13px; color: var(--muted); margin: 8px 0; }

@@ -33,8 +33,10 @@
     line: null, lineSince: 0, candidate: null, candSince: 0,
     prevLine: null, prevDwell: 0, maxLine: -1,
     cooldownUntil: 0, lastPrompted: {}, events: [], current: null,
-    thresholdMs: 3000, accuracyPx: null
+    thresholdMs: 3000, accuracyPx: null, fast: true
   };
+  const SAVED_KEY = 'lingerReaderCalibrated';
+  const savedAt = (() => { try { return localStorage.getItem(SAVED_KEY); } catch { return null; } })();
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const clean = (w) => w.toLowerCase().replace(/[^a-z]/g, '');
@@ -66,15 +68,17 @@
     const now = performance.now();
     S.samples.push({ x: data.x, y: data.y, t: now });
     S.lastSample = now;
-    while (S.samples.length && now - S.samples[0].t > 300) S.samples.shift();
-    if (S.samples.length < 3) return;
+    // Short window = quicker response; "smoother" mode trades a little lag for less jitter.
+    const win = S.fast ? 150 : 250;
+    while (S.samples.length && now - S.samples[0].t > win) S.samples.shift();
+    if (S.samples.length < 2) return;
     const x = median(S.samples.map((s) => s.x)), y = median(S.samples.map((s) => s.y));
     track(lineAt(x, y), now);
   }
-  // Switch lines only after the eyes stay on the new one for 200 ms, so noise doesn't flicker.
+  // Switch lines only after the eyes stay on the new one briefly, so noise doesn't flicker.
   function track(cand, now) {
     if (cand !== S.candidate) { S.candidate = cand; S.candSince = now; }
-    if (cand === S.line || now - S.candSince < 200) return checkPause(now);
+    if (cand === S.line || now - S.candSince < (S.fast ? 90 : 160)) return checkPause(now);
     if (S.line !== null) { S.prevLine = S.line; S.prevDwell = now - S.lineSince; }
     S.line = cand; S.lineSince = S.candSince;
     if (cand !== null) S.maxLine = Math.max(S.maxLine, cand);
@@ -169,7 +173,7 @@
   document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => { S.mode = b.dataset.mode; setTask(); }));
   $('threshold').addEventListener('input', (e) => { S.thresholdMs = Number(e.target.value) * 1000; $('thrOut').textContent = Number(e.target.value).toFixed(1); });
   $('showDot').addEventListener('change', (e) => { if (window.webgazer && S.tracking) webgazer.showPredictionPoints(e.target.checked); });
-  $('showVideo').addEventListener('change', (e) => { if (window.webgazer && S.tracking) { webgazer.showVideoPreview(e.target.checked); webgazer.showFaceOverlay(e.target.checked); webgazer.showFaceFeedbackBox(e.target.checked); } });
+  $('showVideo').addEventListener('change', (e) => { if (window.webgazer && S.tracking) webgazer.showVideoPreview(e.target.checked); });
   $('recal').addEventListener('click', calibrate);
   letter.addEventListener('click', (e) => {
     if (!S.manual || S.popOpen) return;
@@ -185,81 +189,134 @@
     $('taskText').innerHTML = '<b>Click-to-pause mode:</b> no camera. Click any line to pretend your eyes stopped there, to try the pop-up and the explanations.';
     document.querySelector('.seg').hidden = true;
   });
-  $('start').addEventListener('click', async () => {
+  if (savedAt) { $('useSaved').hidden = false; $('useSaved').textContent = 'Use saved calibration (' + savedAt + ')'; }
+  async function startCamera(skipCal) {
     const st = $('startStatus');
     if (!window.webgazer) { st.textContent = 'The eye-tracking library didn’t load. Check your internet connection and reload the page.'; st.classList.add('err'); return; }
     st.classList.remove('err'); st.textContent = 'Starting camera… allow camera access if your browser asks.';
-    $('start').disabled = true;
+    $('start').disabled = true; $('useSaved').disabled = true;
+    const remember = $('remember').checked;
     try {
-      webgazer.saveDataAcrossSessions(false);
+      // A smaller camera frame means less work per frame, so predictions arrive faster.
+      webgazer.params.camConstraints = { video: { width: { ideal: 480 }, height: { ideal: 360 }, facingMode: 'user' } };
+      webgazer.saveDataAcrossSessions(remember);
       webgazer.setRegression('ridge');
       webgazer.setGazeListener(onGaze);
       await webgazer.begin();
-      webgazer.showVideoPreview(true).showPredictionPoints(false).applyKalmanFilter(true);
-      S.tracking = true;
-      $('recal').hidden = false;
-      st.textContent = '';
-      calibrate();
+      // Mouse movement while reading isn't where you're looking, so don't learn from it.
+      webgazer.removeMouseEventListeners();
+      if (!remember) { webgazer.clearData(); try { localStorage.removeItem(SAVED_KEY); } catch {} }
+      webgazer.showVideoPreview($('showVideo').checked).showFaceOverlay(false).showFaceFeedbackBox(false)
+        .showPredictionPoints($('showDot').checked).applyKalmanFilter(!S.fast);
+      S.tracking = true; $('recal').hidden = false; st.textContent = '';
+      if (skipCal) goRead(); else calibrate();
     } catch (err) {
       st.classList.add('err');
       st.textContent = 'Couldn’t start the camera (' + (err && err.name ? err.name : 'unknown error') + '). Check camera permission, or use click-to-pause mode.';
-      $('start').disabled = false;
+      $('start').disabled = false; $('useSaved').disabled = false;
     }
-  });
+  }
+  $('start').addEventListener('click', () => startCamera(false));
+  $('useSaved').addEventListener('click', () => startCamera(true));
+  $('fast').addEventListener('change', (e) => { S.fast = e.target.checked; if (window.webgazer && S.tracking) webgazer.applyKalmanFilter(!S.fast); });
+
+  function goRead() {
+    $('calib').hidden = true; $('intro').hidden = true; panel.hidden = false; step(3);
+    S.samples = []; S.lineSince = performance.now(); S.cooldownUntil = performance.now() + 1500;
+  }
 
   // ---------- calibration ----------
-  const POS = [[10, 12], [50, 12], [90, 12], [10, 50], [50, 50], [90, 50], [10, 88], [50, 88], [90, 88]];
-  function calibrate() {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const calMode = () => (document.querySelector('input[name="cal"]:checked') || {}).value || 'quick';
+  // Calibration points sit over the letter, because that's the only area where accuracy matters.
+  function letterPoints(cols, rows) {
+    const r = letter.getBoundingClientRect();
+    const top = Math.max(70, r.top + 20), bottom = Math.min(window.innerHeight - 50, r.bottom - 20);
+    const left = r.left + 30, right = r.right - 30;
+    const pts = [];
+    for (let j = 0; j < rows; j++) {
+      const y = top + (bottom - top) * (rows === 1 ? 0.5 : j / (rows - 1));
+      const xs = []; for (let i = 0; i < cols; i++) xs.push(left + (right - left) * (cols === 1 ? 0.5 : i / (cols - 1)));
+      (j % 2 ? xs.reverse() : xs).forEach((x) => pts.push([Math.round(x), Math.round(y)]));
+    }
+    return pts;
+  }
+  async function calibrate() {
     S.calibrating = true; step(2);
+    $('intro').hidden = true; panel.hidden = false; closePopIfOpen();
+    letter.scrollIntoView({ block: 'center' });
+    await wait(250);
     const c = $('calib');
-    c.querySelectorAll('.cdot, .target').forEach((d) => d.remove());
-    $('calibMsg').innerHTML = '<h2>Calibrate</h2><p>Look at each dot and click it <b>5 times</b>, keeping your eyes on it while you click. Dots turn green when done.</p>';
-    $('calibMsg').hidden = false;
+    c.querySelectorAll('.cdot, .target, .mover, .calib-bar').forEach((d) => d.remove());
+    c.classList.toggle('see', true);
+    c.hidden = false;
+    $('calibMsg').hidden = false; $('calibMsg').style.top = '';
+    if (calMode() === 'precise') return precise(c);
+    $('calibMsg').innerHTML = '<h2>Follow the dot</h2><p>Keep your eyes on the blue dot as it moves. Keep your head still. No clicking needed.</p><p style="margin-top:12px"><button type="button" class="btn primary" id="goCal">Start (about 15 s)</button></p>';
+    await new Promise((res) => $('goCal').addEventListener('click', res, { once: true }));
+    $('calibMsg').hidden = true;
+    const pts = letterPoints(3, 4);
+    const dot = document.createElement('div'); dot.className = 'mover'; c.appendChild(dot);
+    const bar = document.createElement('div'); bar.className = 'calib-bar'; bar.innerHTML = '<span></span>'; c.appendChild(bar);
+    dot.style.left = pts[0][0] + 'px'; dot.style.top = pts[0][1] + 'px';
+    await wait(600);
+    for (let k = 0; k < pts.length; k++) {
+      const [x, y] = pts[k];
+      dot.classList.remove('rec'); dot.style.left = x + 'px'; dot.style.top = y + 'px';
+      await wait(450); // give the eyes time to land on the dot
+      dot.classList.add('rec');
+      const end = performance.now() + 550;
+      while (performance.now() < end) { webgazer.recordScreenPosition(x, y, 'click'); await wait(40); }
+      bar.firstChild.style.width = Math.round((k + 1) / pts.length * 100) + '%';
+    }
+    dot.remove(); bar.remove();
+    measure();
+  }
+  function precise(c) {
+    $('calibMsg').innerHTML = '<h2>Calibrate</h2><p>Look at each dot and click it <b>3 times</b>, keeping your eyes on it while you click. Dots turn green when done.</p>';
+    const pts = letterPoints(3, 3);
     let done = 0;
-    POS.forEach(([x, y]) => {
+    pts.forEach(([x, y]) => {
       const d = document.createElement('button');
-      d.type = 'button'; d.className = 'cdot'; d.style.left = x + '%'; d.style.top = y + '%'; d.setAttribute('aria-label', 'Calibration dot');
+      d.type = 'button'; d.className = 'cdot'; d.style.left = x + 'px'; d.style.top = y + 'px'; d.setAttribute('aria-label', 'Calibration dot');
       let n = 0;
-      d.addEventListener('click', () => { // WebGazer also learns from each click
-        n++; d.style.opacity = String(0.25 + n * 0.15);
-        if (n >= 5) { d.classList.add('done'); if (++done === POS.length) measure(); }
+      d.addEventListener('click', () => {
+        webgazer.recordScreenPosition(x, y, 'click');
+        n++; d.style.opacity = String(0.3 + n * 0.23);
+        if (n >= 3) { d.classList.add('done'); if (++done === pts.length) { $('calibMsg').hidden = true; measure(); } }
       });
       c.appendChild(d);
     });
-    c.hidden = false;
   }
-  // Stare at a center dot for 3 s and measure how far the predictions land from it.
-  function measure() {
+  function closePopIfOpen() { if (S.popOpen) closePop(); }
+  // Stare at one dot over the letter for 2 s. Only the up-down error matters for telling lines apart.
+  async function measure() {
     const c = $('calib');
     c.querySelectorAll('.cdot').forEach((d) => d.remove());
-    $('calibMsg').innerHTML = '<h2>Accuracy check</h2><p>Stare at the blue dot for 3 seconds without moving your mouse.</p>';
-    $('calibMsg').style.top = '30%';
-    const t = document.createElement('div'); t.className = 'target'; c.appendChild(t);
-    const pts = [];
-    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-    S.calibrating = false; // let samples flow, but nothing on the page reacts while the overlay is up
-    const startAt = performance.now();
-    const collect = setInterval(async () => {
-      const el = performance.now() - startAt;
-      if (el > 600) { const p = await webgazer.getCurrentPrediction(); if (p) pts.push(Math.hypot(p.x - cx, p.y - cy)); }
-      if (el > 3600) {
-        clearInterval(collect);
-        const err = pts.length ? Math.round(median(pts)) : null;
-        S.accuracyPx = err;
-        const r = lineEls.map((l) => l.getBoundingClientRect());
-        const gap = Math.round((r[2].top + r[2].bottom) / 2 - (r[1].top + r[1].bottom) / 2);
-        $('accuracy').textContent = err === null ? 'no data' : `~${err}px (lines are ${gap}px apart)`;
-        $('calibMsg').style.top = '';
-        $('calibMsg').innerHTML = err === null
-          ? '<h2>No gaze data</h2><p>Make sure your face is visible in the camera preview, then recalibrate.</p>'
-          : `<h2>${err <= gap ? 'Good enough for line-level' : err <= gap * 2 ? 'Rough, but worth a try' : 'Too noisy'}</h2><p>Typical error: about <b>${err}px</b>. Lines in the letter are ${gap}px apart. ${err > gap ? 'More light, a still head and recalibrating usually help.' : ''}</p><p style="margin-top:12px"><button type="button" class="btn primary" id="toRead">Start reading</button> <button type="button" class="btn ghost" id="again">Recalibrate</button></p>`;
-        t.remove();
-        const go = $('toRead'), again = $('again');
-        if (go) go.addEventListener('click', () => { c.hidden = true; $('intro').hidden = true; panel.hidden = false; step(3); S.lineSince = performance.now(); S.cooldownUntil = performance.now() + 1500; });
-        if (again) again.addEventListener('click', calibrate);
-        if (err === null) { const b = document.createElement('p'); b.innerHTML = '<button type="button" class="btn primary">Recalibrate</button>'; b.firstChild.addEventListener('click', calibrate); $('calibMsg').appendChild(b); }
-      }
-    }, 100);
+    const r = letter.getBoundingClientRect();
+    const cx = Math.round((r.left + r.right) / 2), cy = Math.round(Math.min(Math.max((r.top + r.bottom) / 2, 120), window.innerHeight - 120));
+    $('calibMsg').hidden = false; $('calibMsg').style.top = '18%';
+    $('calibMsg').innerHTML = '<h2>Accuracy check</h2><p>Stare at the dot for 2 seconds.</p>';
+    const t = document.createElement('div'); t.className = 'target'; t.style.left = cx + 'px'; t.style.top = cy + 'px'; c.appendChild(t);
+    await wait(400);
+    const ys = [];
+    const end = performance.now() + 1600;
+    while (performance.now() < end) { const p = await webgazer.getCurrentPrediction(); if (p) ys.push(Math.abs(p.y - cy)); await wait(60); }
+    t.remove();
+    S.calibrating = false;
+    const err = ys.length ? Math.round(median(ys)) : null;
+    S.accuracyPx = err;
+    const lr = lineEls.map((l) => l.getBoundingClientRect());
+    const gap = Math.round((lr[2].top + lr[2].bottom) / 2 - (lr[1].top + lr[1].bottom) / 2);
+    $('accuracy').textContent = err === null ? 'no data' : `~${err}px up/down (lines ${gap}px apart)`;
+    if (err !== null && $('remember').checked) { try { localStorage.setItem(SAVED_KEY, new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })); } catch {} }
+    $('calibMsg').style.top = '';
+    $('calibMsg').innerHTML = err === null
+      ? '<h2>No gaze data</h2><p>Make sure your face is visible in the camera preview, then recalibrate.</p><p style="margin-top:12px"><button type="button" class="btn primary" id="again">Recalibrate</button></p>'
+      : `<h2>${err <= gap / 2 ? 'Good enough for line-level' : err <= gap ? 'Rough, but worth a try' : 'Too noisy'}</h2><p>Your gaze lands about <b>${err}px</b> above or below where you look. Lines are ${gap}px apart. ${err > gap / 2 ? 'More light, a still head and recalibrating usually help.' : ''}</p><p style="margin-top:12px"><button type="button" class="btn primary" id="toRead">Start reading</button> <button type="button" class="btn ghost" id="again">Recalibrate</button></p>`;
+    const go = $('toRead'), again = $('again');
+    if (go) go.addEventListener('click', goRead);
+    if (again) again.addEventListener('click', calibrate);
   }
 
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.popOpen) closePop(); });
@@ -268,6 +325,7 @@
   window.lingerTest = {
     open() { S.tracking = true; $('intro').hidden = true; panel.hidden = false; step(3); },
     gaze(x, y) { S.lastSample = performance.now(); onGaze({ x, y }); },
+    calibrate: () => calibrate(),
     lineCenter(i) { const r = lineEls[i].getBoundingClientRect(); return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 }; }
   };
 })();
