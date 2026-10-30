@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Linger</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<header class="top">
+  <img src="icons/icon-32.png" width="28" height="28" alt="">
+  <div><strong>Linger</strong><span id="host">this page</span></div>
+</header>
+
+<main>
+  <p class="blocked" id="blocked" hidden>Linger can’t run on this page (browser settings or the Chrome Web Store). Try a normal website.</p>
+
+  <section>
+    <label class="sw"><span><b>Underline hard words</b><small>On every website</small></span><input type="checkbox" id="highlight"><i></i></label>
+    <label class="sw"><span><b>On this site</b><small id="siteLabel">Turn off for banking or work tools</small></span><input type="checkbox" id="site"><i></i></label>
+    <label class="sw"><span><b>Bigger words</b><small>Larger underlined words, easier to tap</small></span><input type="checkbox" id="bigger"><i></i></label>
+    <button type="button" class="btn primary" id="explain">✦ Explain this page</button>
+  </section>
+
+  <section>
+    <h2>👁 Eye tracking</h2>
+    <label class="sw"><span><b>Notice when I’m stuck</b><small>Uses your webcam. Video stays on this laptop.</small></span><input type="checkbox" id="eye"><i></i></label>
+    <label class="slider"><span>Pause after <output id="secsOut">3</output> s on one line</span><input type="range" id="secs" min="1.5" max="6" step="0.5" value="3"></label>
+    <button type="button" class="btn ghost small" id="recal">Recalibrate</button>
+    <p class="hint" id="eyeHint">After turning it on, follow the dot for about 15 seconds. Then read normally.</p>
+  </section>
+
+  <section>
+    <h2>📱 Your phone</h2>
+    <div id="paired" hidden><p class="ok"><span class="dot"></span>Saving to your phone · <span id="codeShow"></span></p><button type="button" class="link" id="unpair">Disconnect</button></div>
+    <form id="pairForm"><p class="hint">In the Linger app, open <b>Words → Turn on live sync</b> and type the code here.</p>
+      <div class="row"><input id="code" placeholder="xxxx-xxxx-xxxx" autocomplete="off" spellcheck="false"><button type="submit" class="btn primary small">Connect</button></div>
+      <p class="hint" id="pairMsg" role="status"></p></form>
+  </section>
+
+  <section>
+    <h2>★ Saved <span class="count" id="savedCount">0</span></h2>
+    <ul id="saved"></ul>
+    <a class="link" href="https://somohanty04.github.io/linger-prototype/" target="_blank" rel="noopener">Open the Linger app →</a>
+  </section>
+</main>
+<script src="popup.js"></script>
+</body>
+</html>

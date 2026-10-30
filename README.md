@@ -20,6 +20,10 @@ This repository is a clickable prototype of the phone app. It runs entirely in t
   - **Fill in the story**: put your saved words back into three short stories, then see which ones you got right.
   - **Flashcards**: quiz yourself with the real sentence where you first saw each word.
 
+## Chrome extension
+
+`extension/` is the Linger Chrome extension: it underlines hard words on any website, explains them on click, explains whole pages, saves words to the phone app (Firebase), and has an optional webcam eye-tracking switch. Download `linger-extension.zip` from the site, then load it in `chrome://extensions` (Developer mode → Load unpacked). See `extension/README.md`.
+
 ## Laptop pause test
 
 `reader.html` tests whether a laptop webcam (WebGazer.js) can tell when you are stuck on a line of a landlord letter. It calibrates in about 15 seconds, asks "Stuck on this line?" after a long look or a re-read, and logs whether each prompt was right.
