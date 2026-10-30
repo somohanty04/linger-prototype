@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1F2DA8">
+<title>Linger Reader · pause test</title>
+<meta name="description" content="Week 1 test: can a laptop webcam tell when you are stuck on a line of text?">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Source+Serif+4:wght@500;600&display=swap">
+<link rel="stylesheet" href="reader.css?v=1">
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <a class="back" href="./">← Phone app prototype</a>
+    <div class="brand"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="11.5" fill="none" stroke="#44C9E6" stroke-width="3"/><circle cx="15" cy="15" r="5" fill="#44C9E6"/></svg>Linger Reader</div>
+    <p class="eyebrow">Week 1 test · laptop webcam pause detection</p>
+    <h1>Can Linger tell when you’re stuck on a line?</h1>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="main">
+    <ol class="steps" aria-label="Test steps">
+      <li id="step1" class="step on"><b>1</b> Turn on camera</li>
+      <li id="step2" class="step"><b>2</b> Calibrate</li>
+      <li id="step3" class="step"><b>3</b> Read the letter</li>
+    </ol>
+
+    <div class="panel" id="intro">
+      <h2>Before you start</h2>
+      <ul class="tips">
+        <li>Use a laptop with a webcam, in good light, with your face centered.</li>
+        <li>Keep your head fairly still. Glasses are OK but may lower accuracy.</li>
+        <li>The video never leaves your computer: WebGazer runs in this browser tab and nothing is uploaded.</li>
+      </ul>
+      <div class="row">
+        <button type="button" class="btn primary" id="start">Turn on camera</button>
+        <button type="button" class="btn ghost" id="manual">No camera? Try click-to-pause mode</button>
+      </div>
+      <p class="status" id="startStatus" role="status"></p>
+    </div>
+
+    <div class="panel" id="readerPanel" hidden>
+      <div class="reader-head">
+        <div class="seg" role="group" aria-label="What you are testing">
+          <button type="button" data-mode="normal" aria-pressed="true">Task A: read normally</button>
+          <button type="button" data-mode="stuck" aria-pressed="false">Task B: get stuck on purpose</button>
+        </div>
+        <p class="task" id="taskText"></p>
+      </div>
+      <article class="letter" id="letter" aria-label="Letter from landlord"></article>
+      <div class="pop" id="pop" role="dialog" aria-label="Linger noticed a pause" hidden></div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="card">
+      <h3>Live signal</h3>
+      <div class="meter-row"><span>Line you’re looking at</span><strong id="liveLine">–</strong></div>
+      <div class="meter-row"><span>Time on this line</span><strong id="liveDwell">–</strong></div>
+      <div class="meter"><span id="dwellBar"></span></div>
+      <div class="meter-row"><span>Calibration error</span><strong id="accuracy">not measured</strong></div>
+      <label class="slider"><span>Pause after <output id="thrOut">3.0</output> s on one line</span>
+        <input type="range" id="threshold" min="1.5" max="6" step="0.5" value="3"></label>
+      <label class="check"><input type="checkbox" id="showDot"> Show my gaze dot</label>
+      <label class="check"><input type="checkbox" id="showVideo" checked> Show camera preview</label>
+      <button type="button" class="btn small ghost" id="recal" hidden>Recalibrate</button>
+    </div>
+
+    <div class="card">
+      <h3>Results</h3>
+      <div class="stats">
+        <div><strong id="sPrompts">0</strong><span>prompts</span></div>
+        <div><strong id="sYes">0</strong><span>“yes, stuck”</span></div>
+        <div><strong id="sNo">0</strong><span>“no, just reading”</span></div>
+      </div>
+      <p class="small" id="precision">Each prompt asks if it was right. That tells you how often the camera is correct.</p>
+      <ol class="log" id="log"></ol>
+      <div class="row">
+        <button type="button" class="btn small ghost" id="copy">Copy results</button>
+        <button type="button" class="btn small ghost" id="clear">Clear</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="calib" id="calib" hidden>
+  <div class="calib-msg" id="calibMsg">
+    <h2>Calibrate</h2>
+    <p>Look at each dot and click it <b>5 times</b>, keeping your eyes on it while you click. Dots turn green when done.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/webgazer@3.4.0/dist/webgazer.js"></script>
+<script src="reader.js?v=1"></script>
+</body>
+</html>
