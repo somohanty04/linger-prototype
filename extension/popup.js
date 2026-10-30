@@ -15,7 +15,8 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
   if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain', 'eye', 'recal', 'secs'].forEach((id) => { $(id).disabled = true; }); }
   if (usable && !status) $('blocked').textContent = 'Reload this page to start Linger here.';
 
-  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, pairCode: '', saved: [] });
+  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, pairCode: '', saved: [], gazeProblem: null });
+  if (st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = 'Last time on ' + st.gazeProblem.site + ': ' + st.gazeProblem.why + '. Try another site, or check camera access.'; }
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
   $('bigger').checked = st.bigger;

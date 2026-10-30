@@ -2,6 +2,8 @@
 
 A menu-bar app that explains hard English words in **any app**: Mail, PDFs in Preview, Word, Slack, websites.
 
+- **Linger mode** (on by default, ⌃⌥U to turn on/off): hard words in the window you're reading get an orange dotted underline, refreshed about once a second when the window changes. Rest the mouse on an underlined word to see its card. Scrolling hides the lines until the page settles.
+
 - **⌃⌥L** (Control-Option-L): point at a word with the mouse and press the keys. A card shows the meaning, the sentence in plain English, local notes for slang, 🔊 Hear it, and ★ Save to Linger.
 - **⌃⌥E** (Control-Option-E): explain the window you're reading: "What this wants from you", key dates and amounts, and the hard words (click one for its meaning).
 - **📱 Connect your phone** (menu): type the code from the phone app (Words → Turn on live sync); saved words appear on the phone right away.
@@ -36,4 +38,4 @@ This uses the Command Line Tools (`xcode-select --install`). The app is written 
 
 ## Next
 
-Linger mode (underline hard words in the front window) and webcam eye tracking across all apps.
+Webcam eye tracking across all apps.

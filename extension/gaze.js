@@ -47,22 +47,59 @@
   }
 
   // ---------- start / stop ----------
+  // Start-up, step by step with visible progress, so nothing fails silently.
+  // (WebGazer's own begin() never finishes if the camera can't start, so check the camera ourselves first.)
   async function start() {
     attach();
-    if (!wg) { message('Eye tracking couldn’t load', 'Reload the page and try again.'); return; }
+    const fail = (title, body, why) => { busyMsg(null); message(title, body); report(why || title); G.on = false; chip(); };
+    if (!wg) return fail('Eye tracking couldn’t load', 'Reload the page and try again.', 'webgazer missing');
+    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+      return fail('This page can’t use the camera', 'Eye tracking works on secure (https) websites. Try another page, like the Linger test page.', 'insecure context');
+    try { if (document.featurePolicy && !document.featurePolicy.allowsFeature('camera')) return fail('This website blocks the camera', 'Some sites don’t allow any camera use. Try eye tracking on another website, like the Linger test page.', 'camera blocked by site policy'); } catch {}
+    busyMsg('Starting the camera…', 'If Chrome asks to use your camera, click Allow.');
+    try {
+      const probe = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      probe.getTracks().forEach((t) => t.stop());
+    } catch (e) {
+      const n = e && e.name;
+      if (n === 'NotAllowedError' || n === 'SecurityError') return fail('Camera access is blocked', 'Click the camera icon at the right of the address bar, choose “Always allow”, then turn eye tracking on again.', 'camera ' + n);
+      if (n === 'NotFoundError' || n === 'OverconstrainedError') return fail('No camera found', 'Linger needs a webcam for eye tracking.', 'camera ' + n);
+      if (n === 'NotReadableError' || n === 'AbortError') return fail('The camera is busy', 'Another app (like Zoom or FaceTime) may be using it. Close it and try again.', 'camera ' + n);
+      return fail('Couldn’t turn on the camera', String((e && e.message) || e), 'camera ' + n);
+    }
+    busyMsg('Loading eye tracking…', 'The first time can take 10–20 seconds while the face model downloads.');
     try {
       wg.params.camConstraints = { video: { width: { ideal: 480 }, height: { ideal: 360 }, facingMode: 'user' } };
       wg.saveDataAcrossSessions(true);
       wg.setRegression('weightedRidge').setGazeListener(onGaze); // weighted: recent clicks and calibration count more
-      await wg.begin();
+      const began = await Promise.race([
+        new Promise((res) => { wg.begin(() => res('fail')).then(() => res('ok'), (e) => res('error: ' + ((e && e.message) || e))); }),
+        wait(45000).then(() => 'timeout')
+      ]);
+      if (began !== 'ok') return fail('Eye tracking couldn’t start', began === 'timeout' ? 'The face model didn’t load. Check your internet connection and try again.' : 'Try reloading the page, then turn it on again.', 'begin ' + began);
       wg.removeMouseEventListeners();
       wg.showVideoPreview(false).showFaceOverlay(false).showFaceFeedbackBox(false).showPredictionPoints(false).applyKalmanFilter(true);
+      // Wait until the tracker actually sees a face before calibrating.
       G.on = true; chip();
+      busyMsg('Looking for your face…', 'Sit in front of the camera with light on your face.');
+      const t0 = performance.now();
+      while (!(G.last > t0) && performance.now() - t0 < 20000) { const p = await wg.getCurrentPrediction().catch(() => null); if (p) break; await wait(300); }
+      busyMsg(null);
+      report('');
       calibrate();
     } catch (e) {
-      message('Couldn’t turn on the camera', 'Allow camera access for this site (the camera icon in the address bar), then try again.');
+      fail('Eye tracking couldn’t start', 'Try reloading the page, then turn it on again.', 'start ' + ((e && e.message) || e));
     }
   }
+  // A small "working on it" box, so people know something is happening.
+  function busyMsg(title, body) {
+    let b = root.querySelector('.busy');
+    if (!title) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('div'); b.className = 'shade busy'; ui.appendChild(b); }
+    b.innerHTML = `<div class="msg"><h2>${title}</h2><div>${body || ''}</div></div>`;
+  }
+  // Remember the last problem so the Linger menu can show it.
+  function report(why) { try { chrome.storage.local.set({ gazeProblem: why ? { t: Date.now(), site: location.hostname, why } : null }); } catch {} }
   function stop() {
     G.on = false; G.calibrating = false;
     try { wg.end(); } catch {}

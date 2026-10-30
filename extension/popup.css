@@ -35,3 +35,5 @@ h2 { margin: 0; font-size: 14px; color: var(--indigo-900); display: flex; align-
 #saved li b { color: var(--indigo-900); }
 #saved li span { color: var(--muted); }
 .blocked { margin: 0; padding: 10px 12px; border-radius: 12px; background: #FFE7DF; color: #A81F64; }
+
+.problem { margin: 0; padding: 8px 10px; border-radius: 10px; background: #FFE7DF; color: #A81F64; font-size: 12px; }

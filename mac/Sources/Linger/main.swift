@@ -3,12 +3,15 @@ import SwiftUI
 import Carbon
 
 /// Linger for Mac: a menu-bar app that explains hard English words in any app.
+///   Linger mode (⌃⌥U): hard words in the front window get underlined; rest the mouse on one to see its meaning
 ///   ⌃⌥L  look up the word under the mouse        ⌃⌥E  explain the window you're reading
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var status: NSStatusItem!
     private var cardPanel: FloatingPanel?, explainPanel: FloatingPanel?, pairPanel: FloatingPanel?, toastPanel: FloatingPanel?
     private let card = CardModel(), explain = ExplainModel(), pair = PairModel()
     private var clickAway: Any?
+    private let mode = LingerMode()
+    private var modeWanted: Bool { get { UserDefaults.standard.object(forKey: "lingerMode") as? Bool ?? true } set { UserDefaults.standard.set(newValue, forKey: "lingerMode") } }
 
     func applicationDidFinishLaunching(_ note: Notification) {
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -18,6 +21,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         HotKeys.register(id: 1, keyCode: kVK_ANSI_L, modifiers: controlKey | optionKey) { [weak self] in self?.lookUpUnderMouse() }
         HotKeys.register(id: 2, keyCode: kVK_ANSI_E, modifiers: controlKey | optionKey) { [weak self] in self?.explainWindow() }
+        HotKeys.register(id: 3, keyCode: kVK_ANSI_U, modifiers: controlKey | optionKey) { [weak self] in self?.toggleMode() }
+        mode.onHover = { [weak self] w, sentence in self?.showCard(for: w, sentence: sentence, why: "") }
+        mode.onStatus = { [weak self] text in self?.status.button?.toolTip = "Linger · " + text }
+        if modeWanted && ScreenReader.hasPermission { mode.start() }
 
         card.onClose = { [weak self] in self?.closeCard() }
         explain.onClose = { [weak self] in self?.explainPanel?.orderOut(nil) }
@@ -34,7 +41,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.removeAllItems()
         let head = NSMenuItem(title: "Linger · explains hard English anywhere", action: nil, keyEquivalent: ""); head.isEnabled = false
         menu.addItem(head)
+        let perm = NSMenuItem(title: ScreenReader.hasPermission ? "✓ Screen reading allowed" : "⚠️ Screen reading not allowed yet", action: nil, keyEquivalent: ""); perm.isEnabled = false
+        menu.addItem(perm)
         menu.addItem(.separator())
+        let lm = item("Linger mode: underline hard words", #selector(toggleMode)); lm.state = mode.isOn ? .on : .off
+        lm.keyEquivalent = "u"; lm.keyEquivalentModifierMask = [.control, .option]
+        menu.addItem(lm)
+        let tip = NSMenuItem(title: "    Rest the mouse on an underlined word to see its meaning", action: nil, keyEquivalent: ""); tip.isEnabled = false
+        menu.addItem(tip)
         let look = item("Look up word under mouse", #selector(menuLookUp)); look.keyEquivalent = "l"; look.keyEquivalentModifierMask = [.control, .option]
         let expl = item("Explain this window", #selector(menuExplain)); expl.keyEquivalent = "e"; expl.keyEquivalentModifierMask = [.control, .option]
         menu.addItem(look); menu.addItem(expl)
@@ -72,6 +86,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         try? task.run(); NSApp.terminate(nil)
     }
     @objc private func unpair() { Sync.pairCode = "" }
+    @objc func toggleMode() {
+        if mode.isOn { mode.stop(); modeWanted = false; toast("Linger mode off") }
+        else if !ScreenReader.hasPermission { toast("Allow screen reading first (Linger menu)"); askPermission() }
+        else { modeWanted = true; mode.start(); toast("Linger mode on: hard words will be underlined") }
+    }
     @objc private func openPhoneApp() { NSWorkspace.shared.open(URL(string: "https://somohanty04.github.io/linger-prototype/")!) }
     @objc private func quit() { NSApp.terminate(nil) }
 
@@ -81,10 +100,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         a.informativeText = """
         Linger explains hard English words in any app: email, PDFs, websites, documents.
 
+        • Linger mode (on by default, ⌃⌥U to turn on or off): hard words in the window you're reading get an orange dotted underline. Rest the mouse on one to see its meaning.
         • ⌃⌥L (Control-Option-L): point at a word with the mouse, press the keys, and Linger shows its meaning, the sentence in plain English, and lets you hear it and save it.
         • ⌃⌥E (Control-Option-E): explain the window you're reading: what it wants from you, key dates and amounts, and the hard words.
 
-        Linger reads text on your screen only when you press these keys. Everything stays on this Mac, except saved words you send to your phone.
+        Linger reads the window in front only while Linger mode is on, or when you press these keys. Everything stays on this Mac, except saved words you send to your phone.
         \(ScreenReader.hasPermission ? "" : "\nFirst, allow screen reading: click Allow, turn Linger on in System Settings → Privacy & Security → Screen & System Audio Recording, then restart Linger from its menu.")
         """
         a.addButton(withTitle: ScreenReader.hasPermission ? "OK" : "Allow screen reading")
@@ -97,6 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func lookUpUnderMouse() {
         guard ScreenReader.hasPermission else { toast("Allow screen reading first (Linger menu)"); askPermission(); return }
+        toast("Looking up…")
         let p = ScreenReader.mouse()
         let area = CGRect(x: p.x - 450, y: p.y - 80, width: 900, height: 160)
         Task { @MainActor in
@@ -106,6 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 let hit = result.words.first { $0.rect.insetBy(dx: -3, dy: -3).contains(p) }
                     ?? result.words.min { dist($0.rect, p) < dist($1.rect, p) }.flatMap { dist($0.rect, p) < 45 ? $0 : nil }
                 guard let w = hit else { toast("No text under the mouse"); return }
+                toastPanel?.orderOut(nil)
                 showCard(for: w, sentence: ScreenReader.sentence(around: w, in: result), why: "")
             } catch { toast("Couldn’t read the screen") }
         }
@@ -147,7 +169,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.cardPanel?.refit()
         }
     }
-    private func closeCard() { cardPanel?.orderOut(nil); if let c = clickAway { NSEvent.removeMonitor(c); clickAway = nil } }
+    private func closeCard() { cardPanel?.orderOut(nil); mode.cardClosed(); if let c = clickAway { NSEvent.removeMonitor(c); clickAway = nil } }
     /// Close the card when the user clicks somewhere else.
     private func armClickAway() {
         if let c = clickAway { NSEvent.removeMonitor(c) }
