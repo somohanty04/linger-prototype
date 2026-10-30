@@ -25,7 +25,9 @@ Works on macOS 14 (Sonoma) or newer, Apple silicon and Intel.
 cd mac && ./build.sh
 ```
 
-This uses the Command Line Tools (`xcode-select --install`). The app is written to `mac/build/Linger.app`. Every rebuild has a new signature, so macOS asks for the screen-reading permission again: remove the old Linger entry in Screen & System Audio Recording and allow the new one.
+This uses the Command Line Tools (`xcode-select --install`). The app is written to `mac/build/Linger.app`.
+
+**Signing:** builds made on Sonakshi's Mac are signed with a self-signed **"Linger Developer"** certificate kept in that Mac's Keychain. Every build has the same identity, so the Screen Recording permission (on her Mac and on teammates' Macs) survives updates. Builds made on a Mac without that certificate fall back to an ad-hoc signature; those work too, but macOS treats each one as a new app and asks for the permission again. Release builds for the group should come from the Mac that has the certificate.
 
 ## Files
 

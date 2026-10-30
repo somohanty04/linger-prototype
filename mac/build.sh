@@ -46,6 +46,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
-# Ad-hoc signature so macOS will run it on this Mac.
-codesign --force --deep --sign - "$APP"
+# Sign with the "Linger Developer" certificate if this Mac has it (same signature every build, so the
+# Screen Recording permission survives updates). Otherwise fall back to an ad-hoc signature.
+if security find-certificate -c "Linger Developer" >/dev/null 2>&1; then
+  codesign --force --deep --sign "Linger Developer" "$APP"
+else
+  echo "No 'Linger Developer' certificate on this Mac: using an ad-hoc signature (permission resets each build)."
+  codesign --force --deep --sign - "$APP"
+fi
 echo "Built $APP"
