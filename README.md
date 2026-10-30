@@ -11,11 +11,17 @@ This repository is a clickable prototype of the phone app. It runs entirely in t
 - **Lens**: tap a word on the lease letter or café sign. Tapping stands in for your eyes pausing on it. Linger asks first, then shows the meaning in context and a local note. Hard words are underlined and explained automatically.
   - **Explain this letter**: a plain-English summary of what the letter or sign wants from you, with key dates.
   - **Read aloud**: reads the text with the browser's built-in voice and highlights each word as it is read.
+  - **📷 Camera**: point your phone at any letter, sign or bill (or upload a photo). Tesseract.js reads the text inside the browser, hard words are underlined, Explain builds a plain-English summary with dates and amounts, and words you tap are looked up on Wiktionary. Without an AI backend the summary is made by swapping formal words for plain ones.
+- **WhatsApp helper (simulated)**: from Lens, tap "Prefer texting?". Send a photo or try a sample letter and Linger replies with a summary, key dates, a voice note, and the hard words it saved to Words. Type any word to get its meaning. A real WhatsApp number would need a small server (for example Twilio's WhatsApp sandbox).
 - **Words**: your saved words, with the sentence, place and date you met each one. **Start Activity** opens Fill in the story.
 - **Local**: Pittsburgh slang, local customs, and a "pause map" of where newcomers get stuck (sample data).
 - **Review**: practice activities.
   - **Fill in the story**: put your saved words back into three short stories, then see which ones you got right.
   - **Flashcards**: quiz yourself with the real sentence where you first saw each word.
+
+## Laptop pause test
+
+`reader.html` tests whether a laptop webcam (WebGazer.js) can tell when you are stuck on a line of a landlord letter. It calibrates in about 15 seconds, asks "Stuck on this line?" after a long look or a re-read, and logs whether each prompt was right.
 
 ## Glasses simulation
 

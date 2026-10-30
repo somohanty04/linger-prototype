@@ -31,6 +31,21 @@
     }
   };
   const ALIAS = { chairs: 'parkingchair', redd: 'reddup', "n'at": 'nat' };
+  // Plain swaps for formal words, used to explain text the camera reads (no AI in this prototype).
+  const PLAIN = {
+    arrears: 'late rent or money owed', remit: 'pay', remitted: 'paid', remittance: 'payment', premises: 'building', lessor: 'landlord', lessee: 'renter',
+    tenant: 'renter', tenants: 'renters', hereby: '', herein: 'in this letter', thereof: 'of it', pursuant: 'according', prohibited: 'not allowed',
+    permitted: 'allowed', prior: 'before', consent: 'permission', retain: 'keep', commence: 'start', commencement: 'start', terminate: 'end',
+    termination: 'ending', delinquent: 'late', eviction: 'being made to move out', notwithstanding: 'even so', aforementioned: 'mentioned above',
+    undergo: 'go through', ensure: 'make sure', accessible: 'open to enter', failure: 'not doing it', subletting: 'renting your place to someone else',
+    sublet: 'rent your place to someone else', obligated: 'required', obligation: 'duty', stipulated: 'stated', forfeit: 'lose', forfeiture: 'losing',
+    liable: 'responsible', liability: 'responsibility', deductible: 'amount you pay first', premium: 'regular payment', balance: 'amount owed',
+    overdue: 'late', penalty: 'fine', assessed: 'charged', statement: 'bill', applicable: 'that applies', accordance: 'agreement',
+    renewal: 'extending', expiration: 'end date', vacate: 'move out', utilities: 'water, power and gas', jurisdiction: 'area of authority'
+  };
+  const PHRASES = [[/failure to (\w+) (may|will|could) result in/gi, 'if you don’t $1, it could lead to'], [/failure to/gi, 'if you don’t'], [/may result in/gi, 'could lead to'], [/termination of (your )?service/gi, 'your service being cut off'], [/for your records/gi, 'so you have it later'], [/prior written consent/gi, 'written permission first'], [/in full/gi, 'completely'], [/no later than/gi, 'by'], [/in accordance with/gi, 'following'], [/you are hereby notified that/gi, 'this letter tells you that'], [/is hereby/gi, 'is'], [/are hereby/gi, 'are']];
+  const SCAN_PLACE = 'Camera scan';
+  TEXTS.camera = '';
   const D = {
     yinz: { word: 'yinz', kind: 'slang', say: 'yinz', meaning: 'You all. Pittsburgh’s way of saying “you” to a group.', ctx: 'The sign is talking to everyone who reads it: “Heads up, all of you!”', local: 'Friendly and very local. Newcomers using it usually get a smile.', sentence: 'Heads up, yinz!', src: 'cafe' },
     slippy: { word: 'slippy', kind: 'slang', say: 'SLIP-ee', meaning: 'Slippery.', ctx: 'The back parking lot gets slippery once it snows.', local: 'Common across western Pennsylvania. It is not a typo.', sentence: 'The back lot gets slippy after snow.', src: 'cafe' },
@@ -84,8 +99,11 @@
     activity: null, // 'story' | 'cards'
     cards: { idx: 0, revealed: false },
     game: null,
-    speaking: null // which text is being read aloud
+    speaking: null, // which text is being read aloud
+    scan: { status: 'idle', progress: 0, img: null, msg: '' }, // camera: idle | live | reading | done | error
+    chat: { msgs: [], busy: false }
   };
+  let camStream = null;
 
   // ---------- helpers ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -139,6 +157,138 @@
   }
   const summaryText = (s) => [s.title + '.', ...s.points.map((p) => p[1].replace(/<[^>]+>/g, ''))].join(' ');
 
+  // ---------- understanding text from a photo ----------
+  const MONTHS = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
+  const DATE_SRC = `\\b(?:(?:${MONTHS})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?|\\d{1,2}\\/\\d{1,2}(?:\\/\\d{2,4})?|the\\s+\\d{1,2}(?:st|nd|rd|th))\\b`;
+  const MONEY_RE = /\$\s?\d[\d,]*(?:\.\d{2})?/g;
+  const ACTION_RE = /\b(must|required|due|please|prohibited|not permitted|failure|deadline|pay|payment|no later than|shall|need to|by the|overdue|delinquent|owe)\b/i;
+  const plainify = (s) => {
+    let t = s; PHRASES.forEach(([re, r]) => { t = t.replace(re, r); });
+    t = t.replace(/[A-Za-z]+/g, (w) => { const p = PLAIN[w.toLowerCase()]; if (p === undefined) return w; if (!p) return ''; return w[0] === w[0].toUpperCase() ? cap(p) : p; });
+    t = t.replace(/\b([Aa]) ([aeiou])/g, (m, a, v) => a + 'n ' + v).replace(/\s{2,}/g, ' ').replace(/\s+([.,])/g, '$1').trim();
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
+  const sentencesOf = (text) => (text || '').split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.split(' ').length > 2);
+  const isHeading = (s) => s.replace(/[^A-Za-z]/g, '').length > 0 && s === s.toUpperCase();
+  const isHard = (k) => (D[k] && D[k].kind !== 'common') || PLAIN[k] !== undefined || k.length >= 11;
+  function summarize(text) {
+    const sents = sentencesOf(text);
+    let acts = sents.filter((s) => !isHeading(s) && ACTION_RE.test(s));
+    if (!acts.length) acts = sents.slice(0, 3);
+    const points = acts.slice(0, 4).map((s) => [/\$/.test(s) ? '💵' : new RegExp(DATE_SRC, 'i').test(s) ? '📅' : /prohibit|not permitted|not allowed/i.test(s) ? '🚫' : '📌', `<b>${esc(plainify(s))}</b>`]);
+    const dates = [...new Set([...(text.match(new RegExp(DATE_SRC, 'gi')) || []), ...(text.match(MONEY_RE) || [])].map((d) => d.trim()))].slice(0, 5);
+    return { title: 'What this wants from you', points, dates, note: 'Made automatically from the text Linger read, by swapping formal words for plain ones. In the full app, an AI would write this summary.' };
+  }
+  // Words met in scanned text get an entry on the fly: a plain swap if we have one, otherwise a dictionary lookup.
+  function makeEntry(k, text, place) {
+    if (D[k]) return D[k];
+    const sentence = sentencesOf(text).find((s) => s.toLowerCase().includes(k)) || '';
+    const p = PLAIN[k];
+    D[k] = { word: k, kind: isHard(k) ? 'hard' : 'common', meaning: p ? cap(p) + '.' : 'Looking up…', ctx: sentence ? 'In plain English: ' + plainify(sentence) : 'A word you looked up.', sentence, place, scanned: true };
+    if (!p) D[k].pending = lookup(k);
+    return D[k];
+  }
+  async function lookup(k) {
+    try {
+      // Wiktionary's free API; definitions come as HTML, so strip tags and pick a short one.
+      const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(k));
+      const j = r.ok ? await r.json() : null;
+      const defs = ((j && j.en) || []).flatMap((x) => x.definitions || []).map((d) => {
+        const doc = new DOMParser().parseFromString(d.definition || '', 'text/html');
+        doc.querySelectorAll('style, sup').forEach((n) => n.remove());
+        return doc.body.textContent.replace(/\s+/g, ' ').trim();
+      }).filter((t) => t && !/^(obsolete|archaic|plural of|alternative)/i.test(t));
+      const def = defs.find((t) => t.length <= 140) || defs[0];
+      D[k].meaning = def ? def.charAt(0).toUpperCase() + def.slice(1) : 'Not in the dictionary yet.';
+    } catch { D[k].meaning = 'Couldn’t look this word up right now.'; }
+    delete D[k].pending;
+    render();
+  }
+
+  // ---------- camera and text reading (Tesseract.js runs in the browser) ----------
+  let tessLoading = null;
+  const loadTesseract = () => tessLoading || (tessLoading = new Promise((res, rej) => {
+    if (window.Tesseract) return res();
+    const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    s.onload = res; s.onerror = () => { tessLoading = null; rej(new Error('load')); }; document.head.appendChild(s);
+  }));
+  async function readImage(src, onProgress) {
+    await loadTesseract();
+    const { data } = await window.Tesseract.recognize(src, 'eng', { logger: (m) => { if (m.status === 'recognizing text') onProgress(Math.round(m.progress * 100)); } });
+    return data.text.replace(/[|_~^`{}<>]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').slice(0, 160).join(' ');
+  }
+  // Big phone photos are slow to read; shrink them first.
+  const shrink = (src, max = 1800) => new Promise((res) => {
+    const img = new Image();
+    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.9)); };
+    img.onerror = () => res(src); img.src = src;
+  });
+  const fileToDataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+  async function startCamera() {
+    stopSpeaking();
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+      S.scan = { status: 'live', progress: 0, img: null, msg: '' };
+    } catch {
+      S.scan = { status: 'error', progress: 0, img: null, msg: 'Couldn’t open the camera. Allow camera access, or upload a photo instead.' };
+    }
+    render();
+  }
+  function stopCamera() { if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; } }
+  function capture() {
+    const v = document.getElementById('cam'); if (!v || !v.videoWidth) return;
+    const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0);
+    scanImage(c.toDataURL('image/jpeg', 0.92));
+  }
+  async function scanImage(src) {
+    stopCamera(); stopSpeaking();
+    S.pending = null; S.sheet = null; S.explain = false;
+    S.scan = { status: 'reading', progress: 0, img: src, msg: '' }; render();
+    try {
+      const text = await readImage(await shrink(src), (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; });
+      if (text.split(' ').length < 3) throw new Error('empty');
+      Object.keys(D).forEach((k) => { if (D[k].scanned && !isSaved(k)) delete D[k]; });
+      TEXTS.camera = text; SUMMARY.camera = summarize(text);
+      S.scan.status = 'done';
+    } catch (e) {
+      S.scan.status = 'error';
+      S.scan.msg = e.message === 'empty' ? 'Linger couldn’t find readable text. Try again closer, flatter and in better light.' : 'Couldn’t read the photo. Check your connection and try again.';
+    }
+    render();
+  }
+
+  // ---------- WhatsApp helper (simulated chat) ----------
+  function openChat() { if (!S.chat.msgs.length) S.chat.msgs.push({ from: 'bot', html: 'Hi! I’m Linger. Send me a photo of any letter, sign or bill and I’ll explain it in plain English. You can also type a word to get its meaning.' }); }
+  const botSay = (m, delay = 750) => new Promise((res) => { S.chat.busy = true; render(); setTimeout(() => { S.chat.msgs.push({ from: 'bot', ...m }); S.chat.busy = false; render(); res(); }, delay); });
+  async function chatDocument(kind, img) {
+    if (S.chat.busy) return;
+    S.chat.msgs.push(img ? { from: 'me', img } : { from: 'me', card: kind });
+    let text, sum, place;
+    if (img) {
+      const m = { from: 'bot', html: 'Reading your photo… <span id="chatPct">0%</span>' };
+      S.chat.msgs.push(m); S.chat.busy = true; render();
+      try { text = await readImage(await shrink(img), (p) => { m.html = `Reading your photo… <span id="chatPct">${p}%</span>`; const el = document.getElementById('chatPct'); if (el) el.textContent = p + '%'; }); } catch { text = ''; }
+      S.chat.busy = false;
+      if (text.split(' ').length < 3) { m.html = 'Sorry, I couldn’t read that photo. Try again closer, flatter and in better light.'; render(); return; }
+      m.html = 'Got it, I read your photo. Here’s the short version.';
+      sum = summarize(text); place = 'WhatsApp photo';
+    } else { text = TEXTS[kind]; sum = SUMMARY[kind]; place = PLACES[kind]; render(); }
+    await botSay({ html: `<b>${esc(sum.title)}:</b><ul>${sum.points.map(([ic, t]) => `<li>${ic} ${t}</li>`).join('')}</ul>` }, 1000);
+    if (sum.dates.length) await botSay({ html: '<b>Key dates and amounts:</b> ' + sum.dates.map(esc).join(' · ') });
+    const said = summaryText(sum);
+    await botSay({ voice: said, secs: Math.max(5, Math.round(said.split(' ').length / 2.6)) });
+    const keys = [...new Set(text.split(' ').map(keyOf))].filter((k) => k && (D[k] ? D[k].kind !== 'common' : PLAIN[k] !== undefined)).slice(0, 5);
+    keys.forEach((k) => { makeEntry(k, text, place); if (!isSaved(k)) toggleSave(k); });
+    if (keys.length) await botSay({ html: `I saved ${keys.length} hard ${keys.length === 1 ? 'word' : 'words'} to your Linger Words for practice: <b>${keys.map((k) => esc(D[k].word)).join(', ')}</b>. Reply with any word to get its meaning.` });
+  }
+  async function chatWord(w) {
+    const k = keyOf(w); if (!k || S.chat.busy) return;
+    S.chat.msgs.push({ from: 'me', html: esc(w) }); render();
+    const e = makeEntry(k, '', 'WhatsApp');
+    if (e.pending) { S.chat.busy = true; render(); await e.pending; }
+    await botSay({ html: `<b>${esc(e.word)}</b>: ${esc(e.meaning)}${e.local ? '<br><i>Around here:</i> ' + esc(e.local) : ''}` }, 500);
+  }
+
   // ---------- views ----------
   const rings = (a) => a.map(([cls, st]) => `<span class="${cls}" style="${st}"></span>`).join('');
   const heroDeco = rings([['ring', 'width:190px;height:190px;right:-50px;top:-70px'], ['dot', 'width:78px;height:78px;right:24px;top:-18px']]);
@@ -150,32 +300,51 @@
 
   function viewLens() {
     const active = S.pending || S.sheet;
+    const cam = S.source === 'camera';
     const toks = tokens().map((raw, i) => {
+      if (!raw) return '';
       const k = keyOf(raw), e = D[k];
       let cls = 'tok';
-      if (e && (e.kind !== 'hard' || S.autoHard)) cls += ' hard';
+      if (cam ? k && isHard(k) : e && (e.kind !== 'hard' || S.autoHard)) cls += ' hard';
       if (active && k === active) cls += ' on';
       return `<button type="button" class="${cls}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
     }).join('');
-    const autos = S.autoHard ? Object.keys(D).filter((k) => D[k].kind === 'hard' && D[k].src === S.source) : [];
-    const what = S.source === 'lease' ? 'letter' : 'sign';
+    let autos = [];
+    if (S.autoHard && cam && S.scan.status === 'done') { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
+    else if (S.autoHard && !cam) autos = Object.keys(D).filter((k) => D[k].kind === 'hard' && D[k].src === S.source);
+    const what = S.source === 'lease' ? 'letter' : S.source === 'cafe' ? 'sign' : 'text';
     const reading = S.speaking === 'lens';
+    const sc = S.scan, upload = (cls, label) => `<label class="btn ${cls}">${label}<input type="file" accept="image/*" id="photo" hidden></label>`;
+    let inner, hasText = true;
+    if (cam && sc.status !== 'done') {
+      hasText = false;
+      if (sc.status === 'live') inner = `<div class="lens-label">Camera · point at a letter, sign or bill</div><video id="cam" class="cam" playsinline muted autoplay></video>
+        <div class="cam-actions"><button type="button" class="btn ghost-dark" data-action="cam-stop">Cancel</button><button type="button" class="shutter" data-action="capture" aria-label="Take photo"></button>${upload('ghost-dark', 'Upload')}</div>`;
+      else if (sc.status === 'reading') inner = `<div class="lens-label">Reading the text…</div><img class="cam" src="${sc.img}" alt="Your photo"><div class="scan-pct">Reading text <span id="scanPct">${sc.progress}%</span></div>`;
+      else inner = `<div class="lens-label">Camera</div><div class="cam-empty"><p>${sc.status === 'error' ? esc(sc.msg) : 'Point your phone at a letter, sign or bill. Linger reads the text and underlines the hard words.'}</p>
+        <div class="cam-buttons"><button type="button" class="btn primary" data-action="cam-start">📷 Turn on camera</button>${upload('white', 'Upload a photo')}</div>
+        <p class="cam-note">Your photo stays on your phone. The text is read inside your browser.</p></div>`;
+    } else {
+      const label = cam ? 'Camera · your photo' : S.source === 'cafe' ? 'Camera · café notice board' : 'Camera · letter from landlord';
+      inner = `<div class="lens-label">${label}</div><div class="paper">${toks}</div>${cam ? '<button type="button" class="rescan" data-action="cam-start">📷 Scan something else</button>' : ''}`;
+    }
     return `${hero('Lens', 'Point your camera at a sign or letter')}
     <div class="body">
       <div class="seg">
         <button type="button" class="${S.source === 'lease' ? 'on' : ''}" data-action="source" data-v="lease">Lease letter</button>
         <button type="button" class="${S.source === 'cafe' ? 'on' : ''}" data-action="source" data-v="cafe">Café sign</button>
+        <button type="button" class="${cam ? 'on' : ''}" data-action="source" data-v="camera">📷 Camera</button>
       </div>
       <div class="lens">
         <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
-        <div class="lens-label">${S.source === 'cafe' ? 'Camera · café notice board' : 'Camera · letter from landlord'}</div>
-        <div class="paper">${toks}</div>
+        ${inner}
       </div>
-      <div class="lens-actions">
+      ${hasText ? `<div class="lens-actions">
         <button type="button" class="btn primary" data-action="explain">✦ Explain this ${what}</button>
         <button type="button" class="btn ${reading ? 'deep' : 'ghost'}" data-action="read" ${canSpeak ? '' : 'disabled'}>${speaker}${reading ? 'Stop' : 'Read aloud'}</button>
       </div>
-      <p class="small" style="margin: -2px 4px 0">Tap a word you would pause on. On the glasses, your eyes do this part. <span class="dotted-key">Dotted</span> words are ones newcomers often pause on.</p>
+      <p class="small" style="margin: -2px 4px 0">Tap a word you would pause on. On the glasses, your eyes do this part. <span class="dotted-key">Dotted</span> words are ${cam ? 'ones Linger thinks are hard' : 'ones newcomers often pause on'}.</p>` : ''}
+      <button type="button" class="act" data-action="play" data-v="chat"><span class="ic">💬</span><span><strong>Prefer texting?</strong><span class="small">Send a photo to Linger on WhatsApp and get a summary and a voice note back</span></span><span class="go">›</span></button>
       <div class="card">
         <div class="switch-row"><div><strong>Ask before showing</strong><span class="small">When you linger, Linger checks first</span></div>
           <button type="button" class="switch" role="switch" aria-label="Ask before showing" aria-checked="${S.askFirst}" data-action="ask"></button></div>
@@ -186,6 +355,24 @@
         <div class="label" style="color: var(--indigo-500)">Auto-defined on this page</div>
         ${autos.map((k) => `<button type="button" class="auto" data-action="open" data-k="${k}"><strong>${esc(D[k].word)}</strong> · ${esc(D[k].meaning)}</button>`).join('')}
       </div>` : ''}
+    </div>`;
+  }
+
+  function viewChat() {
+    const msgs = S.chat.msgs.map((m, i) => {
+      const who = m.from === 'me' ? 'me' : 'bot';
+      if (m.img) return `<div class="bubble ${who} pic"><img src="${m.img}" alt="Photo you sent"></div>`;
+      if (m.card) return `<div class="bubble ${who} doc"><span class="doc-ic">📄</span><span><b>${m.card === 'lease' ? 'Lease letter.jpg' : 'Cafe sign.jpg'}</b><span class="doc-prev">${esc(TEXTS[m.card].split(' ').slice(0, 9).join(' '))}…</span></span></div>`;
+      if (m.voice) { const on = S.speaking === 'voice' + i; return `<div class="bubble ${who} voice"><button type="button" class="play" data-action="voice" data-i="${i}" aria-label="${on ? 'Stop voice note' : 'Play voice note'}">${on ? '■' : '▶'}</button><span class="wave" aria-hidden="true">${'<i></i>'.repeat(22)}</span><span class="dur">0:${String(m.secs).padStart(2, '0')}</span></div>`; }
+      return `<div class="bubble ${who}">${m.html}</div>`;
+    }).join('');
+    return `<div class="full-view chat-view">
+      <div class="chat-top"><button type="button" class="x" data-action="quit" aria-label="Close chat">${xIcon}</button>
+        <span class="avatar">${logo}</span><div><strong>Linger</strong><span>WhatsApp helper · simulated</span></div></div>
+      <div class="chat-msgs" id="chatMsgs">${msgs}${S.chat.busy ? '<div class="bubble bot typing" aria-label="Linger is typing"><i></i><i></i><i></i></div>' : ''}</div>
+      ${S.chat.msgs.length <= 1 && !S.chat.busy ? `<div class="quick"><button type="button" data-action="chat-sample" data-v="lease">Try: lease letter</button><button type="button" data-action="chat-sample" data-v="cafe">Try: café sign</button></div>` : ''}
+      <form class="composer" id="chatForm"><label class="cbtn" aria-label="Send a photo">📷<input type="file" accept="image/*" id="chatPhoto" hidden></label>
+        <input id="chatInput" placeholder="Type a word to look up" autocomplete="off" aria-label="Message"><button type="submit" class="cbtn send" aria-label="Send">➤</button></form>
     </div>`;
   }
 
@@ -339,6 +526,7 @@
   function overlay() {
     if (S.activity === 'cards') return viewCards();
     if (S.activity === 'story') return viewStory();
+    if (S.activity === 'chat') return viewChat();
     let html = '';
     if (S.pending && S.tab === 'lens') {
       const secs = (1.1 + (S.pendingRaw.length % 7) * 0.15).toFixed(1);
@@ -350,7 +538,7 @@
     }
     if (S.explain) {
       const s = SUMMARY[S.source];
-      const n = Object.keys(D).filter((k) => D[k].src === S.source).length;
+      const n = S.source === 'camera' ? new Set(tokens().map(keyOf).filter((k) => k && isHard(k))).size : Object.keys(D).filter((k) => D[k].src === S.source).length;
       const on = S.speaking === 'summary';
       html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close summary" data-action="close"></button>
         <div class="panel" role="dialog" aria-label="${esc(s.title)}"><div class="grab"></div>
@@ -394,16 +582,22 @@
   const over = document.getElementById('overlay');
   const screenEl = document.querySelector('.screen');
   let lastTab = null;
+  let chatDraft = { value: '', focus: false };
   function render() {
     const views = { lens: viewLens, words: viewWords, local: viewLocal, review: viewReview };
     const top = scroll.scrollTop;
     const focusQ = document.activeElement && document.activeElement.id === 'q';
+    const ciOld = document.getElementById('chatInput'); chatDraft = { value: ciOld ? ciOld.value : '', focus: document.activeElement === ciOld };
     const caret = focusQ ? document.activeElement.selectionStart : 0;
     scroll.innerHTML = views[S.tab]();
     scroll.scrollTop = lastTab === S.tab ? top : 0;
     lastTab = S.tab;
     over.innerHTML = overlay();
     screenEl.classList.toggle('full', !!S.activity);
+    const camEl = document.getElementById('cam');
+    if (camEl && camStream && camEl.srcObject !== camStream) { camEl.srcObject = camStream; camEl.play().catch(() => {}); }
+    const cm = document.getElementById('chatMsgs'); if (cm) cm.scrollTop = cm.scrollHeight;
+    const ci = document.getElementById('chatInput'); if (ci) { if (chatDraft.value) ci.value = chatDraft.value; if (chatDraft.focus) ci.focus({ preventScroll: true }); }
     document.querySelectorAll('.tabbar button').forEach((b) => {
       if (b.dataset.tab === S.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
@@ -412,11 +606,12 @@
 
   // ---------- actions ----------
   const actions = {
-    tab: (d) => { stopSpeaking(); S.tab = d.tab; S.pending = null; S.sheet = null; S.explain = false; },
-    source: (d) => { stopSpeaking(); S.source = d.v; S.pending = null; S.sheet = null; S.explain = false; },
+    tab: (d) => { stopSpeaking(); if (camStream) { stopCamera(); S.scan.status = 'idle'; } S.tab = d.tab; S.pending = null; S.sheet = null; S.explain = false; },
+    source: (d) => { stopSpeaking(); if (camStream) { stopCamera(); S.scan.status = 'idle'; } S.source = d.v; S.pending = null; S.sheet = null; S.explain = false; },
     word: (d) => {
       const raw = tokens()[Number(d.i)];
       const k = keyOf(raw);
+      if (k && S.source === 'camera') makeEntry(k, TEXTS.camera, SCAN_PLACE);
       if (!k) return;
       const clean = raw.replace(/[.,!?;:]+$/, '');
       if (S.askFirst) { S.pending = k; S.pendingRaw = clean; S.sheet = null; }
@@ -435,8 +630,13 @@
     save: (d) => { toggleSave(d.k); },
     filter: (d) => { S.wordFilter = d.v; },
     seg: (d) => { S.localSeg = d.v; },
-    play: (d) => { stopSpeaking(); S.sheet = null; S.explain = false; S.activity = d.v; if (d.v === 'story') newGame(0); else S.cards = { idx: 0, revealed: false }; },
-    quit: () => { S.activity = null; S.game = null; },
+    play: (d) => { stopSpeaking(); S.sheet = null; S.explain = false; S.activity = d.v; if (d.v === 'story') newGame(0); else if (d.v === 'chat') openChat(); else S.cards = { idx: 0, revealed: false }; },
+    'cam-start': () => { startCamera(); },
+    'cam-stop': () => { stopCamera(); S.scan.status = 'idle'; },
+    capture: () => { capture(); },
+    voice: (d) => { const m = S.chat.msgs[Number(d.i)]; if (m) speak('voice' + d.i, m.voice); },
+    'chat-sample': (d) => { chatDocument(d.v); },
+    quit: () => { if (S.activity === 'chat') stopSpeaking(); S.activity = null; S.game = null; },
     'card-reveal': () => { S.cards.revealed = true; },
     'card-next': () => { S.cards.idx += 1; S.cards.revealed = false; },
     pick: (d) => { const g = S.game; g.sel = g.sel === d.k ? null : d.k; },
@@ -457,6 +657,19 @@
     actions[b.dataset.action](b.dataset);
     render();
   });
+  document.addEventListener('change', async (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (!f || !['photo', 'chatPhoto'].includes(ev.target.id)) return;
+    const src = await fileToDataURL(f);
+    if (ev.target.id === 'photo') scanImage(src); else chatDocument(null, src);
+  });
+  document.addEventListener('submit', (ev) => {
+    if (ev.target.id !== 'chatForm') return;
+    ev.preventDefault();
+    const inp = document.getElementById('chatInput'); const w = inp.value.trim();
+    inp.value = ''; chatDraft = { value: '', focus: true };
+    if (w) chatWord(w);
+  });
   document.addEventListener('input', (ev) => {
     if (ev.target.id === 'q') { S.query = ev.target.value; render(); }
   });
@@ -465,6 +678,9 @@
     if (S.sheet || S.pending || S.explain) { S.sheet = null; S.pending = null; S.explain = false; render(); }
     else if (S.activity) { S.activity = null; S.game = null; render(); }
   });
+
+  // Test hook: feed an image to the scanner or chat without a camera.
+  window.lingerTest = { scan: (src) => scanImage(src), chatPhoto: (src) => chatDocument(null, src) };
 
   // Shrink the phone frame to fit shorter desktop windows.
   function fit() {

@@ -217,3 +217,53 @@ button { cursor: pointer; }
 .explain { background: var(--indigo-100); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
 
 @media (prefers-reduced-motion: reduce) { .panel { animation: none; } .switch::after, .tok { transition: none; } }
+
+/* Camera scan in the lens */
+.cam { display: block; width: 100%; aspect-ratio: 3 / 4; max-height: 420px; object-fit: cover; border-radius: 10px; background: #000; }
+.cam-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.shutter { width: 64px; height: 64px; flex: none; border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.55); background: #FFFFFF; background-clip: padding-box; }
+.shutter:active { transform: scale(0.94); }
+.btn.ghost-dark { height: 44px; border: 1px solid rgba(255, 255, 255, 0.35); background: transparent; color: #FFFFFF; font-size: 14px; cursor: pointer; }
+.btn.white { cursor: pointer; }
+.cam-empty { color: #E0E6FF; text-align: center; padding: 18px 4px 6px; display: flex; flex-direction: column; gap: 14px; }
+.cam-empty p { margin: 0; }
+.cam-buttons { display: flex; flex-direction: column; gap: 10px; }
+.cam-note { font-size: 12px; color: #B9C0E8; }
+.scan-pct { color: #FFFFFF; text-align: center; margin-top: 12px; font-weight: 600; }
+.rescan { margin-top: 12px; width: 100%; height: 40px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, 0.3); background: transparent; color: #FFFFFF; font-weight: 600; }
+
+/* WhatsApp helper (simulated) */
+.chat-view { background: #ECE5DD; }
+.chat-top { display: flex; align-items: center; gap: 10px; padding: calc(16px + env(safe-area-inset-top, 0px)) 14px 12px; background: #075E54; color: #FFFFFF; }
+.chat-top .x { background: rgba(255, 255, 255, 0.16); }
+.chat-top .avatar { width: 38px; height: 38px; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center; flex: none; }
+.chat-top strong { display: block; font-size: 17px; }
+.chat-top span { font-size: 12px; color: #CFE9E5; }
+.chat-msgs { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+.bubble { max-width: 82%; padding: 8px 12px; border-radius: 12px; font-size: 15px; line-height: 1.4; box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08); }
+.bubble.bot { align-self: flex-start; background: #FFFFFF; border-top-left-radius: 4px; }
+.bubble.me { align-self: flex-end; background: #DCF8C6; border-top-right-radius: 4px; }
+.bubble ul { margin: 6px 0 0; padding-left: 4px; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.bubble b { color: var(--indigo-900); }
+.bubble.pic { padding: 4px; }
+.bubble.pic img { display: block; max-width: 220px; max-height: 260px; border-radius: 9px; }
+.bubble.doc { display: flex; gap: 10px; align-items: center; }
+.doc-ic { font-size: 26px; }
+.doc-prev { display: block; font-size: 12px; color: var(--muted); }
+.bubble.voice { display: flex; align-items: center; gap: 10px; min-width: 220px; }
+.play { width: 36px; height: 36px; flex: none; border-radius: 50%; border: 0; background: #075E54; color: #FFFFFF; font-size: 14px; }
+.wave { display: flex; align-items: center; gap: 2px; flex: 1; height: 24px; }
+.wave i { display: block; width: 3px; border-radius: 2px; background: #9FB3AE; height: 40%; }
+.wave i:nth-child(3n) { height: 80%; } .wave i:nth-child(4n) { height: 60%; } .wave i:nth-child(5n) { height: 95%; }
+.dur { font-size: 12px; color: var(--muted); }
+.typing { display: flex; gap: 4px; padding: 12px 14px; }
+.typing i { width: 7px; height: 7px; border-radius: 50%; background: #9AA0B2; animation: blink 1s infinite; }
+.typing i:nth-child(2) { animation-delay: 0.2s; } .typing i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+.quick { display: flex; gap: 8px; padding: 0 12px 10px; flex-wrap: wrap; }
+.quick button { height: 36px; padding: 0 14px; border-radius: 99px; border: 1px solid #075E54; background: #FFFFFF; color: #075E54; font-weight: 700; font-size: 13px; }
+.composer { display: flex; align-items: center; gap: 8px; padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); background: #F0F0F0; }
+.composer input { flex: 1; min-width: 0; height: 44px; border: 0; border-radius: 22px; padding: 0 16px; font-size: 15px; background: #FFFFFF; }
+.cbtn { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 0; display: grid; place-items: center; background: #FFFFFF; font-size: 18px; cursor: pointer; }
+.cbtn.send { background: #075E54; color: #FFFFFF; }
+@media (prefers-reduced-motion: reduce) { .typing i { animation: none; } }
