@@ -8,11 +8,11 @@ This repository is a clickable prototype of the phone app. It runs entirely in t
 
 ## What you can try
 
-- **Lens**: tap a word on the lease letter or café sign. Tapping stands in for your eyes pausing on it. Linger asks first, then shows the meaning in context and a local note. Hard words are underlined and explained automatically.
+- **Lens (home screen)**: two big buttons, **Scan with camera** (full-screen camera with a framing guide; the photo is cropped, cleaned up and read in the browser, then the plain-English summary opens automatically) and **Text it to Linger** (the WhatsApp helper). Below them, tap a word on the lease letter or café sign. Tapping stands in for your eyes pausing on it. Linger asks first, then shows the meaning in context and a local note. Hard words are underlined and explained automatically.
   - **Explain this letter**: a plain-English summary of what the letter or sign wants from you, with key dates.
   - **Read aloud**: reads the text with the browser's built-in voice and highlights each word as it is read.
   - **📷 Camera**: point your phone at any letter, sign or bill (or upload a photo). Tesseract.js reads the text inside the browser, hard words are underlined, Explain builds a plain-English summary with dates and amounts, and words you tap are looked up on Wiktionary. Without an AI backend the summary is made by swapping formal words for plain ones.
-- **WhatsApp helper (simulated)**: from Lens, tap "Prefer texting?". Send a photo or try a sample letter and Linger replies with a summary, key dates, a voice note, and the hard words it saved to Words. Type any word to get its meaning. A real WhatsApp number would need a small server (for example Twilio's WhatsApp sandbox).
+- **WhatsApp helper (simulated)**: from Lens, tap "Prefer texting?". Send a photo or try a sample letter and Linger replies with a summary, key dates, a voice note, and the hard words it saved to Words. Type one word to get its meaning, or paste a whole message or email to get it explained. A real WhatsApp number would need a small server (for example Twilio's WhatsApp sandbox).
 - **Words**: your saved words, with the sentence, place and date you met each one. **Start Activity** opens Fill in the story.
 - **Local**: Pittsburgh slang, local customs, and a "pause map" of where newcomers get stuck (sample data).
 - **Review**: practice activities.

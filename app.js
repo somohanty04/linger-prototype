@@ -41,7 +41,7 @@
     sublet: 'rent your place to someone else', obligated: 'required', obligation: 'duty', stipulated: 'stated', forfeit: 'lose', forfeiture: 'losing',
     liable: 'responsible', liability: 'responsibility', deductible: 'amount you pay first', premium: 'regular payment', balance: 'amount owed',
     overdue: 'late', penalty: 'fine', assessed: 'charged', statement: 'bill', applicable: 'that applies', accordance: 'agreement',
-    renewal: 'extending', expiration: 'end date', vacate: 'move out', utilities: 'water, power and gas', jurisdiction: 'area of authority'
+    renewal: 'renewal (extension)', expiration: 'end date', vacate: 'move out of', utilities: 'water, power and gas', jurisdiction: 'area of authority'
   };
   const PHRASES = [[/failure to (\w+) (may|will|could) result in/gi, 'if you don’t $1, it could lead to'], [/failure to/gi, 'if you don’t'], [/may result in/gi, 'could lead to'], [/termination of (your )?service/gi, 'your service being cut off'], [/for your records/gi, 'so you have it later'], [/prior written consent/gi, 'written permission first'], [/in full/gi, 'completely'], [/no later than/gi, 'by'], [/in accordance with/gi, 'following'], [/you are hereby notified that/gi, 'this letter tells you that'], [/is hereby/gi, 'is'], [/are hereby/gi, 'are']];
   const SCAN_PLACE = 'Camera scan';
@@ -92,7 +92,7 @@
 
   // ---------- state ----------
   const S = {
-    tab: 'words', source: 'lease', askFirst: true, autoHard: true,
+    tab: 'lens', source: 'lease', askFirst: true, autoHard: true,
     pending: null, pendingRaw: '', sheet: null, sheetRaw: '', explain: false,
     saved: ['arrears', 'jitney', 'nebby'], savedDates: { arrears: 'Oct 24', jitney: 'Oct 23', nebby: 'Oct 22' },
     wordFilter: 'all', query: '', localSeg: 'slang',
@@ -100,7 +100,7 @@
     cards: { idx: 0, revealed: false },
     game: null,
     speaking: null, // which text is being read aloud
-    scan: { status: 'idle', progress: 0, img: null, msg: '' }, // camera: idle | live | reading | done | error
+    scan: { status: 'idle', progress: 0, img: null, msg: '', conf: 0 }, // camera: idle | live | reading | done | error
     chat: { msgs: [], busy: false }
   };
   let camStream = null;
@@ -173,6 +173,7 @@
   const isHard = (k) => (D[k] && D[k].kind !== 'common') || PLAIN[k] !== undefined || k.length >= 11;
   function summarize(text) {
     const sents = sentencesOf(text);
+    sents.forEach((x, i) => { sents[i] = x.replace(/^(dear [^,]{1,40}|hi|hello|hey|good (morning|afternoon|evening))( [^,]{1,25})?,\s*/i, ''); });
     let acts = sents.filter((s) => !isHeading(s) && ACTION_RE.test(s));
     if (!acts.length) acts = sents.slice(0, 3);
     const points = acts.slice(0, 4).map((s) => [/\$/.test(s) ? '💵' : new RegExp(DATE_SRC, 'i').test(s) ? '📅' : /prohibit|not permitted|not allowed/i.test(s) ? '🚫' : '📌', `<b>${esc(plainify(s))}</b>`]);
@@ -206,73 +207,120 @@
   }
 
   // ---------- camera and text reading (Tesseract.js runs in the browser) ----------
-  let tessLoading = null;
+  let tessLoading = null, workerP = null, onOcr = () => {};
   const loadTesseract = () => tessLoading || (tessLoading = new Promise((res, rej) => {
     if (window.Tesseract) return res();
     const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
     s.onload = res; s.onerror = () => { tessLoading = null; rej(new Error('load')); }; document.head.appendChild(s);
   }));
-  async function readImage(src, onProgress) {
-    await loadTesseract();
-    const { data } = await window.Tesseract.recognize(src, 'eng', { logger: (m) => { if (m.status === 'recognizing text') onProgress(Math.round(m.progress * 100)); } });
-    return data.text.replace(/[|_~^`{}<>]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').slice(0, 160).join(' ');
-  }
-  // Big phone photos are slow to read; shrink them first.
-  const shrink = (src, max = 1800) => new Promise((res) => {
+  // One reader is kept warm, so later scans don't reload anything.
+  const getWorker = () => workerP || (workerP = loadTesseract()
+    .then(() => window.Tesseract.createWorker('eng', 1, { logger: (m) => { if (m.status === 'recognizing text') onOcr(Math.round(m.progress * 100)); } }))
+    .catch((e) => { workerP = null; throw e; }));
+  const warmUp = () => { getWorker().catch(() => {}); };
+  // Drop the stray marks OCR picks up from shadows and edges.
+  const cleanText = (t) => t.replace(/[|_~^`{}<>[\]\\]/g, ' ').split(/\s+/)
+    .filter((w) => /[A-Za-z0-9$]/.test(w) && (w.replace(/[^A-Za-z0-9]/g, '').length > 1 || /^(a|A|I|&|\d)[.,]?$/.test(w)))
+    .slice(0, 180).join(' ');
+  // Shrink big photos, make them grey and stretch the contrast: Tesseract reads that more reliably.
+  const prepare = (src, max = 2000) => new Promise((res) => {
     const img = new Image();
-    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.9)); };
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const g = c.getContext('2d'); g.drawImage(img, 0, 0, c.width, c.height);
+      const d = g.getImageData(0, 0, c.width, c.height), px = d.data, hist = new Uint32Array(256);
+      for (let i = 0; i < px.length; i += 4) { const y = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000 | 0; px[i] = y; hist[y]++; }
+      const n = px.length / 4; let lo = 0, hi = 255, acc = 0;
+      while (lo < 255 && (acc += hist[lo]) < n * 0.02) lo++;
+      acc = 0; while (hi > 0 && (acc += hist[hi]) < n * 0.02) hi--;
+      const span = Math.max(1, hi - lo);
+      for (let i = 0; i < px.length; i += 4) { const v = Math.max(0, Math.min(255, (px[i] - lo) * 255 / span)); px[i] = px[i + 1] = px[i + 2] = v; }
+      g.putImageData(d, 0, 0); res(c.toDataURL('image/png'));
+    };
     img.onerror = () => res(src); img.src = src;
   });
+  async function readImage(src, onProgress) {
+    const w = await getWorker();
+    onOcr = onProgress;
+    try { const { data } = await w.recognize(await prepare(src)); return { text: cleanText(data.text), conf: Math.round(data.confidence || 0) }; }
+    finally { onOcr = () => {}; }
+  }
   const fileToDataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
   async function startCamera() {
-    stopSpeaking();
+    stopSpeaking(); warmUp();
+    S.pending = null; S.sheet = null; S.explain = false;
     try {
-      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
-      S.scan = { status: 'live', progress: 0, img: null, msg: '' };
+      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false });
+      S.activity = 'camera';
     } catch {
-      S.scan = { status: 'error', progress: 0, img: null, msg: 'Couldn’t open the camera. Allow camera access, or upload a photo instead.' };
+      S.tab = 'lens'; S.source = 'camera';
+      S.scan = { status: 'error', progress: 0, img: null, msg: 'Couldn’t open the camera. Allow camera access in your browser, or upload a photo instead.', conf: 0 };
     }
     render();
   }
   function stopCamera() { if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; } }
+  function closeCamera() { stopCamera(); if (S.activity === 'camera') S.activity = null; }
+  // Keep only the part of the picture inside the on-screen frame (the video is shown with object-fit: cover).
   function capture() {
-    const v = document.getElementById('cam'); if (!v || !v.videoWidth) return;
-    const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0);
-    scanImage(c.toDataURL('image/jpeg', 0.92));
+    const v = document.getElementById('cam'), f = document.getElementById('camFrame'); if (!v || !v.videoWidth || !f) return;
+    const vr = v.getBoundingClientRect(), f0 = f.getBoundingClientRect();
+    // Take a little more than the frame, so letters touching its edge aren't cut off.
+    const mx = f0.width * 0.06, my = f0.height * 0.04;
+    const fr = { left: f0.left - mx, top: f0.top - my, width: f0.width + mx * 2, height: f0.height + my * 2 };
+    const k = Math.max(vr.width / v.videoWidth, vr.height / v.videoHeight);
+    const ox = (v.videoWidth * k - vr.width) / 2, oy = (v.videoHeight * k - vr.height) / 2;
+    const sx = Math.max(0, (fr.left - vr.left + ox) / k), sy = Math.max(0, (fr.top - vr.top + oy) / k);
+    const sw = Math.min(v.videoWidth - sx, fr.width / k), sh = Math.min(v.videoHeight - sy, fr.height / k);
+    const c = document.createElement('canvas'); c.width = Math.round(sw); c.height = Math.round(sh);
+    c.getContext('2d').drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    scanImage(c.toDataURL('image/jpeg', 0.95));
   }
   async function scanImage(src) {
-    stopCamera(); stopSpeaking();
+    closeCamera(); stopSpeaking();
+    S.tab = 'lens'; S.source = 'camera';
     S.pending = null; S.sheet = null; S.explain = false;
-    S.scan = { status: 'reading', progress: 0, img: src, msg: '' }; render();
+    S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0 }; render();
     try {
-      const text = await readImage(await shrink(src), (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; });
+      const { text, conf } = await readImage(src, (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; });
       if (text.split(' ').length < 3) throw new Error('empty');
       Object.keys(D).forEach((k) => { if (D[k].scanned && !isSaved(k)) delete D[k]; });
       TEXTS.camera = text; SUMMARY.camera = summarize(text);
-      S.scan.status = 'done';
+      S.scan.status = 'done'; S.scan.conf = conf;
+      S.explain = true; // show the plain-English summary right away
     } catch (e) {
       S.scan.status = 'error';
-      S.scan.msg = e.message === 'empty' ? 'Linger couldn’t find readable text. Try again closer, flatter and in better light.' : 'Couldn’t read the photo. Check your connection and try again.';
+      S.scan.msg = e.message === 'empty' ? 'Linger couldn’t find readable text. Try again closer, flatter and in better light.' : 'Couldn’t read the photo. Check your internet connection and try again.';
     }
     render();
   }
 
   // ---------- WhatsApp helper (simulated chat) ----------
-  function openChat() { if (!S.chat.msgs.length) S.chat.msgs.push({ from: 'bot', html: 'Hi! I’m Linger. Send me a photo of any letter, sign or bill and I’ll explain it in plain English. You can also type a word to get its meaning.' }); }
+  function openChat() {
+    warmUp();
+    if (S.chat.msgs.length) return;
+    S.chat.msgs.push({ from: 'bot', html: 'Hi! I’m Linger 👋 Send me anything in English that confuses you and I’ll explain it in plain words.' });
+    S.chat.msgs.push({ from: 'bot', html: '📷 <b>Send a photo</b> of a letter, sign or bill<br>📋 <b>Paste</b> the text of an email or message<br>🔤 <b>Type one word</b> to get its meaning' });
+  }
   const botSay = (m, delay = 750) => new Promise((res) => { S.chat.busy = true; render(); setTimeout(() => { S.chat.msgs.push({ from: 'bot', ...m }); S.chat.busy = false; render(); res(); }, delay); });
-  async function chatDocument(kind, img) {
+  async function chatDocument(kind, img, pasted) {
     if (S.chat.busy) return;
-    S.chat.msgs.push(img ? { from: 'me', img } : { from: 'me', card: kind });
     let text, sum, place;
     if (img) {
+      S.chat.msgs.push({ from: 'me', img });
       const m = { from: 'bot', html: 'Reading your photo… <span id="chatPct">0%</span>' };
       S.chat.msgs.push(m); S.chat.busy = true; render();
-      try { text = await readImage(await shrink(img), (p) => { m.html = `Reading your photo… <span id="chatPct">${p}%</span>`; const el = document.getElementById('chatPct'); if (el) el.textContent = p + '%'; }); } catch { text = ''; }
+      let conf = 0;
+      try { const r = await readImage(img, (p) => { m.html = `Reading your photo… <span id="chatPct">${p}%</span>`; const el = document.getElementById('chatPct'); if (el) el.textContent = p + '%'; }); text = r.text; conf = r.conf; } catch { text = ''; }
       S.chat.busy = false;
       if (text.split(' ').length < 3) { m.html = 'Sorry, I couldn’t read that photo. Try again closer, flatter and in better light.'; render(); return; }
-      m.html = 'Got it, I read your photo. Here’s the short version.';
+      m.html = conf && conf < 60 ? 'I read your photo, but some words may be wrong. A flatter, brighter photo helps. Here’s the short version:' : 'Got it, I read your photo. Here’s the short version:';
       sum = summarize(text); place = 'WhatsApp photo';
-    } else { text = TEXTS[kind]; sum = SUMMARY[kind]; place = PLACES[kind]; render(); }
+    } else if (pasted) {
+      S.chat.msgs.push({ from: 'me', html: esc(pasted.length > 280 ? pasted.slice(0, 280) + '…' : pasted) });
+      text = cleanText(pasted); sum = summarize(text); place = 'Pasted text';
+    } else { S.chat.msgs.push({ from: 'me', card: kind }); text = TEXTS[kind]; sum = SUMMARY[kind]; place = PLACES[kind]; }
+    render();
     await botSay({ html: `<b>${esc(sum.title)}:</b><ul>${sum.points.map(([ic, t]) => `<li>${ic} ${t}</li>`).join('')}</ul>` }, 1000);
     if (sum.dates.length) await botSay({ html: '<b>Key dates and amounts:</b> ' + sum.dates.map(esc).join(' · ') });
     const said = summaryText(sum);
@@ -281,9 +329,12 @@
     keys.forEach((k) => { makeEntry(k, text, place); if (!isSaved(k)) toggleSave(k); });
     if (keys.length) await botSay({ html: `I saved ${keys.length} hard ${keys.length === 1 ? 'word' : 'words'} to your Linger Words for practice: <b>${keys.map((k) => esc(D[k].word)).join(', ')}</b>. Reply with any word to get its meaning.` });
   }
-  async function chatWord(w) {
-    const k = keyOf(w); if (!k || S.chat.busy) return;
-    S.chat.msgs.push({ from: 'me', html: esc(w) }); render();
+  // Several words = a pasted message to explain; one or two = look the word up.
+  async function chatInput(t) {
+    if (S.chat.busy) return;
+    if (t.split(/\s+/).length >= 6) return chatDocument(null, null, t);
+    const k = keyOf(t); if (!k) return;
+    S.chat.msgs.push({ from: 'me', html: esc(t) }); render();
     const e = makeEntry(k, '', 'WhatsApp');
     if (e.pending) { S.chat.busy = true; render(); await e.pending; }
     await botSay({ html: `<b>${esc(e.word)}</b>: ${esc(e.meaning)}${e.local ? '<br><i>Around here:</i> ' + esc(e.local) : ''}` }, 500);
@@ -309,32 +360,35 @@
       if (active && k === active) cls += ' on';
       return `<button type="button" class="${cls}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
     }).join('');
+    const sc = S.scan, scanned = !!TEXTS.camera;
     let autos = [];
-    if (S.autoHard && cam && S.scan.status === 'done') { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
+    if (S.autoHard && cam && sc.status === 'done') { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
     else if (S.autoHard && !cam) autos = Object.keys(D).filter((k) => D[k].kind === 'hard' && D[k].src === S.source);
     const what = S.source === 'lease' ? 'letter' : S.source === 'cafe' ? 'sign' : 'text';
     const reading = S.speaking === 'lens';
-    const sc = S.scan, upload = (cls, label) => `<label class="btn ${cls}">${label}<input type="file" accept="image/*" id="photo" hidden></label>`;
     let inner, hasText = true;
-    if (cam && sc.status !== 'done') {
-      hasText = false;
-      if (sc.status === 'live') inner = `<div class="lens-label">Camera · point at a letter, sign or bill</div><video id="cam" class="cam" playsinline muted autoplay></video>
-        <div class="cam-actions"><button type="button" class="btn ghost-dark" data-action="cam-stop">Cancel</button><button type="button" class="shutter" data-action="capture" aria-label="Take photo"></button>${upload('ghost-dark', 'Upload')}</div>`;
-      else if (sc.status === 'reading') inner = `<div class="lens-label">Reading the text…</div><img class="cam" src="${sc.img}" alt="Your photo"><div class="scan-pct">Reading text <span id="scanPct">${sc.progress}%</span></div>`;
-      else inner = `<div class="lens-label">Camera</div><div class="cam-empty"><p>${sc.status === 'error' ? esc(sc.msg) : 'Point your phone at a letter, sign or bill. Linger reads the text and underlines the hard words.'}</p>
-        <div class="cam-buttons"><button type="button" class="btn primary" data-action="cam-start">📷 Turn on camera</button>${upload('white', 'Upload a photo')}</div>
-        <p class="cam-note">Your photo stays on your phone. The text is read inside your browser.</p></div>`;
-    } else {
-      const label = cam ? 'Camera · your photo' : S.source === 'cafe' ? 'Camera · café notice board' : 'Camera · letter from landlord';
-      inner = `<div class="lens-label">${label}</div><div class="paper">${toks}</div>${cam ? '<button type="button" class="rescan" data-action="cam-start">📷 Scan something else</button>' : ''}`;
+    if (cam && sc.status === 'reading') { hasText = false; inner = `<div class="lens-label">Reading your photo…</div><img class="cam" src="${sc.img}" alt="Your photo"><div class="scan-pct">Reading text <span id="scanPct">${sc.progress}%</span></div>`; }
+    else if (cam && sc.status === 'error') { hasText = false; inner = `<div class="lens-label">Camera</div><div class="cam-empty"><p>${esc(sc.msg)}</p><div class="cam-buttons"><button type="button" class="btn primary" data-action="cam-start">📷 Try the camera again</button><label class="btn white">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label></div></div>`; }
+    else {
+      const label = cam ? 'Your scan' : S.source === 'cafe' ? 'Sample · café notice board' : 'Sample · letter from landlord';
+      inner = `<div class="lens-label">${label}</div><div class="paper">${toks}</div>
+        ${cam && sc.conf && sc.conf < 60 ? '<p class="cam-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}
+        ${cam ? '<button type="button" class="rescan" data-action="cam-start">📷 Scan something else</button>' : ''}`;
     }
-    return `${hero('Lens', 'Point your camera at a sign or letter')}
-    <div class="body">
-      <div class="seg">
-        <button type="button" class="${S.source === 'lease' ? 'on' : ''}" data-action="source" data-v="lease">Lease letter</button>
-        <button type="button" class="${S.source === 'cafe' ? 'on' : ''}" data-action="source" data-v="cafe">Café sign</button>
-        <button type="button" class="${cam ? 'on' : ''}" data-action="source" data-v="camera">📷 Camera</button>
+    const samples = [['lease', 'Lease letter'], ['cafe', 'Café sign']].concat(scanned || cam ? [['camera', '📷 Your scan']] : []);
+    return `<header class="hero lens-hero">${heroDeco}
+      <div class="hero-top">${logo}${pairPill}</div>
+      <h1>What do you need to read?</h1>
+      <div class="hsub">Scan it or text it. Linger explains it in plain English.</div>
+      <div class="big-actions">
+        <button type="button" class="big" data-action="cam-start"><span class="big-ic" aria-hidden="true">📷</span><strong>Scan with camera</strong><span>Letters, signs, bills</span></button>
+        <button type="button" class="big" data-action="play" data-v="chat"><span class="big-ic" aria-hidden="true">💬</span><strong>Text it to Linger</strong><span>Send a photo on WhatsApp</span></button>
       </div>
+      <label class="upload-link">or upload a photo<input type="file" accept="image/*" id="photo" hidden></label>
+    </header>
+    <div class="body">
+      <div class="sample-row"><span class="label" style="color: var(--muted)">${cam ? 'Showing' : 'Or try a sample'}</span>
+        <div class="chips">${samples.map(([id, l]) => `<button type="button" class="chip ${S.source === id ? 'on' : ''}" data-action="source" data-v="${id}">${l}</button>`).join('')}</div></div>
       <div class="lens">
         <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
         ${inner}
@@ -344,7 +398,6 @@
         <button type="button" class="btn ${reading ? 'deep' : 'ghost'}" data-action="read" ${canSpeak ? '' : 'disabled'}>${speaker}${reading ? 'Stop' : 'Read aloud'}</button>
       </div>
       <p class="small" style="margin: -2px 4px 0">Tap a word you would pause on. On the glasses, your eyes do this part. <span class="dotted-key">Dotted</span> words are ${cam ? 'ones Linger thinks are hard' : 'ones newcomers often pause on'}.</p>` : ''}
-      <button type="button" class="act" data-action="play" data-v="chat"><span class="ic">💬</span><span><strong>Prefer texting?</strong><span class="small">Send a photo to Linger on WhatsApp and get a summary and a voice note back</span></span><span class="go">›</span></button>
       <div class="card">
         <div class="switch-row"><div><strong>Ask before showing</strong><span class="small">When you linger, Linger checks first</span></div>
           <button type="button" class="switch" role="switch" aria-label="Ask before showing" aria-checked="${S.askFirst}" data-action="ask"></button></div>
@@ -355,6 +408,20 @@
         <div class="label" style="color: var(--indigo-500)">Auto-defined on this page</div>
         ${autos.map((k) => `<button type="button" class="auto" data-action="open" data-k="${k}"><strong>${esc(D[k].word)}</strong> · ${esc(D[k].meaning)}</button>`).join('')}
       </div>` : ''}
+    </div>`;
+  }
+
+  function viewCamera() {
+    return `<div class="full-view camera-view">
+      <video id="cam" playsinline muted autoplay></video>
+      <div class="cam-frame" id="camFrame"><i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i></div>
+      <div class="cam-top"><button type="button" class="x" data-action="cam-close" aria-label="Close camera">${xIcon}</button><span>Scan a letter, sign or bill</span><span class="spacer"></span></div>
+      <p class="cam-hint">Fit the text inside the frame. Hold steady, in good light.</p>
+      <div class="cam-bottom">
+        <label class="cam-side"><span class="cs-ic" aria-hidden="true">🖼️</span><span>Upload</span><input type="file" accept="image/*" id="photo" hidden></label>
+        <button type="button" class="shutter" data-action="capture" aria-label="Take photo"></button>
+        <button type="button" class="cam-side" data-action="cam-text"><span class="cs-ic" aria-hidden="true">💬</span><span>Text it</span></button>
+      </div>
     </div>`;
   }
 
@@ -370,9 +437,9 @@
       <div class="chat-top"><button type="button" class="x" data-action="quit" aria-label="Close chat">${xIcon}</button>
         <span class="avatar">${logo}</span><div><strong>Linger</strong><span>WhatsApp helper · simulated</span></div></div>
       <div class="chat-msgs" id="chatMsgs">${msgs}${S.chat.busy ? '<div class="bubble bot typing" aria-label="Linger is typing"><i></i><i></i><i></i></div>' : ''}</div>
-      ${S.chat.msgs.length <= 1 && !S.chat.busy ? `<div class="quick"><button type="button" data-action="chat-sample" data-v="lease">Try: lease letter</button><button type="button" data-action="chat-sample" data-v="cafe">Try: café sign</button></div>` : ''}
+      ${S.chat.msgs.length <= 2 && !S.chat.busy ? `<div class="quick"><label class="qphoto">📷 Send a photo<input type="file" accept="image/*" id="chatPhoto2" hidden></label><button type="button" data-action="chat-sample" data-v="lease">Try: lease letter</button><button type="button" data-action="chat-sample" data-v="cafe">Try: café sign</button></div>` : ''}
       <form class="composer" id="chatForm"><label class="cbtn" aria-label="Send a photo">📷<input type="file" accept="image/*" id="chatPhoto" hidden></label>
-        <input id="chatInput" placeholder="Type a word to look up" autocomplete="off" aria-label="Message"><button type="submit" class="cbtn send" aria-label="Send">➤</button></form>
+        <input id="chatInput" placeholder="Type a word or paste a message" autocomplete="off" aria-label="Message"><button type="submit" class="cbtn send" aria-label="Send">➤</button></form>
     </div>`;
   }
 
@@ -527,6 +594,7 @@
     if (S.activity === 'cards') return viewCards();
     if (S.activity === 'story') return viewStory();
     if (S.activity === 'chat') return viewChat();
+    if (S.activity === 'camera') return viewCamera();
     let html = '';
     if (S.pending && S.tab === 'lens') {
       const secs = (1.1 + (S.pendingRaw.length % 7) * 0.15).toFixed(1);
@@ -606,8 +674,8 @@
 
   // ---------- actions ----------
   const actions = {
-    tab: (d) => { stopSpeaking(); if (camStream) { stopCamera(); S.scan.status = 'idle'; } S.tab = d.tab; S.pending = null; S.sheet = null; S.explain = false; },
-    source: (d) => { stopSpeaking(); if (camStream) { stopCamera(); S.scan.status = 'idle'; } S.source = d.v; S.pending = null; S.sheet = null; S.explain = false; },
+    tab: (d) => { stopSpeaking(); closeCamera(); S.tab = d.tab; S.pending = null; S.sheet = null; S.explain = false; },
+    source: (d) => { stopSpeaking(); S.source = d.v; S.pending = null; S.sheet = null; S.explain = false; },
     word: (d) => {
       const raw = tokens()[Number(d.i)];
       const k = keyOf(raw);
@@ -632,7 +700,8 @@
     seg: (d) => { S.localSeg = d.v; },
     play: (d) => { stopSpeaking(); S.sheet = null; S.explain = false; S.activity = d.v; if (d.v === 'story') newGame(0); else if (d.v === 'chat') openChat(); else S.cards = { idx: 0, revealed: false }; },
     'cam-start': () => { startCamera(); },
-    'cam-stop': () => { stopCamera(); S.scan.status = 'idle'; },
+    'cam-close': () => { closeCamera(); },
+    'cam-text': () => { closeCamera(); S.activity = 'chat'; openChat(); },
     capture: () => { capture(); },
     voice: (d) => { const m = S.chat.msgs[Number(d.i)]; if (m) speak('voice' + d.i, m.voice); },
     'chat-sample': (d) => { chatDocument(d.v); },
@@ -659,7 +728,8 @@
   });
   document.addEventListener('change', async (ev) => {
     const f = ev.target.files && ev.target.files[0];
-    if (!f || !['photo', 'chatPhoto'].includes(ev.target.id)) return;
+    if (!f || !['photo', 'chatPhoto', 'chatPhoto2'].includes(ev.target.id)) return;
+    ev.target.value = '';
     const src = await fileToDataURL(f);
     if (ev.target.id === 'photo') scanImage(src); else chatDocument(null, src);
   });
@@ -668,7 +738,7 @@
     ev.preventDefault();
     const inp = document.getElementById('chatInput'); const w = inp.value.trim();
     inp.value = ''; chatDraft = { value: '', focus: true };
-    if (w) chatWord(w);
+    if (w) chatInput(w);
   });
   document.addEventListener('input', (ev) => {
     if (ev.target.id === 'q') { S.query = ev.target.value; render(); }
@@ -676,11 +746,11 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
     if (S.sheet || S.pending || S.explain) { S.sheet = null; S.pending = null; S.explain = false; render(); }
-    else if (S.activity) { S.activity = null; S.game = null; render(); }
+    else if (S.activity) { closeCamera(); S.activity = null; S.game = null; render(); }
   });
 
   // Test hook: feed an image to the scanner or chat without a camera.
-  window.lingerTest = { scan: (src) => scanImage(src), chatPhoto: (src) => chatDocument(null, src) };
+  window.lingerTest = { scan: (src) => scanImage(src), chatPhoto: (src) => chatDocument(null, src), chatText: (t) => chatInput(t) };
 
   // Shrink the phone frame to fit shorter desktop windows.
   function fit() {

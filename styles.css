@@ -267,3 +267,38 @@ button { cursor: pointer; }
 .cbtn { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 0; display: grid; place-items: center; background: #FFFFFF; font-size: 18px; cursor: pointer; }
 .cbtn.send { background: #075E54; color: #FFFFFF; }
 @media (prefers-reduced-motion: reduce) { .typing i { animation: none; } }
+
+/* Lens home: scan or text, front and center */
+.lens-hero { padding-bottom: 40px; }
+.lens-hero h1 { font-size: 30px; margin-top: 14px; }
+.lens-hero .hsub { font-size: 16px; }
+.big-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.big { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 14px; border-radius: 18px; border: 0; background: #FFFFFF; color: var(--ink); box-shadow: 0 8px 20px rgba(16, 20, 80, 0.25); min-height: 124px; }
+.big:active { transform: scale(0.98); }
+.big-ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; background: var(--indigo-100); margin-bottom: 8px; }
+.big:first-child .big-ic { background: var(--cta); }
+.big:last-child .big-ic { background: #DCF8C6; }
+.big strong { font-size: 16px; color: var(--indigo-900); line-height: 1.2; }
+.big span:last-child { font-size: 12px; color: var(--muted); }
+.upload-link { display: inline-block; margin-top: 12px; font-size: 14px; font-weight: 600; color: #E0E6FF; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.sample-row { display: flex; flex-direction: column; gap: 8px; }
+.cam-warn { margin: 10px 2px 0; font-size: 13px; color: #FFD98A; }
+.qphoto { height: 36px; padding: 0 14px; border-radius: 99px; background: #075E54; color: #FFFFFF; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; cursor: pointer; }
+
+/* Full-screen camera */
+.camera-view { background: #000; }
+.camera-view video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cam-frame { position: absolute; left: 7%; right: 7%; top: 15%; bottom: 25%; border-radius: 18px; box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.5); }
+.cam-frame .k { position: absolute; width: 34px; height: 34px; border: 4px solid var(--cyan); }
+.cam-frame .k1 { top: -2px; left: -2px; border-right: 0; border-bottom: 0; border-radius: 18px 0 0 0; }
+.cam-frame .k2 { top: -2px; right: -2px; border-left: 0; border-bottom: 0; border-radius: 0 18px 0 0; }
+.cam-frame .k3 { bottom: -2px; left: -2px; border-right: 0; border-top: 0; border-radius: 0 0 0 18px; }
+.cam-frame .k4 { bottom: -2px; right: -2px; border-left: 0; border-top: 0; border-radius: 0 0 18px 0; }
+.cam-top { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 0; color: #FFFFFF; font-weight: 700; }
+.cam-top .x { background: rgba(255, 255, 255, 0.2); }
+.cam-top .spacer { width: 40px; }
+.cam-hint { position: absolute; left: 0; right: 0; bottom: calc(25% - 40px); margin: 0; text-align: center; color: #FFFFFF; font-size: 14px; font-weight: 600; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
+.cam-bottom { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-around; padding: 0 20px calc(34px + env(safe-area-inset-bottom, 0px)); }
+.camera-view .shutter { width: 76px; height: 76px; border-width: 5px; }
+.cam-side { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 64px; border: 0; background: transparent; color: #FFFFFF; font-size: 12px; font-weight: 600; cursor: pointer; }
+.cs-ic { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; background: rgba(255, 255, 255, 0.18); }
