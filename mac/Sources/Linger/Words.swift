@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 /// Linger's word knowledge, shared with the phone app and the Chrome extension (Resources/words.json):
 /// plain-English swaps for formal words, hard-word meanings, local slang, and the ~10,000 most common English words.
@@ -61,6 +62,17 @@ final class Words {
         if raw.count > 1, raw == raw.uppercased() { return nil }           // acronyms
         if k.count < 6 || k.contains("'") { return nil }
         return isCommon(k) ? nil : .hard
+    }
+
+    /// macOS's own spell checker knows real English words; brands, names and misread text fail it.
+    private var spellCache: [String: Bool] = [:]
+    func isRealWord(_ raw: String) -> Bool {
+        let w = raw.trimmingCharacters(in: CharacterSet.letters.inverted)
+        if let c = spellCache[w.lowercased()] { return c }
+        let r = NSSpellChecker.shared.checkSpelling(of: w.lowercased(), startingAt: 0, language: "en", wrap: false, inSpellDocumentWithTag: 0, wordCount: nil)
+        let ok = r.location == NSNotFound
+        spellCache[w.lowercased()] = ok
+        return ok
     }
 
     /// A meaning we already know (no lookup needed).
@@ -130,7 +142,7 @@ final class Words {
         let wordRe = try! NSRegularExpression(pattern: "[A-Za-z][A-Za-z'’-]*[A-Za-z]")
         for w in Words.all(wordRe, text) {
             let k = Words.key(w)
-            if !hardSeen.contains(k), classify(w, sentenceStart: true) != nil { hardSeen.insert(k); hardWords.append(w) }
+            if !hardSeen.contains(k), classify(w, sentenceStart: true) != nil, plain[k] != nil || hard[k] != nil || slang[k] != nil || isRealWord(w) { hardSeen.insert(k); hardWords.append(w) }
             if hardWords.count >= 12 { break }
         }
         return Summary(points: points, dates: Array(dates.prefix(6)), hardWords: hardWords)

@@ -87,14 +87,42 @@ final class LingerMode {
         }
     }
 
-    /// Which recognized words to underline (a word at the start of a line may be capitalized).
+    /// Which recognized words to underline. Only words inside real sentences count: menus, sidebars, buttons,
+    /// web and email addresses, and code are skipped, and so are words macOS's spell checker doesn't know
+    /// (names, brands, and text the recognizer misread).
     static func hardWords(in r: ScreenReader.Result) -> [ScreenReader.Word] {
-        var firstOfLine = Set<Int>()
-        var seenLine = Set<Int>()
-        for (i, w) in r.words.enumerated() where !seenLine.contains(w.lineIndex) { seenLine.insert(w.lineIndex); firstOfLine.insert(i) }
-        return r.words.enumerated().compactMap { i, w in
-            Words.shared.classify(w.text, sentenceStart: firstOfLine.contains(i)) != nil ? w : nil
-        }.prefix(400).map { $0 }
+        var out: [ScreenReader.Word] = []
+        var firstSeen = Set<Int>()
+        for w in r.words {
+            let li = w.lineIndex, line = r.lines[li]
+            let isFirst = !firstSeen.contains(li); firstSeen.insert(li)
+            guard isProse(line) else { continue }
+            // Vision sometimes returns the whole line's box for one word; skip boxes far wider than the word.
+            if let lr = r.lineRects[safe: li], line.count > 0 {
+                let perChar = lr.width / CGFloat(line.count)
+                if w.rect.width > perChar * CGFloat(w.text.count) * 2.2 + 12 { continue }
+            }
+            let prev = li > 0 ? r.lines[li - 1].trimmingCharacters(in: .whitespaces) : ""
+            let sentenceStart = isFirst && (li == 0 || prev.isEmpty || ".!?:".contains(prev.last!))
+            guard Words.shared.classify(w.text, sentenceStart: sentenceStart) != nil else { continue }
+            let k = Words.key(w.text)
+            let known = Words.shared.plain[k] != nil || Words.shared.hard[k] != nil || Words.shared.slang[k] != nil
+            guard known || Words.shared.isRealWord(w.text) else { continue }
+            out.append(w)
+            if out.count >= 400 { break }
+        }
+        return out
+    }
+
+    /// A line of running text, not a menu item, label, button, address or code.
+    static func isProse(_ line: String) -> Bool {
+        let l = line.lowercased()
+        if l.contains("://") || l.contains("www.") || l.contains("@") || l.contains(".com") || l.contains(".org") || l.contains(".gov") { return false }
+        if line.contains("{") || line.contains("}") || line.contains(";") || line.contains("=") || line.contains("</") || line.contains("()") { return false }
+        let words = line.split(whereSeparator: { $0 == " " || $0 == "\t" }).filter { $0.contains(where: { $0.isLetter }) }
+        guard words.count >= 5 else { return false }
+        let letters = line.filter { $0.isLetter }.count
+        return Double(letters) / Double(max(line.count, 1)) > 0.65
     }
 
     private func redraw() {
@@ -167,4 +195,8 @@ final class UnderlineView: NSView {
             path.stroke()
         }
     }
+}
+
+extension Array {
+    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }
