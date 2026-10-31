@@ -12,19 +12,21 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
   $('host').textContent = usable ? host : 'this page';
   $('siteLabel').textContent = usable ? host : 'Not available here';
   const status = usable ? await chrome.tabs.sendMessage(tab.id, { type: 'status' }).catch(() => null) : null;
-  if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain', 'eye', 'recal', 'secs'].forEach((id) => { $(id).disabled = true; }); }
+  if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain'].forEach((id) => { $(id).disabled = true; }); }
   if (usable && !status) $('blocked').textContent = 'Reload this page to start Linger here.';
 
-  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, pairCode: '', saved: [], gazeProblem: null });
-  if (st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = 'Last time on ' + st.gazeProblem.site + ': ' + st.gazeProblem.why + '. Try another site, or check camera access.'; }
+  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null });
+  if (st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = 'Last problem: ' + st.gazeProblem.why + '. Open Recalibrate to check the camera.'; }
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
   $('bigger').checked = st.bigger;
   $('showGaze').checked = st.showGaze;
   $('spread').checked = st.spread;
   $('secs').value = st.pauseSecs; $('secsOut').textContent = st.pauseSecs;
-  $('eye').checked = !!(status && status.eye);
-  $('recal').hidden = !$('eye').checked;
+  $('eye').checked = st.eyeOn;
+  $('recal').hidden = !st.gazeModel;
+  const acc = st.gazeModel && st.gazeModel.acc;
+  if (acc) $('eyeHint').textContent = `Set up ${new Date(st.gazeModel.at).toLocaleDateString()}: lands about ${acc.err}px from where you look. Works on every tab. Clicking around helps it keep learning.`;
 
   $('highlight').onchange = (e) => chrome.storage.local.set({ highlight: e.target.checked });
   $('bigger').onchange = (e) => chrome.storage.local.set({ bigger: e.target.checked });
@@ -36,18 +38,15 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
   };
   $('explain').onclick = async () => { await chrome.tabs.sendMessage(tab.id, { type: 'explain' }).catch(() => {}); window.close(); };
 
-  // Eye tracking runs inside the page (it needs the page's camera permission and layout).
+  // Eye tracking runs once for the whole browser; the first time, it opens the setup page.
   $('eye').onchange = async (e) => {
-    if (e.target.checked) { await chrome.runtime.sendMessage({ type: 'eye-on', tabId: tab.id }); window.close(); }
-    else { await chrome.runtime.sendMessage({ type: 'eye-off', tabId: tab.id }); $('recal').hidden = true; }
+    const r = await chrome.runtime.sendMessage({ type: e.target.checked ? 'eye-on' : 'eye-off', tabId: tab && tab.id });
+    if (r && r.setup) e.target.checked = false;
+    window.close();
   };
-  $('recal').onclick = async () => { await chrome.runtime.sendMessage({ type: 'eye-recal', tabId: tab.id }); window.close(); };
+  $('recal').onclick = async () => { await chrome.runtime.sendMessage({ type: 'eye-recal', tabId: tab && tab.id }); window.close(); };
   $('secs').oninput = (e) => { $('secsOut').textContent = e.target.value; };
-  $('secs').onchange = (e) => {
-    const secs = Number(e.target.value);
-    chrome.storage.local.set({ pauseSecs: secs });
-    if ($('eye').checked) chrome.runtime.sendMessage({ type: 'eye-secs', tabId: tab.id, secs });
-  };
+  $('secs').onchange = (e) => chrome.storage.local.set({ pauseSecs: Number(e.target.value) });
 
   // Phone pairing: the same 12-character code the phone app shows under Words → live sync.
   const showPair = (code) => { $('paired').hidden = !code; $('pairForm').hidden = !!code; $('codeShow').textContent = pretty(code); };

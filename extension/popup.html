@@ -23,13 +23,13 @@
 
   <section>
     <h2>👁 Eye tracking</h2>
-    <label class="sw"><span><b>Notice when I’m stuck</b><small>Uses your webcam. Video stays on this laptop.</small></span><input type="checkbox" id="eye"><i></i></label>
+    <label class="sw"><span><b>Notice when I’m stuck</b><small>On every tab. Uses your webcam; video stays on this laptop.</small></span><input type="checkbox" id="eye"><i></i></label>
     <label class="slider"><span>Pause after <output id="secsOut">3</output> s on one line</span><input type="range" id="secs" min="1.5" max="6" step="0.5" value="3"></label>
     <label class="sw"><span><b>Show where I’m looking</b><small>A light bar under the line Linger thinks you’re reading</small></span><input type="checkbox" id="showGaze"><i></i></label>
     <label class="sw"><span><b>More space between lines</b><small>Makes lines easier for the webcam to tell apart</small></span><input type="checkbox" id="spread"><i></i></label>
     <button type="button" class="btn ghost small" id="recal">Recalibrate</button>
     <p class="problem" id="eyeProblem" hidden></p>
-    <p class="hint" id="eyeHint">After turning it on, follow the dot for about 20 seconds. Works best with light on your face, an arm’s length from the screen, head still. Clicking around the page also helps it learn.</p>
+    <p class="hint" id="eyeHint">The first time, a setup page opens: follow a dot for about 35 seconds. Works best with light on your face, an arm’s length from the screen.</p>
   </section>
 
   <section>

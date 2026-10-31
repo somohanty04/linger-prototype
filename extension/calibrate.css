@@ -1,0 +1,39 @@
+:root { --indigo-900: #1F2AA8; --indigo-500: #6D79FF; --indigo-300: #B1B7FF; --indigo-100: #EAEFFF; --ink: #14161F; --muted: #5B6070; --line: #E8E8E8; --ok: #115940; --bad: #A81F64; }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ink); background: linear-gradient(160deg, #1F2DA8, #5464D9); min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+body.running { background: #F6F8FF; cursor: none; padding: 0; overflow: hidden; }
+.card { width: min(520px, 100%); background: #FFFFFF; border-radius: 24px; padding: 28px; box-shadow: 0 24px 60px rgba(10, 14, 60, 0.35); }
+.card.wide { width: min(760px, 100%); }
+h1 { margin: 10px 0 6px; color: var(--indigo-900); font-size: 28px; }
+.lead { margin: 0 0 16px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+.cam { position: relative; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; background: #171C4A; margin-bottom: 12px; }
+.cam video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+.camOff { position: absolute; inset: 0; display: grid; place-items: center; color: var(--indigo-300); font-weight: 700; }
+.checks { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.checks li { font-size: 13px; font-weight: 700; padding: 6px 10px; border-radius: 99px; background: var(--indigo-100); color: var(--muted); }
+.checks li::before { content: "○ "; }
+.checks li.ok { background: #DDF7E8; color: var(--ok); } .checks li.ok::before { content: "✓ "; }
+.checks li.bad { background: #FFE7DF; color: var(--bad); } .checks li.bad::before { content: "! "; }
+.tips { margin: 0 0 14px; padding-left: 20px; color: var(--ink); font-size: 14px; line-height: 1.5; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.btn { height: 44px; border-radius: 99px; border: 1px solid var(--indigo-300); background: #FFFFFF; color: var(--indigo-900); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; padding: 0 18px; }
+.btn.primary { border-color: var(--indigo-500); background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.small { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+.err { margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: #FFE7DF; color: var(--bad); font-size: 14px; }
+
+#run { position: fixed; inset: 0; }
+.dot { position: fixed; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; background: var(--indigo-500); box-shadow: 0 0 0 12px rgba(109, 121, 255, 0.22); transition: left .38s ease, top .38s ease, transform .3s ease; }
+.dot::after { content: ""; position: absolute; inset: 13px; border-radius: 50%; background: #FFFFFF; }
+.dot.rec { transform: scale(0.55); }
+.dot.check { background: #1DB954; box-shadow: 0 0 0 12px rgba(29, 185, 84, 0.2); }
+.bar { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); width: min(360px, 70vw); height: 8px; border-radius: 99px; background: var(--indigo-100); overflow: hidden; }
+.bar span { display: block; height: 100%; width: 0; background: var(--indigo-500); transition: width .2s; }
+.runMsg { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); margin: 0; color: var(--muted); font-size: 14px; font-weight: 700; }
+
+.try { position: relative; border: 1px solid var(--line); border-radius: 16px; padding: 14px 18px; margin-bottom: 8px; font-family: Georgia, serif; font-size: 19px; line-height: 1.9; background: #FFFDF7; }
+.try p { margin: 0 0 10px; }
+.try .tryHead { font-family: 'Figtree', system-ui, sans-serif; font-size: 13px; color: var(--muted); line-height: 1.4; }
+.gdot { position: fixed; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: rgba(109, 121, 255, 0.45); border: 2px solid rgba(43, 57, 178, 0.6); pointer-events: none; display: none; }
+.gline { position: fixed; height: 4px; border-radius: 4px; background: rgba(109, 121, 255, 0.6); pointer-events: none; display: none; transition: top .15s ease; }

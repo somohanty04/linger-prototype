@@ -1,12 +1,13 @@
-// Linger eye tracking on any page (injected with WebGazer only when the user turns it on).
+// Linger eye tracking on any page. The tracking itself runs once for the whole browser (tracker.js);
+// this script gets the gaze point for this tab.
 // Pause = eyes stay on one line of text for a few seconds, or go back up to re-read it.
 // Then Linger opens the card for the hard word on that line closest to where you're looking.
 (() => {
   'use strict';
-  if (window.__lingerGaze) { if (!window.__lingerGaze.on) window.__lingerGaze.start(); return; }
+  if (window.__lingerGaze) return;
   const L = window.__lingerAPI;
-  const wg = window.webgazer;
-  const G = { on: false, calibrating: false, secs: (L && L.settings.pauseSecs) || 3, samples: [], last: 0, trained: !!window.__lingerSim, err: null };
+  if (!L) return;
+  const G = { on: false, status: 'off', msg: '', secs: L.settings.pauseSecs || 3, last: 0, port: null, dpr: null };
   const BAND = 30; // px: one "line" of text for the webcam's accuracy
 
   // ---------- small UI (shadow DOM) ----------
@@ -41,129 +42,63 @@
   function chip() {
     let c = root.querySelector('.chip');
     if (!G.on) { if (c) c.remove(); return; }
-    if (!c) { c = document.createElement('div'); c.className = 'chip'; ui.appendChild(c); }
-    c.innerHTML = '<span class="live"></span><span class="label">Linger eye tracking</span><button data-a="recal">Recalibrate</button><button data-a="off">Turn off</button>';
-    c.onclick = (e) => { const a = e.target.dataset && e.target.dataset.a; if (a === 'recal') calibrate(); if (a === 'off') stop(); };
+    if (!c) {
+      c = document.createElement('div'); c.className = 'chip'; ui.appendChild(c);
+      c.innerHTML = '<span class="live"></span><span class="label"></span><button data-a="recal">Recalibrate</button><button data-a="off">Turn off</button>';
+      c.onclick = (e) => { const a = e.target.dataset && e.target.dataset.a; if (a && api) chrome.runtime.sendMessage({ type: a === 'recal' ? 'eye-recal' : 'eye-off' }).catch(() => {}); };
+    }
+    const bad = G.status !== 'ok' && G.status !== 'loading';
+    c.classList.toggle('lost', bad);
+    c.querySelector('.label').textContent = (bad && G.msg) || LABEL[G.status] || LABEL.ok;
+    c.querySelector('[data-a="recal"]').textContent = G.status === 'nomodel' || G.status === 'error' ? 'Set up' : 'Recalibrate';
   }
 
-  // ---------- start / stop ----------
-  // Start-up, step by step with visible progress, so nothing fails silently.
-  // (WebGazer's own begin() never finishes if the camera can't start, so check the camera ourselves first.)
-  async function start() {
-    attach();
-    const fail = (title, body, why) => { busyMsg(null); message(title, body); report(why || title); G.on = false; chip(); };
-    if (!wg) return fail('Eye tracking couldn’t load', 'Reload the page and try again.', 'webgazer missing');
-    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
-      return fail('This page can’t use the camera', 'Eye tracking works on secure (https) websites. Try another page, like the Linger test page.', 'insecure context');
-    try { if (document.featurePolicy && !document.featurePolicy.allowsFeature('camera')) return fail('This website blocks the camera', 'Some sites don’t allow any camera use. Try eye tracking on another website, like the Linger test page.', 'camera blocked by site policy'); } catch {}
-    busyMsg('Starting the camera…', 'If Chrome asks to use your camera, click Allow.');
-    try {
-      const probe = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-      probe.getTracks().forEach((t) => t.stop());
-    } catch (e) {
-      const n = e && e.name;
-      if (n === 'NotAllowedError' || n === 'SecurityError') return fail('Camera access is blocked', 'Click the camera icon at the right of the address bar, choose “Always allow”, then turn eye tracking on again.', 'camera ' + n);
-      if (n === 'NotFoundError' || n === 'OverconstrainedError') return fail('No camera found', 'Linger needs a webcam for eye tracking.', 'camera ' + n);
-      if (n === 'NotReadableError' || n === 'AbortError') return fail('The camera is busy', 'Another app (like Zoom or FaceTime) may be using it. Close it and try again.', 'camera ' + n);
-      return fail('Couldn’t turn on the camera', String((e && e.message) || e), 'camera ' + n);
-    }
-    busyMsg('Loading eye tracking…', 'The first time can take 10–20 seconds while the face model downloads.');
-    try {
-      wg.params.camConstraints = { video: { width: { ideal: 480 }, height: { ideal: 360 }, facingMode: 'user' } };
-      wg.saveDataAcrossSessions(true);
-      wg.setRegression('weightedRidge').setGazeListener(onGaze); // weighted: recent clicks and calibration count more
-      const began = await Promise.race([
-        new Promise((res) => { wg.begin(() => res('fail')).then(() => res('ok'), (e) => res('error: ' + ((e && e.message) || e))); }),
-        wait(45000).then(() => 'timeout')
-      ]);
-      if (began !== 'ok') return fail('Eye tracking couldn’t start', began === 'timeout' ? 'The face model didn’t load. Check your internet connection and try again.' : 'Try reloading the page, then turn it on again.', 'begin ' + began);
-      wg.removeMouseEventListeners();
-      wg.showVideoPreview(false).showFaceOverlay(false).showFaceFeedbackBox(false).showPredictionPoints(false).applyKalmanFilter(true);
-      // Wait until the tracker actually sees a face before calibrating.
-      G.on = true; chip();
-      busyMsg('Looking for your face…', 'Sit in front of the camera with light on your face.');
-      const t0 = performance.now();
-      while (!(G.last > t0) && performance.now() - t0 < 20000) { const p = await wg.getCurrentPrediction().catch(() => null); if (p) break; await wait(300); }
-      busyMsg(null);
-      report('');
-      calibrate();
-    } catch (e) {
-      fail('Eye tracking couldn’t start', 'Try reloading the page, then turn it on again.', 'start ' + ((e && e.message) || e));
-    }
+  // ---------- connection to the tracker ----------
+  // The camera and face model run once for the whole browser (tracker.html). This tab just receives where
+  // on the screen you're looking, converts it to a spot on this page, and decides if you're stuck.
+  const api = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
+  const zoom = () => (G.dpr ? devicePixelRatio / G.dpr : 1);
+  const toPage = (sx, sy) => { const z = zoom(); return [(sx - screenX - (outerWidth - innerWidth * z) / 2) / z, (sy - screenY - (outerHeight - innerHeight * z)) / z]; };
+  const toScreen = (x, y) => { const z = zoom(); return [screenX + (outerWidth - innerWidth * z) / 2 + x * z, screenY + (outerHeight - innerHeight * z) + y * z]; };
+  const LABEL = { loading: 'Starting eye tracking…', ok: 'Linger eye tracking', noface: 'Can’t see your eyes. Face the camera.', moved: 'Sit like you did when you set it up', nomodel: 'Eye tracking needs setting up', error: 'Eye tracking stopped' };
+  function setStatus(st) { G.status = st.s; G.msg = st.msg || ''; chip(); }
+  function connect() {
+    if (!api) return;
+    const want = G.on && !document.hidden;
+    if (!want) { if (G.port) { try { G.port.disconnect(); } catch {} G.port = null; } return; }
+    if (G.port) return;
+    const port = chrome.runtime.connect({ name: 'gaze' });
+    G.port = port;
+    port.onMessage.addListener((m) => {
+      if (m.status) setStatus(m.status);
+      if (m.g && document.hasFocus()) { const [x, y] = toPage(m.g[0], m.g[1]); onGaze({ x, y }); }
+    });
+    port.onDisconnect.addListener(() => {
+      void chrome.runtime.lastError;
+      if (G.port === port) G.port = null;
+      if (!G.on) return;
+      // The tracker isn't running (browser restarted, or it was closed): ask for it, then try again.
+      setStatus({ s: 'loading' });
+      chrome.runtime.sendMessage({ type: 'eye-ensure' }).catch(() => {});
+      setTimeout(connect, 1500);
+    });
   }
-  // A small "working on it" box, so people know something is happening.
-  function busyMsg(title, body) {
-    let b = root.querySelector('.busy');
-    if (!title) { if (b) b.remove(); return; }
-    if (!b) { b = document.createElement('div'); b.className = 'shade busy'; ui.appendChild(b); }
-    b.innerHTML = `<div class="msg"><h2>${title}</h2><div>${body || ''}</div></div>`;
+  function setOn(on) {
+    if (on === G.on) return;
+    G.on = on; G.status = on ? 'loading' : 'off';
+    if (on) attach(); else { ui.querySelectorAll('.ask').forEach((n) => n.remove()); L.askOpen = false; clearLine(); showCursor(null); }
+    hist.length = 0; trail.length = 0;
+    chip(); connect();
   }
-  // Remember the last problem so the Linger menu can show it.
-  function report(why) { try { chrome.storage.local.set({ gazeProblem: why ? { t: Date.now(), site: location.hostname, why } : null }); } catch {} }
-  function stop() {
-    G.on = false; G.calibrating = false;
-    try { wg.end(); } catch {}
-    ui.querySelectorAll('.shade, .ask').forEach((n) => n.remove());
-    clearLine(); showCursor(null); chip();
-  }
-  function message(title, body) {
-    const s = document.createElement('div'); s.className = 'shade';
-    s.innerHTML = `<div class="msg"><h2>${title}</h2><div>${body}</div><button>OK</button></div>`;
-    s.querySelector('button').onclick = () => s.remove();
-    ui.appendChild(s);
-  }
-
-  // ---------- calibration: follow a dot through 16 spots (~20 s), then a quick accuracy check ----------
-  const pts16 = () => { const W = innerWidth, H = innerHeight, out = []; [0.1, 0.37, 0.63, 0.9].forEach((fy, j) => { const xs = [0.08, 0.36, 0.64, 0.92].map((fx) => W * fx); (j % 2 ? xs.reverse() : xs).forEach((x) => out.push([Math.round(x), Math.round(H * fy)])); }); return out; };
-  async function calibrate() {
-    if (!G.on) return;
-    G.calibrating = true; closeAsk(); clearLine(); hist.length = 0;
-    ui.querySelectorAll('.shade').forEach((n) => n.remove());
-    const s = document.createElement('div'); s.className = 'shade';
-    s.innerHTML = `<div class="msg"><h2>Follow the dot</h2><div>Sit how you’ll read, about an arm’s length from the screen, face lit from the front. Keep your eyes on the dot and your head still. About 20 seconds.</div><button id="go">Start</button>${G.trained ? '<button class="ghost" id="skip">Skip</button>' : ''}</div>`;
-    ui.appendChild(s);
-    const choice = await new Promise((res) => { s.querySelector('#go').onclick = () => res('go'); const k = s.querySelector('#skip'); if (k) k.onclick = () => res('skip'); });
-    s.querySelector('.msg').remove();
-    if (choice === 'go') {
-      const pts = pts16();
-      const dot = document.createElement('div'); dot.className = 'dot'; s.appendChild(dot);
-      const bar = document.createElement('div'); bar.className = 'bar'; bar.innerHTML = '<span></span>'; s.appendChild(bar);
-      dot.style.left = pts[0][0] + 'px'; dot.style.top = pts[0][1] + 'px';
-      await wait(700);
-      for (let k = 0; k < pts.length && G.on; k++) {
-        const [x, y] = pts[k];
-        dot.classList.remove('rec'); dot.style.left = x + 'px'; dot.style.top = y + 'px';
-        await wait(420); dot.classList.add('rec'); // let the eyes land first
-        const end = performance.now() + 520;
-        while (performance.now() < end) { wg.recordScreenPosition(x, y, 'click'); await wait(35); }
-        bar.firstChild.style.width = Math.round((k + 1) / pts.length * 100) + '%';
-      }
-      G.trained = true;
-      // Accuracy check: up-and-down error is what matters for telling lines apart.
-      const checks = [[0.25, 0.5], [0.5, 0.5], [0.75, 0.5]].map(([fx, fy]) => [Math.round(innerWidth * fx), Math.round(innerHeight * fy)]);
-      bar.remove();
-      const errs = [];
-      for (const [x, y] of checks) {
-        dot.classList.remove('rec'); dot.style.left = x + 'px'; dot.style.top = y + 'px';
-        await wait(500);
-        const end = performance.now() + 900;
-        while (performance.now() < end) { const p = await wg.getCurrentPrediction(); if (p) errs.push(Math.abs(p.y - y)); await wait(60); }
-      }
-      dot.remove();
-      const err = errs.length ? Math.round(median(errs)) : null;
-      G.err = err;
-      const verdict = err === null ? ['Linger can’t see your eyes', 'Check that your face is in front of the camera with light on it.']
-        : err <= 45 ? ['Ready', `Gaze lands about ${err}px from where you look. That’s good enough to tell lines apart.`]
-        : err <= 90 ? ['Usable', `Gaze lands about ${err}px off. Turn on “More space between lines” in the Linger menu for better results.`]
-        : ['Too noisy', `Gaze lands about ${err}px off. Face a window or lamp, keep your head still, and calibrate again.`];
-      const m = document.createElement('div'); m.className = 'msg';
-      m.innerHTML = `<h2>${verdict[0]}</h2><div>${verdict[1]}</div><button id="ok">Start reading</button><button class="ghost" id="again">Calibrate again</button>`;
-      s.appendChild(m);
-      const again = await new Promise((res) => { m.querySelector('#ok').onclick = () => res(false); m.querySelector('#again').onclick = () => res(true); });
-      if (again) { s.remove(); G.calibrating = false; return calibrate(); }
-    }
-    s.remove();
-    G.calibrating = false; G.samples = []; hist.length = 0; trail.length = 0; G.cool = performance.now() + 1500;
+  const send = (m) => { if (G.port) try { G.port.postMessage(m); } catch {} };
+  if (api) {
+    chrome.storage.local.get({ eyeOn: false, gazeModel: null, pauseSecs: 3 }, (v) => { G.dpr = v.gazeModel && v.gazeModel.dpr; G.acc = v.gazeModel && v.gazeModel.acc; G.secs = v.pauseSecs; setOn(!!v.eyeOn); });
+    chrome.storage.onChanged.addListener((ch) => {
+      if (ch.pauseSecs) G.secs = ch.pauseSecs.newValue;
+      if (ch.gazeModel) G.dpr = ch.gazeModel.newValue && ch.gazeModel.newValue.dpr;
+      if (ch.eyeOn) setOn(!!ch.eyeOn.newValue);
+    });
+    document.addEventListener('visibilitychange', connect);
   }
 
   // ---------- pause detection ----------
@@ -196,7 +131,7 @@
   // Webcam gaze is noisy (often more than a line off), so don't trust single points. Use medians:
   // reading = eyes sweep across the line and drift down the page; stuck = they stay in one place.
   function onGaze(d) {
-    if (!d || !G.on || G.calibrating || document.hidden) return;
+    if (!d || !G.on || document.hidden) return;
     const now = performance.now();
     if (G.last && now - G.last > 700) { hist.length = 0; trail.length = 0; } // a gap: start fresh
     G.last = now;
@@ -273,27 +208,18 @@
     a.style.left = Math.min(Math.max(8, r.left), innerWidth - 300) + 'px';
     a.style.top = Math.min(r.bottom + 8, innerHeight - 60) + 'px';
     ui.appendChild(a);
-    const log = (ans) => { try { chrome.storage.local.get({ gazeLog: [] }, (v) => chrome.storage.local.set({ gazeLog: [...v.gazeLog, { t: Date.now(), site: location.hostname, word: w, why, ans, err: G.err }].slice(-500) })); } catch {} };
+    const log = (ans) => { try { chrome.storage.local.get({ gazeLog: [] }, (v) => chrome.storage.local.set({ gazeLog: [...v.gazeLog, { t: Date.now(), site: location.hostname, word: w, why, ans, err: G.acc }].slice(-500) })); } catch {} };
     a.querySelector('.no').onclick = () => { log('no'); closeAsk(); clearLine(); G.cool = performance.now() + 6000; hist.length = 0; trail.length = 0; }; // don't nag
     a.querySelector('.yes').onclick = () => {
       log('yes'); closeAsk(); clearLine();
       // They were looking at this word: use it as one more calibration point.
-      const c = word.getBoundingClientRect(); for (let i = 0; i < 6; i++) wg.recordScreenPosition((c.left + c.right) / 2, (c.top + c.bottom) / 2, 'click');
+      const c = word.getBoundingClientRect(); send({ type: 'learn', s: toScreen((c.left + c.right) / 2, (c.top + c.bottom) / 2), strong: true });
       L.openCard(word, why);
     };
   }
   window.addEventListener('linger-card-closed', () => { G.cool = performance.now() + 4000; hist.length = 0; trail.length = 0; });
   // People look where they click, so every click on the page teaches the tracker a little more.
-  document.addEventListener('click', (e) => { if (G.on && !G.calibrating && e.isTrusted) wg.recordScreenPosition(e.clientX, e.clientY, 'click'); }, true);
-  // Tell people when the camera loses their eyes, instead of silently doing nothing.
-  setInterval(() => {
-    if (!G.on || G.calibrating) return;
-    const lost = performance.now() - (G.last || 0) > 1500;
-    const c = root.querySelector('.chip .label');
-    if (c) c.textContent = lost ? 'Can’t see your eyes. Face the camera.' : 'Linger eye tracking';
-    root.querySelector('.chip') && root.querySelector('.chip').classList.toggle('lost', lost);
-  }, 700);
-
-  window.__lingerGaze = { get on() { return G.on; }, start, stop, calibrate, setSecs: (s) => { G.secs = s; } };
-  start();
+  document.addEventListener('click', (e) => { if (G.on && e.isTrusted) send({ type: 'learn', s: toScreen(e.clientX, e.clientY) }); }, true);
+  // feed/simOn are for the noisy-gaze simulation on the test page (no extension there).
+  window.__lingerGaze = { get on() { return G.on; }, setSecs: (s) => { G.secs = s; }, simOn: () => { attach(); G.on = true; G.status = 'ok'; chip(); }, feed: (x, y) => onGaze({ x, y }) };
 })();

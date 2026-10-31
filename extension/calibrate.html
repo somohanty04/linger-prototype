@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Set up Linger eye tracking</title>
+<link rel="stylesheet" href="calibrate.css">
+</head>
+<body>
+<main id="intro" class="card">
+  <img src="icons/icon-48.png" width="40" height="40" alt="">
+  <h1>Set up eye tracking</h1>
+  <p class="lead">Do this once. Linger then notices when you’re stuck on a word, on every website.</p>
+  <div class="cam">
+    <video id="preview" muted playsinline></video>
+    <div class="camOff" id="camOff">Camera is off</div>
+  </div>
+  <ul class="checks">
+    <li id="cFace">Face in the camera</li>
+    <li id="cLight">Light on your face</li>
+    <li id="cReady">Eye tracking loaded</li>
+  </ul>
+  <ol class="tips">
+    <li>Sit how you normally read, about an arm’s length from the screen.</li>
+    <li>Face a window or lamp, not a bright light behind you.</li>
+    <li>A dot moves to 25 spots. Look right at it. Moving your head a little is fine.</li>
+  </ol>
+  <p class="err" id="err" hidden></p>
+  <div class="actions">
+    <button class="btn primary" id="camBtn">Turn on camera</button>
+    <button class="btn primary" id="startBtn" hidden disabled>Start (full screen, about 35 seconds)</button>
+    <button class="btn ghost" id="cancelBtn">Not now</button>
+  </div>
+  <p class="small">The video is processed on this computer and never leaves it.</p>
+</main>
+
+<div id="run" hidden>
+  <div class="dot" id="dot"></div>
+  <div class="bar"><span id="barFill"></span></div>
+  <p class="runMsg" id="runMsg">Look at the dot</p>
+</div>
+
+<main id="result" class="card wide" hidden>
+  <h1 id="verdict">Ready</h1>
+  <p class="lead" id="verdictText"></p>
+  <div class="try" id="try">
+    <p class="tryHead">Try it: read this, then look at a few words. The light bar follows the line you’re looking at.</p>
+    <p>Tenants are hereby notified that the premises will undergo routine maintenance on November 3.</p>
+    <p>Any arrears must be remitted by the first of the month, pursuant to the lease agreement.</p>
+    <p>Subletting is prohibited without prior written consent from the landlord.</p>
+    <p>Please retain this notice for your records and contact the office with any questions.</p>
+    <div class="gdot" id="gdot"></div>
+    <div class="gline" id="gline"></div>
+  </div>
+  <div class="actions">
+    <button class="btn primary" id="doneBtn">Done, start reading</button>
+    <button class="btn ghost" id="againBtn">Calibrate again</button>
+  </div>
+  <p class="small">Linger keeps learning while you browse: every click teaches it where you were looking.</p>
+</main>
+<script type="module" src="calibrate.js"></script>
+</body>
+</html>

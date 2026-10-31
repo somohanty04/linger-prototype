@@ -1,19 +1,16 @@
 // Test-only: simulates noisy webcam gaze on test.html to measure the pause detection. Not part of the extension zip.
 window.lingerSim = (() => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  let listener = null;
-  const chain = { showVideoPreview() { return chain; }, showFaceOverlay() { return chain; }, showFaceFeedbackBox() { return chain; }, showPredictionPoints() { return chain; }, applyKalmanFilter() { return chain; } };
   const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
   const NOISE = { x: 120, y: 45, outliers: 0.08 };
-  const send = (x, y) => { const o = Math.random() < NOISE.outliers; listener({ x: x + gauss() * NOISE.x + (o ? (Math.random() - 0.5) * 800 : 0), y: y + gauss() * NOISE.y + (o ? (Math.random() - 0.5) * 500 : 0) }); };
+  const send = (x, y) => { const o = Math.random() < NOISE.outliers; window.__lingerGaze.feed(x + gauss() * NOISE.x + (o ? (Math.random() - 0.5) * 800 : 0), y + gauss() * NOISE.y + (o ? (Math.random() - 0.5) * 500 : 0)); };
   let lines = [], prompts = [], root = null;
   async function setup() {
-    window.__lingerSim = true;
-    window.webgazer = { params: {}, saveDataAcrossSessions() {}, setRegression() { return { setGazeListener(fn) { listener = fn; return chain; } }; }, begin: async () => {}, removeMouseEventListeners() {}, ...chain, end() {}, recordScreenPosition() {}, getCurrentPrediction: async () => null };
     await new Promise((r) => { const s = document.createElement('script'); s.src = 'gaze.js?x=' + Date.now(); s.onload = r; document.body.appendChild(s); });
     await wait(300);
+    window.__lingerGaze.simOn();
     root = document.getElementById('linger-gaze').shadowRoot;
-    root.querySelector('#skip').click(); await wait(200);
+    await wait(200);
     const ls = [];
     document.querySelectorAll('p').forEach((p, i) => { if (i === 0) return; const r = document.createRange(); r.selectNodeContents(p); const seen = new Set(); [...r.getClientRects()].forEach((b) => { const k = Math.round(b.top); if (b.width > 40 && !seen.has(k)) { seen.add(k); ls.push({ y: (b.top + b.bottom) / 2, l: b.left, r: b.right }); } }); });
     ls.sort((a, b) => a.y - b.y); lines = []; ls.forEach((l) => { if (!lines.length || Math.abs(lines[lines.length - 1].y - l.y) > 8) lines.push(l); });

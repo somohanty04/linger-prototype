@@ -1,5 +1,5 @@
 // Linger background worker: dictionary lookups, saving words, sending them to the phone (Firestore REST),
-// and starting eye tracking in a tab.
+// and running eye tracking (one hidden tracker page for the whole browser, plus the setup page).
 const FIREBASE = { projectId: 'linger-f41a7', apiKey: 'AIzaSyDxWUp1eTp8bXZV-GV13XQAHI_Q4fL0GCU' };
 const DOC = (code) => `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/pairs/${code}`;
 
@@ -32,6 +32,26 @@ async function checkCode(code) {
   return r.ok ? 'found' : r.status === 404 ? 'new' : 'error';
 }
 
+// ---------- eye tracker page ----------
+let creating = null;
+async function hasTracker() { return (await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] })).length > 0; }
+async function ensureTracker() {
+  if (await hasTracker()) return;
+  if (!creating) creating = chrome.offscreen.createDocument({ url: 'tracker.html', reasons: ['USER_MEDIA'], justification: 'Webcam eye tracking that notices when you are stuck on a word' }).finally(() => { creating = null; });
+  await creating;
+}
+async function closeTracker() { if (await hasTracker()) await chrome.offscreen.closeDocument().catch(() => {}); }
+async function openSetup(fromTab) {
+  await chrome.storage.session.set({ setupFrom: fromTab || null });
+  const url = chrome.runtime.getURL('calibrate.html');
+  const [open] = await chrome.tabs.query({ url });
+  if (open) await chrome.tabs.update(open.id, { active: true }); else await chrome.tabs.create({ url });
+}
+// Keep eye tracking on after Chrome restarts.
+const resume = async () => { const { eyeOn } = await chrome.storage.local.get({ eyeOn: false }); if (eyeOn) ensureTracker(); };
+chrome.runtime.onStartup.addListener(resume);
+chrome.runtime.onInstalled.addListener(resume);
+
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   (async () => {
     if (msg.type === 'lookup') return reply({ meaning: await lookup(msg.word) });
@@ -45,12 +65,29 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       return;
     }
     if (msg.type === 'check-code') return reply({ result: await checkCode(msg.code) });
+    // ---------- eye tracking ----------
     if (msg.type === 'eye-on') {
-      await chrome.scripting.executeScript({ target: { tabId: msg.tabId }, files: ['vendor/webgazer.js', 'gaze.js'] });
+      const { gazeModel } = await chrome.storage.local.get({ gazeModel: null });
+      if (!gazeModel) { await openSetup(msg.tabId); return reply({ ok: true, setup: true }); }
+      await chrome.storage.local.set({ eyeOn: true, gazeProblem: null });
+      await ensureTracker();
       return reply({ ok: true });
     }
-    if (msg.type === 'eye-off' || msg.type === 'eye-recal' || msg.type === 'eye-secs') {
-      await chrome.scripting.executeScript({ target: { tabId: msg.tabId }, func: (t, secs) => { const g = window.__lingerGaze; if (!g) return; if (t === 'eye-off') g.stop(); else if (t === 'eye-recal') g.calibrate(); else g.setSecs(secs); }, args: [msg.type, msg.secs || 3] });
+    if (msg.type === 'eye-off') { await chrome.storage.local.set({ eyeOn: false }); await closeTracker(); return reply({ ok: true }); }
+    if (msg.type === 'eye-recal') { await openSetup(msg.tabId || (sender.tab && sender.tab.id)); return reply({ ok: true }); }
+    if (msg.type === 'eye-ensure') { const { eyeOn } = await chrome.storage.local.get({ eyeOn: false }); if (eyeOn) await ensureTracker(); return reply({ ok: true }); }
+    if (msg.type === 'eye-start') { if (msg.restart) await closeTracker(); await ensureTracker(); return reply({ ok: true }); }
+    if (msg.type === 'get-model') { const { gazeModel } = await chrome.storage.local.get({ gazeModel: null }); return reply({ model: gazeModel }); }
+    if (msg.type === 'save-model') { await chrome.storage.local.set({ gazeModel: msg.model }); return reply({ ok: true }); }
+    if (msg.type === 'gaze-problem') { await chrome.storage.local.set({ gazeProblem: { t: Date.now(), site: 'eye tracking', why: msg.why } }); return reply({ ok: true }); }
+    if (msg.type === 'calib-done' || msg.type === 'calib-cancel') {
+      if (msg.type === 'calib-done') await chrome.storage.local.set({ gazeModel: msg.model, eyeOn: true, gazeProblem: null });
+      const { eyeOn } = await chrome.storage.local.get({ eyeOn: false });
+      if (!eyeOn) await closeTracker();
+      // Go back to the page the person came from.
+      const { setupFrom } = await chrome.storage.session.get({ setupFrom: null });
+      if (setupFrom) chrome.tabs.update(setupFrom, { active: true }).catch(() => {});
+      if (sender.tab) chrome.tabs.remove(sender.tab.id).catch(() => {});
       return reply({ ok: true });
     }
     reply({ ok: false });
