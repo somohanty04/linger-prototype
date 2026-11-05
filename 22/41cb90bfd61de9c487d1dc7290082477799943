@@ -1,0 +1,35 @@
+extension/README.md
+  s_99ec2d8108581c::t_ee128a92b024ee 19
+  s_99ec2d8108581c::t_87d6b53a92d24e 48-50
+extension/popup.html
+  s_99ec2d8108581c::t_ee128a92b024ee 29
+extension/tracker.js
+  s_99ec2d8108581c::t_64283914cad9ed 4,6,17-21,36,40-43,70,97-117,132,137
+extension/gestures.mjs
+  s_99ec2d8108581c::t_ee128a92b024ee 2
+  s_99ec2d8108581c::t_0b6a3d63452ec9 1,3-39
+extension/content.js
+  s_99ec2d8108581c::t_690f846437e63d 38,290
+extension/gaze.js
+  s_99ec2d8108581c::t_690f846437e63d 38-39,90,215-219,221-223,225-228,236,241-242
+  s_99ec2d8108581c::t_ee128a92b024ee 220,224,235,237
+  s_99ec2d8108581c::t_87d6b53a92d24e 86,255
+extension/popup.js
+  s_99ec2d8108581c::t_690f846437e63d 18,25,36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2241cb90bfd61de9c487d1dc7290082477799943",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
