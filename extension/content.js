@@ -35,7 +35,7 @@
   }
 
   // ---------- settings ----------
-  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false };
+  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true };
   const host = location.hostname || 'file';
   const active = () => S.highlight && !S.paused.includes(host);
 
@@ -287,7 +287,7 @@
     else { mo.disconnect(); unwrapAll(); closeCard(); }
   }
   if (api) {
-    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });

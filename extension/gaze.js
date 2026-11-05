@@ -35,6 +35,8 @@
     .ask { position: fixed; pointer-events: auto; background: #1F2AA8; color: #FFFFFF; border-radius: 14px; padding: 10px 12px; font-size: 13px; display: flex; gap: 8px; align-items: center; box-shadow: 0 10px 24px rgba(16, 20, 80, 0.35); }
     .ask button { border: 0; border-radius: 99px; height: 30px; padding: 0 12px; font: inherit; font-weight: 700; font-size: 12px; cursor: pointer; }
     .ask .yes { background: #FFFFFF; color: #1F2AA8; } .ask .no { background: transparent; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.4); }
+    .ask .hint { font-size: 11px; font-weight: 600; opacity: 0.8; white-space: nowrap; }
+    .ask button.picked { outline: 3px solid #9BE3C4; outline-offset: 2px; }
   </style><div id="ui"></div>`;
   const ui = root.getElementById('ui');
   const attach = () => { if (!host.isConnected) document.documentElement.appendChild(host); };
@@ -81,9 +83,11 @@
     if (G.port) return;
     const port = chrome.runtime.connect({ name: 'gaze' });
     G.port = port;
+    if (L.askOpen && root.querySelector('.ask')) send({ type: 'ask', open: true, swipe: !!L.settings.handSwipe }); // tab came back with the question still open
     port.onMessage.addListener((m) => {
       if (m.status) setStatus(m.status);
       if (m.g && document.hasFocus()) { const [x, y] = toPage(m.g[0], m.g[1]); onGaze({ x, y }); }
+      if (m.gesture) onSwipe(m.gesture);
     });
     port.onDisconnect.addListener(() => {
       void chrome.runtime.lastError;
@@ -208,18 +212,34 @@
     clearLine(); lineEl = best; best.classList.add('linger-line');
     ask(best, why);
   }
-  function closeAsk() { const a = root.querySelector('.ask'); if (a) a.remove(); if (L) L.askOpen = false; }
+  function closeAsk() {
+    const a = root.querySelector('.ask'); if (a) a.remove();
+    if (L && L.askOpen) send({ type: 'ask', open: false });
+    if (L) L.askOpen = false;
+  }
+  // Hand swipe while the question is open: to your right = "Yes, explain", to your left = "No".
+  function onSwipe(dir) {
+    const a = root.querySelector('.ask');
+    if (!a || !document.hasFocus() || !L.settings.handSwipe) return;
+    const b = a.querySelector(dir === 'right' ? '.yes' : '.no');
+    b.classList.add('picked');
+    a.dataset.how = 'swipe';
+    setTimeout(() => b.click(), 220); // a short flash so it's clear which answer the swipe picked
+  }
   // Ask first (like the phone app); answers are logged so the team can see how often it was right.
   function ask(word, why) {
     closeAsk(); L.askOpen = true;
     const r = word.getBoundingClientRect();
     const a = document.createElement('div'); a.className = 'ask'; a.dataset.why = why;
     const w = word.textContent.replace(/[<>&"]/g, '');
-    a.innerHTML = `<span>👁 Stuck on <b>${w}</b>?</span><button class="no">No</button><button class="yes">Yes, explain</button>`;
+    // No on the left and Yes on the right, matching the hand swipes (swipe right = yes, left = no).
+    const swipes = !!L.settings.handSwipe;
+    a.innerHTML = `<span>👁 Stuck on <b>${w}</b>?</span><button class="no">No</button><button class="yes">Yes, explain</button>` + (swipes ? '<span class="hint">👋 swipe ← no · yes →</span>' : '');
     a.style.left = Math.min(Math.max(8, r.left), innerWidth - 300) + 'px';
     a.style.top = Math.min(r.bottom + 8, innerHeight - 60) + 'px';
     ui.appendChild(a);
-    const log = (ans) => { try { chrome.storage.local.get({ gazeLog: [] }, (v) => chrome.storage.local.set({ gazeLog: [...v.gazeLog, { t: Date.now(), site: location.hostname, word: w, why, ans, err: G.acc }].slice(-500) })); } catch {} };
+    send({ type: 'ask', open: true, swipe: swipes });
+    const log = (ans) => { try { chrome.storage.local.get({ gazeLog: [] }, (v) => chrome.storage.local.set({ gazeLog: [...v.gazeLog, { t: Date.now(), site: location.hostname, word: w, why, ans, how: a.dataset.how || 'click', err: G.acc }].slice(-500) })); } catch {} };
     a.querySelector('.no').onclick = () => { log('no'); closeAsk(); clearLine(); G.cool = performance.now() + 6000; hist.length = 0; trail.length = 0; }; // don't nag
     a.querySelector('.yes').onclick = () => {
       log('yes'); closeAsk(); clearLine();
@@ -232,5 +252,5 @@
   // People look where they click, so every click on the page teaches the tracker a little more.
   document.addEventListener('click', (e) => { if (G.on && e.isTrusted) send({ type: 'learn', s: toScreen(e.clientX, e.clientY) }); }, true);
   // feed/simOn are for the noisy-gaze simulation on the test page (no extension there).
-  window.__lingerGaze = { get on() { return G.on; }, setSecs: (s) => { G.secs = s; }, simOn: () => { attach(); G.on = true; G.status = 'ok'; chip(); }, feed: (x, y) => onGaze({ x, y }) };
+  window.__lingerGaze = { get on() { return G.on; }, setSecs: (s) => { G.secs = s; }, simOn: () => { attach(); G.on = true; G.status = 'ok'; chip(); }, feed: (x, y) => onGaze({ x, y }), swipe: (dir) => onSwipe(dir) };
 })();
