@@ -43,9 +43,17 @@ async function ensureTracker() {
 async function closeTracker() { if (await hasTracker()) await chrome.offscreen.closeDocument().catch(() => {}); }
 async function openSetup(fromTab) {
   await chrome.storage.session.set({ setupFrom: fromTab || null });
-  const url = chrome.runtime.getURL('calibrate.html');
-  const [open] = await chrome.tabs.query({ url });
-  if (open) await chrome.tabs.update(open.id, { active: true }); else await chrome.tabs.create({ url });
+  // Reuse the setup tab if it's still open. (Don't find it with tabs.query({ url }): without the "tabs"
+  // permission Chrome ignores the url filter and returns every tab, so it would just switch to some other tab.)
+  const { setupTab } = await chrome.storage.session.get({ setupTab: null });
+  const open = setupTab && await chrome.tabs.get(setupTab).catch(() => null);
+  if (open && (open.url || open.pendingUrl || '').includes('/calibrate.html')) {
+    await chrome.tabs.update(open.id, { active: true });
+    await chrome.windows.update(open.windowId, { focused: true }).catch(() => {});
+    return;
+  }
+  const tab = await chrome.tabs.create({ url: chrome.runtime.getURL('calibrate.html') });
+  await chrome.storage.session.set({ setupTab: tab.id });
 }
 // Keep eye tracking on after Chrome restarts.
 const resume = async () => { const { eyeOn } = await chrome.storage.local.get({ eyeOn: false }); if (eyeOn) ensureTracker(); };

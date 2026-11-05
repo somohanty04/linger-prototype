@@ -36,4 +36,3 @@ h1 { margin: 10px 0 6px; color: var(--indigo-900); font-size: 28px; }
 .try p { margin: 0 0 10px; }
 .try .tryHead { font-family: 'Figtree', system-ui, sans-serif; font-size: 13px; color: var(--muted); line-height: 1.4; }
 .gdot { position: fixed; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: rgba(109, 121, 255, 0.45); border: 2px solid rgba(43, 57, 178, 0.6); pointer-events: none; display: none; }
-.gline { position: fixed; height: 4px; border-radius: 4px; background: rgba(109, 121, 255, 0.6); pointer-events: none; display: none; transition: top .15s ease; }
