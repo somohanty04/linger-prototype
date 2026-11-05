@@ -21,7 +21,7 @@
     .chip button { border: 0; border-radius: 99px; height: 28px; padding: 0 10px; font: inherit; font-size: 12px; cursor: pointer; background: rgba(255, 255, 255, 0.18); color: #FFFFFF; }
     .live { width: 8px; height: 8px; border-radius: 50%; background: #9BE3C4; }
     .chip.lost { background: #A81F64; } .chip.lost .live { background: #FFD98A; }
-    .cursor { position: fixed; height: 3px; border-radius: 3px; background: rgba(109, 121, 255, 0.55); box-shadow: 0 0 8px rgba(109, 121, 255, 0.5); transition: top .25s ease, left .25s ease, width .25s ease; pointer-events: none; }
+    .gdot { position: fixed; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: rgba(109, 121, 255, 0.28); border: 2px solid rgba(43, 57, 178, 0.45); transition: transform .12s linear; pointer-events: none; will-change: transform; }
     .shade { position: fixed; inset: 0; background: rgba(246, 248, 255, 0.92); pointer-events: auto; }
     .msg { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 400px; text-align: center; background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 16px; padding: 20px; color: #14161F; font-size: 14px; }
     .msg h2 { margin: 0 0 6px; color: #1F2AA8; font-size: 20px; }
@@ -45,12 +45,24 @@
     if (!c) {
       c = document.createElement('div'); c.className = 'chip'; ui.appendChild(c);
       c.innerHTML = '<span class="live"></span><span class="label"></span><button data-a="recal">Recalibrate</button><button data-a="off">Turn off</button>';
-      c.onclick = (e) => { const a = e.target.dataset && e.target.dataset.a; if (a && api) chrome.runtime.sendMessage({ type: a === 'recal' ? 'eye-recal' : 'eye-off' }).catch(() => {}); };
+      c.onclick = (e) => {
+        const a = e.target.dataset && e.target.dataset.a;
+        if (!a || !api) return;
+        // After Linger is updated or reloaded, this page still runs the old script, which can't reach the
+        // extension any more (Chrome throws "Extension context invalidated"). Say so instead of doing nothing.
+        try { chrome.runtime.sendMessage({ type: a === 'recal' ? 'eye-recal' : 'eye-off' }).catch(stale); } catch { stale(); }
+      };
     }
     const bad = G.status !== 'ok' && G.status !== 'loading';
     c.classList.toggle('lost', bad);
     c.querySelector('.label').textContent = (bad && G.msg) || LABEL[G.status] || LABEL.ok;
     c.querySelector('[data-a="recal"]').textContent = G.status === 'nomodel' || G.status === 'error' ? 'Set up' : 'Recalibrate';
+  }
+
+  function stale() {
+    G.status = 'error'; G.msg = 'Linger was updated. Reload this page.';
+    const c = root.querySelector('.chip');
+    if (c) { c.classList.add('lost'); c.querySelector('.label').textContent = G.msg; }
   }
 
   // ---------- connection to the tracker ----------
@@ -135,6 +147,7 @@
     const now = performance.now();
     if (G.last && now - G.last > 700) { hist.length = 0; trail.length = 0; } // a gap: start fresh
     G.last = now;
+    showCursor(d);
     hist.push({ t: now, x: d.x, y: d.y + scrollY });
     const W = G.secs * 1000;
     while (hist.length && now - hist[0].t > W) hist.shift();
@@ -146,7 +159,6 @@
         const mx = median(recent.map((s) => s.x)), my = median(recent.map((s) => s.y));
         const ln = lineAt(mx, my - scrollY);
         trail.push({ t: now, x: mx, y: my, ln });
-        showCursor(ln);
       }
       while (trail.length && now - trail[0].t > 8000) trail.shift();
     }
@@ -175,14 +187,13 @@
       }
     }
   }
-  // Light bar under the line Linger thinks you're reading (helps people trust and adjust the tracking).
-  function showCursor(b) {
-    let c = root.querySelector('.cursor');
-    if (!b || !L.settings.showGaze || !b.block) { if (c) c.remove(); return; }
-    if (!c) { c = document.createElement('div'); c.className = 'cursor'; ui.appendChild(c); }
-    const br = b.block.getBoundingClientRect();
-    c.style.left = br.left + 'px'; c.style.width = br.width + 'px';
-    c.style.top = (b.top - scrollY + b.h) + 'px';
+  // Soft dot where Linger thinks you're looking (on/off: "Show where I'm looking" in the menu).
+  function showCursor(p) {
+    let c = root.querySelector('.gdot');
+    if (!p || !L.settings.showGaze) { if (c) c.remove(); return; }
+    if (!c) { c = document.createElement('div'); c.className = 'gdot'; ui.appendChild(c); }
+    const x = Math.max(0, Math.min(innerWidth, p.x)), y = Math.max(0, Math.min(innerHeight, p.y));
+    c.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
   }
   let lineEl = null;
   const clearLine = () => { if (lineEl) lineEl.classList.remove('linger-line'); lineEl = null; };

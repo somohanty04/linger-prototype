@@ -2,7 +2,7 @@
 // asked for once, it works on every website (even ones that block cameras), and calibration carries across tabs.
 // Each camera frame → MediaPipe face + iris landmarks → features → screen point → smoothed → sent to the tab.
 import { FaceLandmarker } from './vendor/mediapipe/vision_bundle.mjs';
-import { features, predict, learn, headCheck, OneEuro } from './gazemodel.mjs';
+import { features, predict, learn, headCheck, OneEuro, BlinkGate } from './gazemodel.mjs';
 
 const url = (p) => chrome.runtime.getURL(p);
 const ports = new Set();
@@ -11,6 +11,7 @@ let landmarker = null, lastFace = 0, movedSince = 0;
 const recent = [];                 // the last ~1.5 s of { t, f }, to learn from clicks
 let offset = [0, 0], offsetT = 0;  // quick correction for drift (from clicks), fades over a few minutes
 const fx = new OneEuro(), fy = new OneEuro();
+const gate = new BlinkGate(); // drops blinks, and the half-closed frames around them
 let saveTimer = null;
 const dbg = (self.lingerDebug = { frames: 0, faces: 0, path: '', err: '' }); // for testing
 
@@ -28,7 +29,7 @@ chrome.runtime.onConnect.addListener((port) => {
   port.postMessage({ status, hasModel: !!model });
   port.onDisconnect.addListener(() => ports.delete(port));
   port.onMessage.addListener((m) => {
-    if (m.type === 'model') { model = m.model; offset = [0, 0]; fx.reset(); fy.reset(); }
+    if (m.type === 'model') { model = m.model; offset = [0, 0]; fx.reset(); fy.reset(); gate.reset(); }
     if (m.type === 'learn' && model) learnAt(m.s, m.strong);
   });
 });
@@ -71,12 +72,14 @@ function onFrame(src, W, H) {
   if (!model) { setStatus('nomodel', 'Set up eye tracking first.'); return; }
   if (headCheck(model, ft.head) === 'moved') { if (!movedSince) movedSince = now; } else movedSince = 0;
   setStatus(movedSince && now - movedSince > 1200 ? 'moved' : 'ok', movedSince && now - movedSince > 1200 ? 'Sit like you did when you set it up.' : '');
-  if (blink) return; // the iris is hidden during a blink
-  recent.push({ t: now, f: ft.f });
-  while (recent.length && now - recent[0].t > 1500) recent.shift();
-  const fade = Math.exp(-(now - offsetT) / 180000);
-  const [x, y] = predict(model, ft.f);
-  const g = [Math.round(fx.filter(x + offset[0] * fade, now / 1000)), Math.round(fy.filter(y + offset[1] * fade, now / 1000))];
+  for (const fr of gate.push({ t: now, f: ft.f, blink: ft.blink })) send(fr);
+}
+function send({ t, f }) {
+  recent.push({ t, f });
+  while (recent.length && t - recent[0].t > 1500) recent.shift();
+  const fade = Math.exp(-(t - offsetT) / 180000);
+  const [x, y] = predict(model, f);
+  const g = [Math.round(fx.filter(x + offset[0] * fade, t / 1000)), Math.round(fy.filter(y + offset[1] * fade, t / 1000))];
   for (const p of ports) if (p.name === 'gaze') try { p.postMessage({ g }); } catch {}
 }
 

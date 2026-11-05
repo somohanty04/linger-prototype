@@ -1,11 +1,12 @@
 // Linger eye tracking setup: camera check, a full-screen dot through 20 spots, then 5 check spots to measure accuracy.
 // The tracker (offscreen page) streams features for every camera frame; this page labels them with where the dot was.
-import { fit, predict, learn, cleanGroup, OneEuro, pageToScreen, screenToPage } from './gazemodel.mjs';
+import { NAMES, fit, predict, learn, cleanGroup, OneEuro, BlinkGate, pageToScreen, screenToPage } from './gazemodel.mjs';
 
 const $ = (id) => document.getElementById(id);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const med = (a) => { const s = a.slice().sort((p, q) => p - q); return s[Math.floor(s.length / 2)]; };
-let port = null, lastFeat = 0, ready = false, rec = null, live = null, model = null, previewStream = null;
+const previewGate = new BlinkGate();
+let port = null, lastRun = null, lastFeat = 0, ready = false, rec = null, live = null, model = null, previewStream = null;
 
 function showErr(t) { $('err').hidden = !t; $('err').textContent = t || ''; }
 function check(id, state) { $(id).classList.toggle('ok', state === true); $(id).classList.toggle('bad', state === false); }
@@ -25,7 +26,7 @@ function connect() {
     if (m.feat) {
       lastFeat = performance.now();
       if (rec) rec.push({ f: m.feat, blink: m.blink });
-      if (live && !m.blink) live(m.feat);
+      if (live) previewGate.push({ f: m.feat, blink: m.blink ? 1 : 0 }).forEach((fr) => live(fr.f));
     }
   });
   return alive;
@@ -85,7 +86,17 @@ async function collect(points, { settle = 420, hold = 650, cls = '', onPoint } =
   }
   return out;
 }
-const grid = () => { const W = innerWidth, H = innerHeight, out = []; [0.07, 0.36, 0.64, 0.93].forEach((fy, j) => { const xs = [0.05, 0.275, 0.5, 0.725, 0.95].map((fx) => W * fx); (j % 2 ? xs.reverse() : xs).forEach((x) => out.push([Math.round(x), Math.round(H * fy)])); }); return out; };
+// The 20 dots come in a shuffled order where every 4 dots in a row cover all 4 rows of the screen. People slowly change
+// posture during setup (the head tilts a few degrees); going top to bottom tied that drift to how far down the dot was,
+// so the model learned "head tilted = looking lower" and the gaze landed lines off later (seen in recorded setups).
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const grid = () => {
+  const ys = [0.07, 0.36, 0.64, 0.93], xs = [0.05, 0.275, 0.5, 0.725, 0.95];
+  const cols = ys.map(() => shuffle([0, 1, 2, 3, 4])); // per row: which column it shows in each block
+  const out = [];
+  for (let b = 0; b < xs.length; b++) shuffle([0, 1, 2, 3]).forEach((j) => out.push([Math.round(innerWidth * xs[cols[j][b]]), Math.round(innerHeight * ys[j])]));
+  return out;
+};
 const checks = () => [[0.5, 0.5], [0.2, 0.22], [0.8, 0.22], [0.8, 0.78], [0.2, 0.78]].map(([fx, fy]) => [Math.round(innerWidth * fx), Math.round(innerHeight * fy)]);
 
 $('startBtn').onclick = run;
@@ -116,11 +127,12 @@ async function run() {
       const ps = fr.map((s) => predict(model, s.f));
       const mx = med(ps.map((q) => q[0])), my = med(ps.map((q) => q[1]));
       errs.push(Math.hypot(mx - p.sx, my - p.sy)); vErrs.push(Math.abs(my - p.sy));
-      fr.forEach((s) => extra.push({ f: s.f, x: p.sx, y: p.sy }));
+      extra.push(fr.map((s) => ({ f: s.f, x: p.sx, y: p.sy })));
     });
-    if (extra.length) learn(model, extra);
+    extra.forEach((dot) => learn(model, dot)); // each check dot counts as one more setup dot
     model.acc = errs.length ? { err: Math.round(med(errs)), vErr: Math.round(med(vErrs)) } : null;
     model.dpr = devicePixelRatio; model.at = Date.now();
+    lastRun = { v: 1, at: new Date().toISOString(), screen: { w: screen.width, h: screen.height, dpr: devicePixelRatio }, names: NAMES, cal, val, acc: model.acc };
     finish();
   } catch (e) {
     rec = null;
@@ -141,17 +153,12 @@ async function finish() {
     : a.vErr <= 70 ? ['Ready', `Gaze lands about ${a.err}px from where you look (${a.vErr}px up or down). Good for normal text; “More space between lines” in the Linger menu helps with small text.`]
     : ['Usable, but rough', `Gaze lands about ${a.err}px off (${a.vErr}px up or down). Try more light on your face and keeping a steady distance, then calibrate again.`];
   $('verdict').textContent = v[0]; $('verdictText').textContent = v[1];
-  // Live preview: a dot where Linger thinks you're looking, and a bar under the line.
+  // Live preview: a dot where Linger thinks you're looking.
   const fx = new OneEuro(), fy = new OneEuro();
-  const lines = [...document.querySelectorAll('.try p:not(.tryHead)')];
   live = (f) => {
     const [sx, sy] = predict(model, f), t = performance.now() / 1000;
     const [x, y] = screenToPage(window, fx.filter(sx, t), fy.filter(sy, t), 1);
     const d = $('gdot'); d.style.display = 'block'; d.style.left = x + 'px'; d.style.top = y + 'px';
-    let best = null, bd = 1e9;
-    lines.forEach((p) => { const r = p.getBoundingClientRect(); const dd = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0; if (dd < bd) { bd = dd; best = r; } });
-    const g = $('gline');
-    if (best && bd < 60) { g.style.display = 'block'; g.style.left = best.left + 'px'; g.style.width = best.width + 'px'; g.style.top = (best.bottom - 2) + 'px'; } else g.style.display = 'none';
   };
 }
 
@@ -160,4 +167,13 @@ $('doneBtn').onclick = async () => {
   if (port) port.postMessage({ type: 'model', model });
   if (previewStream) previewStream.getTracks().forEach((t) => t.stop());
   await chrome.runtime.sendMessage({ type: 'calib-done', model });
+};
+
+// Test data: the eye numbers recorded at each dot (no video), for measuring accuracy changes offline.
+$('dataBtn').onclick = () => {
+  if (!lastRun) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(lastRun)], { type: 'application/json' }));
+  a.download = 'linger-gaze-' + lastRun.at.slice(0, 19).replace(/[:T]/g, '-') + '.json';
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 };

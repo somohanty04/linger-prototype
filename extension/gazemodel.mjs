@@ -92,18 +92,34 @@ export function cleanGroup(samples) {
   return ok.filter((s, i) => dist[i] <= cut);
 }
 
-// samples: [{ f, x, y, g (which dot), w? }] with x, y in screen pixels.
-// The amount of smoothing (lambda) is picked by leaving each dot out in turn and checking how well the rest predict it.
-export function fit(samples) {
-  const groups = [...new Set(samples.map((s) => s.g))];
-  const k = samples[0].f.length, d = k + 1;
+// The model only uses a few of the features: both eyes averaged, how open they are, MediaPipe's own look-direction
+// scores, and how the head is turned. Fewer inputs = it can't overfit the 20 setup dots (tested on recorded setups:
+// typical error 141 → 79 px compared with using all 17).
+export function reduce(f) {
+  return [(f[0] + f[2]) / 2, (f[1] + f[3]) / 2, (f[4] + f[5]) / 2, f[6], f[7], f[8], f[9]];
+}
+const inputs = (m, f) => (m.v >= 3 ? reduce(f) : f);
+const median = (a) => { const s = a.slice().sort((p, q) => p - q); return s[Math.floor(s.length / 2)]; };
+
+// One sample per dot: the median of its frames (steadier than fitting every noisy frame).
+function perDot(samples) {
+  const by = new Map();
+  for (const s of samples) { if (!by.has(s.g)) by.set(s.g, []); by.get(s.g).push(s); }
+  return [...by.entries()].map(([g, ss]) => ({ g, x: ss[0].x, y: ss[0].y, w: 1, raw: ss[0].f.map((_, i) => median(ss.map((s) => s.f[i]))) }));
+}
+
+// Ridge regression from features to screen x, y. The amount of smoothing (lambda) is picked by leaving each dot out
+// in turn and checking how well the rest predict it.
+function ridge(dots) {
+  const k = dots[0].f.length, d = k + 1;
   const mu = new Array(k).fill(0), sd = new Array(k).fill(0);
-  samples.forEach((s) => s.f.forEach((v, i) => { mu[i] += v / samples.length; }));
-  samples.forEach((s) => s.f.forEach((v, i) => { sd[i] += (v - mu[i]) ** 2 / samples.length; }));
+  dots.forEach((s) => s.f.forEach((v, i) => { mu[i] += v / dots.length; }));
+  dots.forEach((s) => s.f.forEach((v, i) => { sd[i] += (v - mu[i]) ** 2 / dots.length; }));
   for (let i = 0; i < k; i++) sd[i] = Math.sqrt(sd[i]) > 1e-9 ? Math.sqrt(sd[i]) : 1;
   const m = { mu, sd };
-  const rows = samples.map((s) => ({ z: zrow(m, s.f), x: s.x, y: s.y, w: s.w || 1, g: s.g }));
+  const rows = dots.map((s) => ({ z: zrow(m, s.f), x: s.x, y: s.y, w: s.w, g: s.g }));
   const S = stats(rows, d);
+  const groups = [...new Set(rows.map((r) => r.g))];
   const per = new Map(groups.map((g) => [g, stats(rows.filter((r) => r.g === g), d)]));
   let best = null;
   for (const kk of [1e-4, 3e-4, 1e-3, 3e-3, 0.01, 0.03, 0.1, 0.3]) {
@@ -120,17 +136,33 @@ export function fit(samples) {
     if (!n) break;
   }
   const c = coef(S, best.lam, d);
-  // How far the head may move from where it was during calibration before accuracy suffers.
-  const hv = (i) => { const v = samples.map((s) => s.f[i]); const a = v.reduce((p, q) => p + q, 0) / v.length; return [a, Math.sqrt(v.reduce((p, q) => p + (q - a) ** 2, 0) / v.length)]; };
-  return { v: 2, mu, sd, lam: best.lam, cvErr: Math.round(best.e), cx: c.cx, cy: c.cy, A: S.A, bx: S.bx, by: S.by, wsum: S.wsum, head: { tx: hv(11), ty: hv(12), tz: hv(13) }, points: groups.length, n: samples.length };
+  return { mu, sd, lam: best.lam, cvErr: Math.round(best.e), cx: c.cx, cy: c.cy, A: S.A, bx: S.bx, by: S.by, wsum: S.wsum };
 }
 
-export function predict(m, f) { const z = zrow(m, f); return [dot(m.cx, z), dot(m.cy, z)]; }
+// samples: [{ f, x, y, g (which dot) }] with x, y in screen pixels, f = the full features() list.
+export function fit(samples) {
+  const dots = perDot(samples).map((s) => ({ ...s, f: reduce(s.raw) }));
+  let use = dots, m = ridge(dots);
+  // Drop dots that clearly don't fit the rest (head moved, looked away) and fit again.
+  if (dots.length >= 10) {
+    const err = dots.map((s) => { const z = zrow(m, s.f); return Math.hypot(dot(m.cx, z) - s.x, dot(m.cy, z) - s.y); });
+    const cut = Math.max(120, median(err) * 2.5);
+    const keep = dots.filter((_, i) => err[i] <= cut);
+    if (keep.length < dots.length && keep.length >= 10) { use = keep; m = ridge(keep); }
+  }
+  // How far the head may move from where it was during calibration before accuracy suffers.
+  const hv = (i) => { const v = use.map((s) => s.raw[i]); const a = v.reduce((p, q) => p + q, 0) / v.length; return [a, Math.sqrt(v.reduce((p, q) => p + (q - a) ** 2, 0) / v.length)]; };
+  return { v: 3, ...m, head: { tx: hv(11), ty: hv(12), tz: hv(13) }, points: use.length, dropped: dots.length - use.length, n: samples.length };
+}
+
+export function predict(m, f) { const z = zrow(m, inputs(m, f)); return [dot(m.cx, z), dot(m.cy, z)]; }
 
 // Keep learning after calibration (from clicks and confirmed words): add samples and refit, keeping the same scale.
+// The frames of one call count together as one dot (times its weight), like a setup dot.
 export function learn(m, samples) {
-  const d = m.cx.length;
-  const T = stats(samples.map((s) => ({ z: zrow(m, s.f), x: s.x, y: s.y, w: s.w || 1 })), d);
+  if (!samples.length) return m;
+  const d = m.cx.length, n = m.v >= 3 ? samples.length : 1;
+  const T = stats(samples.map((s) => ({ z: zrow(m, inputs(m, s.f)), x: s.x, y: s.y, w: (s.w || 1) / n })), d);
   for (let i = 0; i < d; i++) { m.bx[i] += T.bx[i]; m.by[i] += T.by[i]; for (let j = 0; j < d; j++) m.A[i][j] += T.A[i][j]; }
   m.wsum += T.wsum;
   const c = coef(m, m.lam, d);
@@ -143,6 +175,25 @@ export function headCheck(m, h) {
   if (!m || !m.head || !h) return 'ok';
   const far = (v, [a, s], min) => Math.abs(v - a) > Math.max(min, 3 * s);
   return far(h.tz, m.head.tz, 12) || far(h.tx, m.head.tx, 9) || far(h.ty, m.head.ty, 7) ? 'moved' : 'ok';
+}
+
+// Blink gate. MediaPipe only flags a blink once the eyes are nearly shut; the frames while the lids close and open
+// look like "looking down" and threw the gaze to the bottom of the screen. So: a frame also counts as a blink when the
+// eyes are much less open than they usually are for this person (median of the last ~second), frames are held back
+// a little so the lead-in to a blink can be dropped, and a few frames after each blink are skipped.
+export class BlinkGate {
+  constructor({ delay = 2, after = 3, drop = 0.7 } = {}) { Object.assign(this, { delay, after, drop, buf: [], opens: [], hold: 0 }); }
+  reset() { this.buf = []; this.hold = 0; }
+  // frame: { f, blink (MediaPipe's blink score 0–1), ... }. Returns the frames that are safe to use (maybe none).
+  push(frame) {
+    const open = (frame.f[4] + frame.f[5]) / 2;
+    const s = this.opens.slice().sort((a, b) => a - b), base = s.length >= 10 ? s[Math.floor(s.length / 2)] : 0;
+    if (frame.blink > BLINK || (base && open < base * this.drop)) { this.buf = []; this.hold = this.after; return []; }
+    if (this.hold > 0) { this.hold--; return []; }
+    this.opens.push(open); if (this.opens.length > 30) this.opens.shift();
+    this.buf.push(frame);
+    return this.buf.length > this.delay ? [this.buf.shift()] : [];
+  }
 }
 
 // One Euro filter: smooths small jitter strongly but follows fast eye jumps quickly.
