@@ -1,0 +1,54 @@
+extension/manifest.json
+  s_99ec2d8108581c::t_0c29e408c97a8c 13
+  s_99ec2d8108581c::t_51f05654a8de7b 17
+extension/icons/card/volume.svg
+  s_99ec2d8108581c::t_2e7f44f0982e18 1-5
+extension/content.js
+  s_99ec2d8108581c::t_51f05654a8de7b 161-187,210-219,241,282,284-291,293-295,297-298,301,312-313,316-318
+  s_99ec2d8108581c::t_65a17b3abf7e36 262,265-266,271
+  s_99ec2d8108581c::t_0e4a3690e63274 188-196,292,302-310,325-326
+  s_99ec2d8108581c::t_0c29e408c97a8c 367
+  s_99ec2d8108581c::t_bb9c1d56b70a56 242-244,248-260,263-264,268,270,272-281,296,300,323,339,342,348-349,352-361,363,368
+  s_99ec2d8108581c::t_55b065672760fd 245,261,329-338
+  s_99ec2d8108581c::t_a914fe5b12c72f 246-247,320-322,324,328,340-341,343-347,350-351
+  s_99ec2d8108581c::t_6e1077e4fbfc4c 267,269
+  s_99ec2d8108581c::t_244402980f1eca 327
+extension/background.js
+  s_99ec2d8108581c::t_0c29e408c97a8c 6-9,11,14-30,78-79
+extension/icons/card/bookmark.svg
+  s_99ec2d8108581c::t_2e7f44f0982e18 1-5
+extension/icons/card/header-rings.svg
+  s_99ec2d8108581c::t_2e7f44f0982e18 1-7
+extension/fonts/OFL.txt
+  s_99ec2d8108581c::t_646372f692cba7 1-93
+extension/test.html
+  s_99ec2d8108581c::t_0c29e408c97a8c 24
+extension/icons/card/volume-20.svg
+  s_99ec2d8108581c::t_bde08ff7eea312 1-5
+extension/dict.js
+  s_99ec2d8108581c::t_f3d91c9e192586 1-23
+extension/README.md
+  s_99ec2d8108581c::t_9421166001cf4e 38,51-52
+  s_99ec2d8108581c::t_14f5c438f5939e 16
+  s_99ec2d8108581c::t_1aa95790765a02 18
+extension/icons/card/bookmark-20.svg
+  s_99ec2d8108581c::t_9849f99adb70df 1-5
+extension/icons/card/header-rings-red.svg
+  s_99ec2d8108581c::t_874978eea2f2a2 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1400159ec2fb623ecdcf89f6fdc11d9260d8038a",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
