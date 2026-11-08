@@ -3,18 +3,31 @@
 const FIREBASE = { projectId: 'linger-f41a7', apiKey: 'AIzaSyDxWUp1eTp8bXZV-GV13XQAHI_Q4fL0GCU' };
 const DOC = (code) => `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/pairs/${code}`;
 
-// Wiktionary definitions come as HTML; strip it and keep a short one.
+importScripts('dict.js');
+
+// Meaning and an example sentence from Wiktionary.
+const dictCache = new Map();
 async function lookup(word) {
+  if (dictCache.has(word)) return dictCache.get(word);
   try {
     const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(word));
-    if (!r.ok) return null;
-    const j = await r.json();
-    const defs = (j.en || []).flatMap((x) => x.definitions || []).map((d) => (d.definition || '')
-      .replace(/<style[\s\S]*?<\/style>/g, '').replace(/<sup[\s\S]*?<\/sup>/g, '').replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim())
-      .filter((t) => t && !/^(obsolete|archaic|plural of|alternative)/i.test(t));
-    const def = defs.find((t) => t.length <= 140) || defs[0];
-    return def ? def.charAt(0).toUpperCase() + def.slice(1) : null;
+    const e = r.ok ? self.lingerDictEntry(await r.json(), word) : { meaning: null, example: null };
+    dictCache.set(word, e);
+    return e;
+  } catch { return { meaning: null, example: null }; }
+}
+
+// Synonyms with how common each word is (Datamuse, which uses WordNet and word counts from books and the web).
+const synCache = new Map();
+async function synonyms(word) {
+  if (synCache.has(word)) return synCache.get(word);
+  const D = 'https://api.datamuse.com/words';
+  const f = (x) => Number(((x.tags || []).find((t) => t.startsWith('f:')) || 'f:0').slice(2));
+  try {
+    const [syn, me] = await Promise.all([fetch(`${D}?rel_syn=${encodeURIComponent(word)}&md=f&max=12`).then((r) => r.json()), fetch(`${D}?sp=${encodeURIComponent(word)}&md=f&max=1`).then((r) => r.json())]);
+    const out = { self: me[0] && me[0].word === word ? f(me[0]) : 0, list: syn.map((x) => ({ w: x.word, f: f(x) })) };
+    synCache.set(word, out);
+    return out;
   } catch { return null; }
 }
 
@@ -62,7 +75,8 @@ chrome.runtime.onInstalled.addListener(resume);
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   (async () => {
-    if (msg.type === 'lookup') return reply({ meaning: await lookup(msg.word) });
+    if (msg.type === 'lookup') return reply(await lookup(msg.word));
+    if (msg.type === 'synonyms') return reply(await synonyms(msg.word));
     if (msg.type === 'save') {
       const { saved = [], pairCode = '' } = await chrome.storage.local.get({ saved: [], pairCode: '' });
       const list = [{ key: msg.key, ...msg.word, at: Date.now() }, ...saved.filter((x) => x.key !== msg.key)].slice(0, 200);

@@ -10,9 +10,9 @@
   "host_permissions": ["<all_urls>"],
   "content_scripts": [{
     "matches": ["http://*/*", "https://*/*", "file:///*"],
-    "js": ["words.js", "cities.js", "content.js", "gaze.js"],
+    "js": ["words.js", "cities.js", "dict.js", "content.js", "gaze.js"],
     "run_at": "document_idle"
   }],
   "content_security_policy": { "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'" },
-  "web_accessible_resources": [{ "resources": ["icons/icon-32.png"], "matches": ["<all_urls>"] }]
+  "web_accessible_resources": [{ "resources": ["icons/icon-32.png", "icons/card/*.svg", "fonts/*.woff2"], "matches": ["<all_urls>"] }]
 }

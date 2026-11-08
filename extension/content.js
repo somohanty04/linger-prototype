@@ -151,24 +151,49 @@
   root.innerHTML = `<style>
     :host { all: initial; }
     * { box-sizing: border-box; font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; }
-    .card { position: fixed; width: 320px; max-width: calc(100vw - 16px); background: #FFFFFF; color: #14161F; border-radius: 16px; padding: 14px 16px; box-shadow: 0 14px 40px rgba(16, 20, 80, 0.28); border: 1px solid #E8E8E8; font-size: 14px; line-height: 1.45; display: flex; flex-direction: column; gap: 8px; }
-    .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-    .word { font-size: 24px; font-weight: 800; color: #1F2AA8; line-height: 1.15; }
-    .say { font-size: 12px; font-weight: 700; color: #0B7A86; background: #DDF4F5; border-radius: 99px; padding: 2px 8px; align-self: flex-start; }
-    .badge { font-size: 11px; font-weight: 700; color: #FFFFFF; background: #2E50D8; border-radius: 4px; padding: 3px 8px; white-space: nowrap; }
-    .badge.slang { background: #44C9E6; } .badge.common { background: #EEF0F5; color: #4A4F5E; }
     .x { border: 0; background: #EAEFFF; color: #1F2AA8; width: 28px; height: 28px; border-radius: 50%; font-size: 14px; cursor: pointer; flex: none; }
-    .meaning { font-size: 16px; font-weight: 600; }
     .lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6070; }
-    .ctx { background: #F6F8FF; border-radius: 10px; padding: 8px 10px; color: #252A39; }
-    .orig { font-style: italic; color: #5B6070; font-size: 13px; }
-    .local { background: #EAEFFF; border-radius: 10px; padding: 8px 10px; color: #1F2AA8; font-size: 13px; }
     .row { display: flex; gap: 8px; margin-top: 2px; }
     .btn { flex: 1; height: 40px; border-radius: 99px; border: 1px solid #B1B7FF; background: #FFFFFF; color: #1F2AA8; font-weight: 700; font-size: 14px; cursor: pointer; }
     .btn.primary { border: 1px solid #6D79FF; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; }
     .btn.done { background: #F0FFFA; color: #115940; border-color: #BDE8D7; }
     .note { font-size: 12px; color: #5B6070; }
-    .why { font-size: 12px; font-weight: 700; color: #8A5A00; background: #FFF6E3; border-radius: 8px; padding: 4px 8px; align-self: flex-start; }
+    /* Word card (Figma: Linger – App – Design System, node 140:523) */
+    .wc { position: fixed; width: 439px; max-width: calc(100vw - 16px); display: flex; flex-direction: column; border-radius: 12px; box-shadow: 0 14px 40px rgba(16, 20, 80, 0.28); font-family: 'Linger Figtree', 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+    .wc * { font-family: inherit; }
+    .wc p { margin: 0; }
+    .wc-top { position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 14px; border: 1px solid #E8E8E8; border-bottom: 0; border-radius: 12px 12px 0 0; background: linear-gradient(177.958deg, rgb(31, 45, 168) 1.4073%, rgb(84, 100, 217) 105.55%); }
+    .wc-rings { position: absolute; left: 173.32px; top: -136.47px; width: 344.934px; height: 344.934px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    .wc-rings img { display: block; transform: rotate(-30deg); flex: none; }
+    .wc-head { position: relative; display: flex; flex-direction: column; gap: 30px; padding-bottom: 4px; }
+    .wc-row { display: flex; align-items: center; justify-content: space-between; }
+    .wc-badge { display: flex; align-items: center; height: 22px; padding: 3px 8px; border-radius: 4px; background: #2E50D8; color: #FFFFFF; font-size: 14px; font-weight: 700; line-height: 14px; letter-spacing: 0.14px; white-space: nowrap; }
+    .wc-icons { display: flex; gap: 4px; align-items: center; justify-content: flex-end; }
+    .wc-icon { width: 24px; height: 24px; padding: 0; border: 0; background: none; border-radius: 6px; cursor: pointer; display: block; }
+    .wc-icon img { display: block; }
+    .wc-icon:hover { background: rgba(255, 255, 255, 0.16); }
+    .wc-icon:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+    .wc-saved { color: #FFFFFF; font-size: 12px; font-weight: 700; line-height: 14px; padding: 4px 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.2); margin-right: 4px; }
+    .wc-word { color: #FFFFFF; font-size: 32px; font-weight: 800; line-height: 24px; min-height: 27.668px; overflow-wrap: anywhere; }
+    .wc-body { display: flex; flex-direction: column; gap: 16px; padding: 14px 14px 18px; border: 1px solid #E8E8E8; border-radius: 0 0 12px 12px; background: linear-gradient(to right, #FFFFFF, #FCFDFF); }
+    .wc-meaning { color: #252A39; font-size: 20px; font-weight: 600; line-height: 22px; }
+    .wc-ctx { display: flex; flex-direction: column; gap: 8px; }
+    .wc-lbl { color: #5B6070; font-size: 16px; font-weight: 600; line-height: 22px; }
+    .wc-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: #F6F7FF; }
+    .wc-s { color: #252A39; font-size: 16px; font-weight: 600; font-style: italic; line-height: 22px; overflow-wrap: anywhere; }
+    .wc-s b { color: #6D79FF; font-weight: 700; font-style: italic; }
+    .wc-local { color: #252A39; font-size: 16px; font-weight: 600; line-height: 22px; }
+    .wc-note { color: #5B6070; font-size: 13px; font-weight: 600; line-height: 18px; }
+    .wc-note:empty { display: none; }
+    .wc-words { display: flex; flex-direction: column; gap: 12px; }
+    .wc-msg { color: #FFFFFF; font-size: 20px; font-weight: 600; line-height: 22px; }
+    /* Not in the dictionary (Figma node 140:496): red, header only, 20px icons */
+    .wc.wc-missing { width: 372px; }
+    .wc-missing .wc-top { border-radius: 12px; background: linear-gradient(176.9195deg, rgb(168, 31, 31) 1.4073%, rgb(217, 84, 84) 105.55%); }
+    .wc-missing .wc-rings { left: 107.32px; }
+    .wc-missing .wc-badge { background: #D82E2E; }
+    .wc-missing .wc-icon { width: 20px; height: 20px; }
+    .wc-missing .wc-body { display: none; }
     .panel { position: fixed; top: 16px; right: 16px; width: 360px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; color: #14161F; border-radius: 18px; box-shadow: 0 14px 40px rgba(16, 20, 80, 0.3); border: 1px solid #E8E8E8; font-size: 14px; line-height: 1.45; }
     .phead { background: linear-gradient(160deg, #1F2DA8, #5464D9); color: #FFFFFF; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; border-radius: 18px 18px 0 0; }
     .phead strong { font-size: 18px; }
@@ -182,6 +207,16 @@
   const layer = root.getElementById('layer');
   const attach = () => { if (!host$.isConnected) document.documentElement.appendChild(host$); };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const asset = (p) => (api ? chrome.runtime.getURL(p) : p);
+  // Figtree (the Linger app font) for the word card; most websites don't have it.
+  let fontsAdded = false;
+  function addFonts() {
+    if (fontsAdded || !document.fonts || typeof FontFace !== 'function') return;
+    fontsAdded = true;
+    [['fonts/figtree-latin.woff2', 'normal'], ['fonts/figtree-latin-italic.woff2', 'italic']].forEach(([f, style]) => {
+      try { const ff = new FontFace('Linger Figtree', `url(${asset(f)})`, { style, weight: '300 900' }); document.fonts.add(ff); ff.load().catch(() => {}); } catch {}
+    });
+  }
   const speakIt = (t) => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; u.rate = 0.9; speechSynthesis.speak(u); } catch {} };
 
   let card = null, cardSpan = null;
@@ -203,40 +238,134 @@
     let meaning = (sl && sl.meaning) || (d && d.meaning) || (PLAIN[k] ? cap(PLAIN[k]) + '.' : '');
     const sentence = sentenceAround(sp);
     const plain = plainify(sentence);
-    card = document.createElement('div');
-    card.className = 'card'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'Meaning of ' + raw);
-    card.innerHTML = `${why ? `<div class="why">👁 ${esc(why)}</div>` : ''}
-      <div class="head"><div style="display:flex;flex-direction:column;gap:4px"><span class="word">${esc(raw)}</span>${sl && sl.say ? `<span class="say">/${esc(sl.say)}/</span>` : ''}</div>
-        <div style="display:flex;gap:6px;align-items:center"><span class="badge ${kind}">${kind === 'slang' ? 'Local slang' : kind === 'hard' ? 'Hard word' : 'Word'}</span><button class="x" aria-label="Close">✕</button></div></div>
-      <div class="meaning" id="m">${meaning ? esc(meaning) : 'Looking up…'}</div>
-      ${plain !== sentence ? `<div class="lbl">This sentence in plain English</div><div class="ctx">${esc(plain)}</div><div class="orig">“${esc(sentence)}”</div>` : `<div class="lbl">In this sentence</div><div class="ctx">“${esc(sentence)}”</div>`}
-      ${sl && sl.local ? `<div class="local">📍 ${esc(sl.city)}: ${esc(sl.local)}</div>` : ''}
-      <div class="row"><button class="btn" id="hear">🔊 Hear it</button><button class="btn primary" id="save">★ Save to Linger</button></div>
-      <div class="note" id="note"></div>`;
-    layer.appendChild(card);
-    place(card, sp.getBoundingClientRect());
-    card.querySelector('.x').onclick = closeCard;
-    card.querySelector('#hear').onclick = () => speakIt(`${raw}. ${sentence}`);
-    if (!meaning) {
-      const r = await send({ type: 'lookup', word: k });
-      meaning = (r && r.meaning) || (api ? 'Not in the dictionary yet.' : await directLookup(k));
-      if (card && cardSpan === sp) card.querySelector('#m').textContent = meaning;
+    addFonts();
+    // "In context": a sentence with the word in it (from the page; if the page only has a heading or label, Linger's
+    // own example, or the dictionary's), and under it the same sentence with an easier synonym, when there is one.
+    const wordRe = new RegExp('\\b' + raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    const locate = (t) => { const m = t ? wordRe.exec(t) || new RegExp('\\b' + k.slice(0, Math.max(4, k.length - 3)) + '\\w*', 'i').exec(t) : null; return m ? { at: m.index, len: m[0].length, word: m[0] } : null; };
+    // A real sentence: 4+ words that end like a sentence, or 8+ words (not a heading, menu item or label).
+    const usable = (t) => { const n = t ? t.trim().split(/\s+/).length : 0; return !!(t && locate(t) && n >= 4 && (/[.!?…"”’)]\s*$/.test(t.trim()) || n >= 8)); };
+    const ctx = { s: '', loc: null, syn: PLAIN[k] || '', fromPage: false };
+    const useSentence = (t, fromPage) => { ctx.s = t; ctx.loc = locate(t); ctx.fromPage = fromPage; };
+    if (usable(sentence)) useSentence(sentence, true);
+    else if (d && usable(d.sentence)) useSentence(d.sentence, false);
+    else if (sl && usable(sl.sentence)) useSentence(sl.sentence, false);
+    const mark = (w) => { const { at, len } = ctx.loc; return `${esc(ctx.s.slice(0, at))}<b>${esc(w)}</b>${esc(ctx.s.slice(at + len))}`; };
+    const asCase = (w) => (/^[A-Z]/.test(ctx.loc.word) ? cap(w) : w);
+    function synHtml() {
+      if (!ctx.loc || !ctx.syn) return '';
+      // Linger's phrase rules first ("remit payment" → "pay"), highlighting what changed; otherwise just the easier
+      // word in place of this one.
+      const src = ctx.s, { at, len } = ctx.loc;
+      let t = src; PHRASES.forEach(([re, r]) => { t = t.replace(re, r); });
+      if (/^[A-Z]/.test(src)) t = cap(t);
+      let a = 0, b = 0;
+      while (a < t.length && a < src.length && t[a] === src[a]) a++;
+      while (b < t.length - a && b < src.length - a && t[t.length - 1 - b] === src[src.length - 1 - b]) b++;
+      while (a > 0 && /\w/.test(t[a - 1])) a--; // widen to whole words
+      while (b > 0 && /\w/.test(t[t.length - b])) b--;
+      const mid = t.slice(a, t.length - b), [, lead, changed, trail] = mid.match(/^(\s*)([\s\S]*?)(\s*)$/);
+      return t !== src && a <= at && src.length - b >= at + len && changed
+        ? `${esc(t.slice(0, a))}${lead}<b>${esc(changed)}</b>${trail}${esc(t.slice(t.length - b))}`
+        : mark(asCase(ctx.syn));
     }
+    function ctxHtml() {
+      const local = sl && sl.local ? `<p class="wc-lbl">Local note (${esc(sl.city)}):</p><p class="wc-local">${esc(sl.local)}</p>` : '';
+      const syn = synHtml();
+      if (!ctx.loc && !local) return '';
+      return `<p class="wc-lbl">In context:</p><div class="wc-box">
+          ${ctx.loc ? `<p class="wc-lbl">${ctx.fromPage ? 'This word:' : 'Example:'}</p><p class="wc-s">“${mark(ctx.loc.word)}”</p>` : ''}
+          ${syn ? `<p class="wc-lbl">Synonym:</p><p class="wc-s">“${syn}”</p>` : ''}
+          ${local}</div>`;
+    }
+    const redraw = () => { if (!card || cardSpan !== sp) return; const el = card.querySelector('#ctx'); el.innerHTML = ctxHtml(); el.hidden = !el.innerHTML.trim(); place(card, sp.getBoundingClientRect()); };
+    const badge = kind === 'slang' ? 'Local Slang' : kind === 'hard' ? 'Hard Word' : 'Word';
+    card = document.createElement('div');
+    card.className = 'wc'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'Meaning of ' + raw);
+    card.innerHTML = `<div class="wc-top">
+        <div class="wc-rings"><img src="${asset('icons/card/header-rings.svg')}" width="252.51" height="252.51" alt=""></div>
+        <div class="wc-head">
+          <div class="wc-row"><span class="wc-badge">${badge}</span>
+            <div class="wc-icons"><span class="wc-saved" id="saved" hidden>Saved</span>
+              <button class="wc-icon" id="hear" aria-label="Say ${esc(raw)} out loud" title="Hear it"><img src="${asset('icons/card/volume.svg')}" width="24" height="24" alt=""></button>
+              <button class="wc-icon" id="save" aria-label="Save ${esc(raw)} to Linger" aria-pressed="false" title="Save to Linger"><img src="${asset('icons/card/bookmark.svg')}" width="24" height="24" alt=""></button></div></div>
+          <div class="wc-words"><p class="wc-word">${esc(raw)}</p></div>
+        </div></div>
+      <div class="wc-body">
+        <p class="wc-meaning" id="m">${meaning ? esc(meaning) : 'Looking up…'}</p>
+        <div class="wc-ctx" id="ctx"></div>
+        <p class="wc-note" id="note"></p>
+      </div>`;
+    layer.appendChild(card);
+    redraw();
+    card.querySelector('#hear').onclick = () => speakIt(raw);
+    // Not in the dictionary: the red card with just the word (and the speaker and bookmark still work).
+    function showMissing() {
+      if (!card || cardSpan !== sp) return;
+      card.classList.add('wc-missing');
+      card.querySelector('.wc-rings img').src = asset('icons/card/header-rings-red.svg');
+      const icon = (sel, f) => { const img = card.querySelector(sel + ' img'); img.src = asset('icons/card/' + f); img.width = 20; img.height = 20; };
+      icon('#hear', 'volume-20.svg'); icon('#save', 'bookmark-20.svg');
+      card.querySelector('.wc-words').insertAdjacentHTML('beforeend', '<p class="wc-msg">Not in the dictionary yet.</p>');
+      place(card, sp.getBoundingClientRect());
+    }
+    const showSaved = () => { card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true'); card.querySelector('#save').title = 'Saved to Linger'; };
+    if (api) chrome.storage.local.get({ saved: [] }, (v) => { if (card && cardSpan === sp && v.saved.some((x) => x.key === k)) showSaved(); });
     card.querySelector('#save').onclick = async () => {
-      const b = card.querySelector('#save');
       const r = await send({ type: 'save', key: k, word: { w: raw.toLowerCase(), m: meaning, s: sentence, p: plain !== sentence ? plain : '', place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
-      b.textContent = '✓ Saved'; b.classList.add('done'); b.classList.remove('primary');
-      card.querySelector('#note').textContent = r && r.synced ? 'Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Connect your phone in the Linger menu to send words there.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
+      if (!card || cardSpan !== sp) return;
+      showSaved();
+      card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Connect your phone in the Linger menu to send words there.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
     };
+    const wantSyn = !ctx.syn && kind !== 'slang';
+    const synP = wantSyn ? (api ? send({ type: 'synonyms', word: k }) : directSynonyms(k)) : null;
+    let dict = null;
+    if (!meaning || !ctx.loc) {
+      dict = api ? await send({ type: 'lookup', word: k }) : await directLookup(k);
+      if (!meaning && !(dict && dict.meaning)) { showMissing(); return; }
+      if (!meaning) meaning = dict.meaning;
+      if (card && cardSpan === sp) card.querySelector('#m').textContent = meaning;
+      if (!ctx.loc && dict && usable(dict.example)) { useSentence(dict.example, false); redraw(); }
+    }
+    // Still no sentence: try the dictionary's example for the base word (tenants → tenant), then fall back to the
+    // text on the page around the word, even if it's only a heading.
+    if (!ctx.loc) {
+      for (const base of [...new Set([k.replace(/ies$/, 'y'), k.replace(/es$/, ''), k.replace(/s$/, ''), k.replace(/ed$/, ''), k.replace(/ed$/, 'e'), k.replace(/ing$/, ''), k.replace(/ing$/, 'e')])].filter((b) => b !== k && b.length > 3)) {
+        const e = api ? await send({ type: 'lookup', word: base }) : await directLookup(base);
+        if (e && usable(e.example)) { useSentence(e.example, false); break; }
+      }
+      if (!ctx.loc && locate(sentence)) useSentence(sentence, true);
+      redraw();
+    }
+    // An easier synonym from the thesaurus, checked against the meaning so it's the right sense of the word.
+    if (synP) { const w = easier(k, await synP, meaning); if (w) { ctx.syn = w; redraw(); } }
   }
-  // Without the extension (test pages), look words up directly.
+  // An easier synonym: a single, clearly more common word from the thesaurus that the dictionary meaning also uses.
+  // The thesaurus mixes every sense of a word (turnout → "output", replicate → "double"); the meaning shown on the
+  // card is the sense we mean, so a synonym it mentions (replicate: "To repeat, duplicate…" → repeat) fits.
+  function easier(k, r, meaning) {
+    if (!r || !r.list || !meaning) return '';
+    for (const c of r.list) {
+      if (!/^[a-z]+$/.test(c.w) || c.w.slice(0, 4) === k.slice(0, 4)) continue;
+      if (!(c.f >= Math.max(3 * (r.self || 0), 5) && (isCommon(c.w) || c.f >= 20))) continue;
+      if (new RegExp('\\b' + c.w + '(s|es|ed|d|ing)?\\b', 'i').test(meaning)) return c.w;
+    }
+    return '';
+  }
+  const DATAMUSE = 'https://api.datamuse.com/words';
+  async function directSynonyms(k) {
+    try {
+      const [syn, self] = await Promise.all([fetch(`${DATAMUSE}?rel_syn=${encodeURIComponent(k)}&md=f&max=12`).then((r) => r.json()), fetch(`${DATAMUSE}?sp=${encodeURIComponent(k)}&md=f&max=1`).then((r) => r.json())]);
+      const f = (x) => Number(((x.tags || []).find((t) => t.startsWith('f:')) || 'f:0').slice(2));
+      return { self: self[0] && self[0].word === k ? f(self[0]) : 0, list: syn.map((x) => ({ w: x.word, f: f(x) })) };
+    } catch { return null; }
+  }
+  // Without the extension (test pages), look words up directly (same as the background worker).
   async function directLookup(k) {
     try {
       const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(k));
-      const j = r.ok ? await r.json() : null;
-      const defs = ((j && j.en) || []).flatMap((x) => x.definitions || []).map((d) => d.definition.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()).filter(Boolean);
-      return cap(defs.find((t) => t.length <= 140) || defs[0] || 'Not in the dictionary yet.');
-    } catch { return 'Couldn’t look this word up right now.'; }
+      return r.ok ? self.lingerDictEntry(await r.json(), k) : null;
+    } catch { return null; }
   }
 
   document.addEventListener('click', (e) => {
