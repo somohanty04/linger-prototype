@@ -1,0 +1,43 @@
+extension/calibrate.js
+  s_99ec2d8108581c::t_37dfb1b5011f03 165,169-172
+extension/practice.js
+  s_99ec2d8108581c::t_6f2fab8512411f 1-108
+extension/gaze.js
+  s_99ec2d8108581c::t_cd33c23b923f61 242-247
+extension/background.js
+  s_99ec2d8108581c::t_37dfb1b5011f03 71-77,106,117,119-120
+extension/calibrate.html
+  s_99ec2d8108581c::t_37dfb1b5011f03 55
+extension/practice.html
+  s_99ec2d8108581c::t_82e42af291738a 1-9,11-19,21-24,26-28,30-32,36,38-39,41-45,47-61,63-84
+  s_99ec2d8108581c::t_8963a0eeca97e1 62
+  s_99ec2d8108581c::t_13b1aa6612717b 10,20,25,29,40,46
+  s_99ec2d8108581c::t_e95764a5b4b12b 33-35,37
+extension/practice.css
+  s_99ec2d8108581c::t_fee1f6038c73c6 1-28,32-58
+  s_99ec2d8108581c::t_e28b6fb92daaaa 29-31
+extension/manifest.json
+  s_99ec2d8108581c::t_37dfb1b5011f03 4
+extension/popup.html
+  s_99ec2d8108581c::t_37dfb1b5011f03 31
+extension/popup.js
+  s_99ec2d8108581c::t_37dfb1b5011f03 49
+extension/content.js
+  s_99ec2d8108581c::t_13b1aa6612717b 58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f197596627ddd870af8534a7e3e6005b7a16255",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "unknown"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
