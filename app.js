@@ -95,7 +95,7 @@
 
   // ---------- state ----------
   const S = {
-    tab: 'lens', source: 'lease', askFirst: true, autoHard: true,
+    tab: 'lens', source: 'camera', askFirst: true, autoHard: true,
     pending: null, pendingRaw: '', sheet: null, sheetRaw: '', explain: false,
     saved: ['arrears', 'jitney', 'nebby'], savedDates: { arrears: 'Oct 24', jitney: 'Oct 23', nebby: 'Oct 22' },
     wordFilter: 'all', query: '', localSeg: 'slang', city: (() => { try { return localStorage.getItem('linger.city') || 'pgh'; } catch { return 'pgh'; } })(), cityPick: false,
@@ -103,9 +103,8 @@
     cards: { idx: 0, revealed: false },
     game: null,
     speaking: null, // which text is being read aloud
-    scan: { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }, // camera: idle | live | reading | done | error; origin: camera | share | paste
-    paste: false, shareHelp: false, toast: '', sync: { status: 'off', code: '', msg: '' },
-    chat: { msgs: [], busy: false }
+    scan: { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }, // idle | live (camera on) | reading | done | error; origin: camera | share | paste
+    paste: false, shareHelp: false, toast: '', sync: { status: 'off', code: '', msg: '' }
   };
   let camStream = null;
 
@@ -338,15 +337,16 @@
     S.pending = null; S.sheet = null; S.explain = false;
     try {
       camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false });
-      S.activity = 'camera';
+      S.tab = 'lens'; S.source = 'camera';
+      S.scan = { status: 'live', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' };
     } catch {
       S.tab = 'lens'; S.source = 'camera';
-      S.scan = { status: 'error', progress: 0, img: null, msg: 'Couldn’t open the camera. Allow camera access in your browser, or upload a photo instead.', conf: 0 };
+      S.scan = { status: 'error', progress: 0, img: null, msg: 'Couldn’t open the camera. Allow camera access in your browser, or use Upload a photo.', conf: 0, origin: 'camera' };
     }
     render();
   }
   function stopCamera() { if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; } }
-  function closeCamera() { stopCamera(); if (S.activity === 'camera') S.activity = null; }
+  function closeCamera() { stopCamera(); if (S.scan.status === 'live') S.scan.status = 'idle'; }
   // Keep only the part of the picture inside the on-screen frame (the video is shown with object-fit: cover).
   function capture() {
     const v = document.getElementById('cam'), f = document.getElementById('camFrame'); if (!v || !v.videoWidth || !f) return;
@@ -381,51 +381,6 @@
     render();
   }
 
-  // ---------- WhatsApp helper (simulated chat) ----------
-  function openChat() {
-    warmUp();
-    if (S.chat.msgs.length) return;
-    S.chat.msgs.push({ from: 'bot', html: 'Hi! I’m Linger 👋 Send me anything in English that confuses you and I’ll explain it in plain words.' });
-    S.chat.msgs.push({ from: 'bot', html: '📷 <b>Send a photo</b> of a letter, sign or bill<br>📋 <b>Paste</b> the text of an email or message<br>🔤 <b>Type one word</b> to get its meaning' });
-  }
-  const botSay = (m, delay = 750) => new Promise((res) => { S.chat.busy = true; render(); setTimeout(() => { S.chat.msgs.push({ from: 'bot', ...m }); S.chat.busy = false; render(); res(); }, delay); });
-  async function chatDocument(kind, img, pasted) {
-    if (S.chat.busy) return;
-    let text, sum, place;
-    if (img) {
-      S.chat.msgs.push({ from: 'me', img });
-      const m = { from: 'bot', html: 'Reading your photo… <span id="chatPct">0%</span>' };
-      S.chat.msgs.push(m); S.chat.busy = true; render();
-      let conf = 0;
-      try { const r = await readImage(img, (p) => { m.html = `Reading your photo… <span id="chatPct">${p}%</span>`; const el = document.getElementById('chatPct'); if (el) el.textContent = p + '%'; }); text = r.text; conf = r.conf; } catch { text = ''; }
-      S.chat.busy = false;
-      if (text.split(' ').length < 3) { m.html = 'Sorry, I couldn’t read that photo. Try again closer, flatter and in better light.'; render(); return; }
-      m.html = conf && conf < 60 ? 'I read your photo, but some words may be wrong. A flatter, brighter photo helps. Here’s the short version:' : 'Got it, I read your photo. Here’s the short version:';
-      sum = summarize(text); place = 'WhatsApp photo';
-    } else if (pasted) {
-      S.chat.msgs.push({ from: 'me', html: esc(pasted.length > 280 ? pasted.slice(0, 280) + '…' : pasted) });
-      text = cleanText(pasted); sum = summarize(text); place = 'Pasted text';
-    } else { S.chat.msgs.push({ from: 'me', card: kind }); text = TEXTS[kind]; sum = SUMMARY[kind]; place = PLACES[kind]; }
-    render();
-    await botSay({ html: `<b>${esc(sum.title)}:</b><ul>${sum.points.map(([ic, t]) => `<li>${ic} ${t}</li>`).join('')}</ul>` }, 1000);
-    if (sum.dates.length) await botSay({ html: '<b>Key dates and amounts:</b> ' + sum.dates.map(esc).join(' · ') });
-    const said = summaryText(sum);
-    await botSay({ voice: said, secs: Math.max(5, Math.round(said.split(' ').length / 2.6)) });
-    const keys = [...new Set(text.split(' ').map(keyOf))].filter((k) => k && (D[k] ? D[k].kind !== 'common' : PLAIN[k] !== undefined)).slice(0, 5);
-    keys.forEach((k) => { makeEntry(k, text, place); if (!isSaved(k)) toggleSave(k); });
-    if (keys.length) await botSay({ html: `I saved ${keys.length} hard ${keys.length === 1 ? 'word' : 'words'} to your Linger Words for practice: <b>${keys.map((k) => esc(D[k].word)).join(', ')}</b>. Reply with any word to get its meaning.` });
-  }
-  // Several words = a pasted message to explain; one or two = look the word up.
-  async function chatInput(t) {
-    if (S.chat.busy) return;
-    if (t.split(/\s+/).length >= 6) return chatDocument(null, null, t);
-    const k = keyOf(t); if (!k) return;
-    S.chat.msgs.push({ from: 'me', html: esc(t) }); render();
-    const e = makeEntry(k, '', 'WhatsApp');
-    if (e.pending) { S.chat.busy = true; render(); await e.pending; }
-    await botSay({ html: `<b>${esc(e.word)}</b>: ${esc(e.meaning)}${e.local ? '<br><i>Around here:</i> ' + esc(e.local) : ''}` }, 500);
-  }
-
   // ---------- views ----------
   const rings = (a) => a.map(([cls, st]) => `<span class="${cls}" style="${st}"></span>`).join('');
   const heroDeco = rings([['ring', 'width:190px;height:190px;right:-50px;top:-70px'], ['dot', 'width:78px;height:78px;right:24px;top:-18px']]);
@@ -435,62 +390,65 @@
     ${over ? `<div class="over">${pin}${esc(over)}</div>` : ''}
     <h1>${esc(title)}</h1>${sub ? `<div class="hsub">${esc(sub)}</div>` : ''}</header>`;
 
+  // Lens (Figma: "final draft · Lens home"): a viewfinder with the scan frame and capture button. The camera only
+  // turns on when the capture button is tapped. After a scan, upload or paste, the results show on the same screen.
+  const gear = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+  const lensHead = (mode) => `<header class="lh-head">
+      <div class="lh-rings" aria-hidden="true"><img src="icons/lens-rings.svg" width="351.387" height="351.387" alt=""></div>
+      <div class="lh-title"><h1>Lens</h1><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button></div>
+      <div class="lh-switch" role="group" aria-label="How to read something">
+        <button type="button" class="lh-seg ${mode === 'scan' ? 'on' : ''}" data-action="shutter-home" aria-pressed="${mode === 'scan'}">Scan</button>
+        <label class="lh-seg ${mode === 'upload' ? 'on' : ''}">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label>
+        <button type="button" class="lh-seg ${mode === 'paste' ? 'on' : ''}" data-action="paste-open">Paste text</button>
+      </div></header>`;
+
   function viewLens() {
+    const sc = S.scan;
+    if (sc.status === 'reading' || (sc.status === 'done' && TEXTS.camera)) return viewResults();
+    const live = sc.status === 'live';
+    const corners = '<i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i>';
+    const hint = live ? 'Fit the whole page inside the frame' : sc.status === 'error' ? 'Tap the button to try again' : 'Tap the button to turn on the camera';
+    return `<div class="lens-home">${lensHead('scan')}
+      <div class="lh-view">
+        ${live ? '<video id="cam" playsinline muted autoplay></video>' : `<div class="lh-empty">${sc.status === 'error' ? `<p>${esc(sc.msg)}</p>` : '<p>Point your camera at a letter, sign or bill. Linger reads it and explains the hard words.</p>'}</div>`}
+        <div class="lh-frame" id="camFrame">${corners}</div>
+        <p class="lh-hint">${hint}</p>
+        <button type="button" class="lh-shutter" data-action="shutter" aria-label="${live ? 'Take photo' : 'Turn on the camera'}"></button>
+      </div></div>`;
+  }
+
+  function viewResults() {
     const active = S.pending || S.sheet;
-    const cam = S.source === 'camera';
-    const toks = tokens().map((raw, i) => {
-      if (!raw) return '';
-      const k = keyOf(raw), e = D[k];
-      let cls = 'tok';
-      if (cam ? k && isHard(k) : e && (e.kind !== 'hard' || S.autoHard)) cls += ' hard';
-      if (active && k === active) cls += ' on';
-      return `<button type="button" class="${cls}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
-    }).join('');
-    const sc = S.scan, scanned = !!TEXTS.camera;
-    let autos = [];
-    if (S.autoHard && cam && sc.status === 'done') { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
-    else if (S.autoHard && !cam) autos = Object.keys(D).filter((k) => D[k].kind === 'hard' && D[k].src === S.source);
-    const what = S.source === 'lease' ? 'letter' : S.source === 'cafe' ? 'sign' : 'text';
-    const reading = S.speaking === 'lens';
+    const sc = S.scan;
     let inner, hasText = true;
-    if (cam && sc.status === 'reading') { hasText = false; inner = `<div class="lens-label">Reading your photo…</div><img class="cam" src="${sc.img}" alt="Your photo"><div class="scan-pct">Reading text <span id="scanPct">${sc.progress}%</span></div>`; }
-    else if (cam && sc.status === 'error') { hasText = false; inner = `<div class="lens-label">Camera</div><div class="cam-empty"><p>${esc(sc.msg)}</p><div class="cam-buttons"><button type="button" class="btn primary" data-action="cam-start">📷 Try the camera again</button><label class="btn white">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label></div></div>`; }
+    if (sc.status === 'reading') { hasText = false; inner = `<div class="lens-label">Reading your photo…</div><img class="cam" src="${sc.img}" alt="Your photo"><div class="scan-pct">Reading text <span id="scanPct">${sc.progress}%</span></div>`; }
     else {
-      const label = cam ? ORIGIN_LABEL[sc.origin] : S.source === 'cafe' ? 'Sample · café notice board' : 'Sample · letter from landlord';
-      inner = `<div class="lens-label">${label}</div><div class="paper">${toks}</div>
-        ${cam && sc.conf && sc.conf < 60 ? '<p class="cam-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}
-        ${cam ? '<button type="button" class="rescan" data-action="cam-start">📷 Scan something else</button>' : ''}`;
+      const toks = tokens().map((raw, i) => {
+        if (!raw) return '';
+        const k = keyOf(raw);
+        let cls = 'tok';
+        if (k && isHard(k)) cls += ' hard';
+        if (active && k === active) cls += ' on';
+        return `<button type="button" class="${cls}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
+      }).join('');
+      inner = `<div class="lens-label">${ORIGIN_LABEL[sc.origin]}</div><div class="paper">${toks}</div>
+        ${sc.conf && sc.conf < 60 ? '<p class="cam-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}`;
     }
-    const samples = [['lease', 'Lease letter'], ['cafe', 'Café sign']].concat(scanned || cam ? [['camera', sc.origin === 'camera' ? '📷 Your scan' : '📋 Your text']] : []);
-    return `<header class="hero lens-hero">${heroDeco}
-      <div class="hero-top">${logo}${pairPill}</div>
-      <h1>What do you need to read?</h1>
-      <div class="hsub">Scan it or text it. Linger explains it in plain English.</div>
-      <div class="big-actions">
-        <button type="button" class="big" data-action="cam-start"><span class="big-ic" aria-hidden="true">📷</span><strong>Scan with camera</strong><span>Letters, signs, bills</span></button>
-        <button type="button" class="big" data-action="play" data-v="chat"><span class="big-ic" aria-hidden="true">💬</span><strong>Text it to Linger</strong><span>Send a photo on WhatsApp</span></button>
-      </div>
-      <div class="hero-links"><label class="upload-link">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label><span aria-hidden="true">·</span><button type="button" class="upload-link" data-action="paste-open">Paste text</button></div>
-    </header>
-    <div class="body">
-      <div class="sample-row"><span class="label" style="color: var(--muted)">${cam ? 'Showing' : 'Or try a sample'}</span>
-        <div class="chips">${samples.map(([id, l]) => `<button type="button" class="chip ${S.source === id ? 'on' : ''}" data-action="source" data-v="${id}">${l}</button>`).join('')}</div></div>
+    let autos = [];
+    if (S.autoHard && sc.status === 'done') { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
+    const reading = S.speaking === 'lens';
+    return `${lensHead('')}
+    <div class="body lens-results">
       <div class="lens">
         <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
         ${inner}
       </div>
       ${hasText ? `<div class="lens-actions">
-        <button type="button" class="btn primary" data-action="explain">✦ Explain this ${what}</button>
+        <button type="button" class="btn primary" data-action="explain">✦ Explain this text</button>
         <button type="button" class="btn ${reading ? 'deep' : 'ghost'}" data-action="read" ${canSpeak ? '' : 'disabled'}>${speaker}${reading ? 'Stop' : 'Read aloud'}</button>
       </div>
-      <p class="small" style="margin: -2px 4px 0">Tap a word you would pause on. On the glasses, your eyes do this part. <span class="dotted-key">Dotted</span> words are ${cam ? 'ones Linger thinks are hard' : 'ones newcomers often pause on'}.</p>` : ''}
-      <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">Select text anywhere, tap Share, then “Explain with Linger”</span></span><span class="go">›</span></button>
-      <div class="card">
-        <div class="switch-row"><div><strong>Ask before showing</strong><span class="small">When you linger, Linger checks first</span></div>
-          <button type="button" class="switch" role="switch" aria-label="Ask before showing" aria-checked="${S.askFirst}" data-action="ask"></button></div>
-        <div class="switch-row"><div><strong>Auto-define hard words</strong><span class="small">Underlined and explained right away</span></div>
-          <button type="button" class="switch" role="switch" aria-label="Auto-define hard words" aria-checked="${S.autoHard}" data-action="auto"></button></div>
-      </div>
+      <p class="small" style="margin: -2px 4px 0">Tap a word you would pause on. On the glasses, your eyes do this part. <span class="dotted-key">Dotted</span> words are ones Linger thinks are hard.</p>` : ''}
+      <button type="button" class="btn ghost" data-action="rescan">📷 Scan something else</button>
       ${autos.length ? `<div style="display: flex; flex-direction: column; gap: 8px">
         <div class="label" style="color: var(--indigo-500)">Auto-defined on this page</div>
         ${autos.map((k) => `<button type="button" class="auto" data-action="open" data-k="${k}"><strong>${esc(D[k].word)}</strong> · ${esc(D[k].meaning)}</button>`).join('')}
@@ -498,35 +456,18 @@
     </div>`;
   }
 
-  function viewCamera() {
-    return `<div class="full-view camera-view">
-      <video id="cam" playsinline muted autoplay></video>
-      <div class="cam-frame" id="camFrame"><i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i></div>
-      <div class="cam-top"><button type="button" class="x" data-action="cam-close" aria-label="Close camera">${xIcon}</button><span>Scan a letter, sign or bill</span><span class="spacer"></span></div>
-      <p class="cam-hint">Fit the text inside the frame. Hold steady, in good light.</p>
-      <div class="cam-bottom">
-        <label class="cam-side"><span class="cs-ic" aria-hidden="true">🖼️</span><span>Upload</span><input type="file" accept="image/*" id="photo" hidden></label>
-        <button type="button" class="shutter" data-action="capture" aria-label="Take photo"></button>
-        <button type="button" class="cam-side" data-action="cam-text"><span class="cs-ic" aria-hidden="true">💬</span><span>Text it</span></button>
+  // Settings (opened from the gear on Lens): the reading switches, sharing from other apps, and the glasses demo.
+  function viewSettings() {
+    return `<header class="set-head"><button type="button" class="set-back" data-action="tab" data-tab="lens" aria-label="Back to Lens">‹</button><h1>Settings</h1></header>
+    <div class="body set-body">
+      <div class="card">
+        <div class="switch-row"><div><strong>Ask before showing</strong><span class="small">When you linger, Linger checks first</span></div>
+          <button type="button" class="switch" role="switch" aria-label="Ask before showing" aria-checked="${S.askFirst}" data-action="ask"></button></div>
+        <div class="switch-row"><div><strong>Auto-define hard words</strong><span class="small">Underlined and explained right away</span></div>
+          <button type="button" class="switch" role="switch" aria-label="Auto-define hard words" aria-checked="${S.autoHard}" data-action="auto"></button></div>
       </div>
-    </div>`;
-  }
-
-  function viewChat() {
-    const msgs = S.chat.msgs.map((m, i) => {
-      const who = m.from === 'me' ? 'me' : 'bot';
-      if (m.img) return `<div class="bubble ${who} pic"><img src="${m.img}" alt="Photo you sent"></div>`;
-      if (m.card) return `<div class="bubble ${who} doc"><span class="doc-ic">📄</span><span><b>${m.card === 'lease' ? 'Lease letter.jpg' : 'Cafe sign.jpg'}</b><span class="doc-prev">${esc(TEXTS[m.card].split(' ').slice(0, 9).join(' '))}…</span></span></div>`;
-      if (m.voice) { const on = S.speaking === 'voice' + i; return `<div class="bubble ${who} voice"><button type="button" class="play" data-action="voice" data-i="${i}" aria-label="${on ? 'Stop voice note' : 'Play voice note'}">${on ? '■' : '▶'}</button><span class="wave" aria-hidden="true">${'<i></i>'.repeat(22)}</span><span class="dur">0:${String(m.secs).padStart(2, '0')}</span></div>`; }
-      return `<div class="bubble ${who}">${m.html}</div>`;
-    }).join('');
-    return `<div class="full-view chat-view">
-      <div class="chat-top"><button type="button" class="x" data-action="quit" aria-label="Close chat">${xIcon}</button>
-        <span class="avatar">${logo}</span><div><strong>Linger</strong><span>WhatsApp helper · simulated</span></div></div>
-      <div class="chat-msgs" id="chatMsgs">${msgs}${S.chat.busy ? '<div class="bubble bot typing" aria-label="Linger is typing"><i></i><i></i><i></i></div>' : ''}</div>
-      ${S.chat.msgs.length <= 2 && !S.chat.busy ? `<div class="quick"><label class="qphoto">📷 Send a photo<input type="file" accept="image/*" id="chatPhoto2" hidden></label><button type="button" data-action="chat-sample" data-v="lease">Try: lease letter</button><button type="button" data-action="chat-sample" data-v="cafe">Try: café sign</button></div>` : ''}
-      <form class="composer" id="chatForm"><label class="cbtn" aria-label="Send a photo">📷<input type="file" accept="image/*" id="chatPhoto" hidden></label>
-        <input id="chatInput" placeholder="Type a word or paste a message" autocomplete="off" aria-label="Message"><button type="submit" class="cbtn send" aria-label="Send">➤</button></form>
+      <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">Select text anywhere, tap Share, then “Explain with Linger”</span></span><span class="go">›</span></button>
+      <a class="act share-card" href="glasses.html"><span class="ic">👓</span><span><strong>Glasses</strong><span class="small">Phone mode · see it through the glasses</span></span><span class="go">›</span></a>
     </div>`;
   }
 
@@ -725,8 +666,6 @@
   function overlay() {
     if (S.activity === 'cards') return viewCards();
     if (S.activity === 'story') return viewStory();
-    if (S.activity === 'chat') return viewChat();
-    if (S.activity === 'camera') return viewCamera();
     let html = '';
     if (S.pending && S.tab === 'lens') {
       const secs = (1.1 + (S.pendingRaw.length % 7) * 0.15).toFixed(1);
@@ -816,22 +755,19 @@
   const over = document.getElementById('overlay');
   const screenEl = document.querySelector('.screen');
   let lastTab = null;
-  let chatDraft = { value: '', focus: false };
   function render() {
-    const views = { lens: viewLens, words: viewWords, local: viewLocal, review: viewReview };
+    const views = { lens: viewLens, words: viewWords, local: viewLocal, review: viewReview, settings: viewSettings };
     const top = scroll.scrollTop;
     const focusQ = document.activeElement && document.activeElement.id === 'q';
-    const ciOld = document.getElementById('chatInput'); chatDraft = { value: ciOld ? ciOld.value : '', focus: document.activeElement === ciOld };
     const caret = focusQ ? document.activeElement.selectionStart : 0;
     scroll.innerHTML = views[S.tab]();
     scroll.scrollTop = lastTab === S.tab ? top : 0;
     lastTab = S.tab;
     over.innerHTML = overlay();
     screenEl.classList.toggle('full', !!S.activity);
+    screenEl.classList.toggle('on-lens', S.tab === 'lens' && !(S.scan.status === 'reading' || (S.scan.status === 'done' && TEXTS.camera)));
     const camEl = document.getElementById('cam');
     if (camEl && camStream && camEl.srcObject !== camStream) { camEl.srcObject = camStream; camEl.play().catch(() => {}); }
-    const cm = document.getElementById('chatMsgs'); if (cm) cm.scrollTop = cm.scrollHeight;
-    const ci = document.getElementById('chatInput'); if (ci) { if (chatDraft.value) ci.value = chatDraft.value; if (chatDraft.focus) ci.focus({ preventScroll: true }); }
     document.querySelectorAll('.tabbar button').forEach((b) => {
       if (b.dataset.tab === S.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
@@ -841,7 +777,6 @@
   // ---------- actions ----------
   const actions = {
     tab: (d) => { stopSpeaking(); closeCamera(); S.tab = d.tab; S.pending = null; S.sheet = null; S.explain = false; },
-    source: (d) => { stopSpeaking(); S.source = d.v; S.pending = null; S.sheet = null; S.explain = false; },
     word: (d) => {
       const raw = tokens()[Number(d.i)];
       const k = keyOf(raw);
@@ -868,9 +803,14 @@
     'city-set': (d) => { stopSpeaking(); setCity(d.v); },
     'city-locate': () => { S.cityPick = false; locateCity(); },
     hear: (d) => { const e = D[d.k]; if (e) speak('hear-' + d.k, `${e.word}. ${e.sentence}`); },
-    play: (d) => { stopSpeaking(); S.sheet = null; S.explain = false; S.activity = d.v; if (d.v === 'story') newGame(0); else if (d.v === 'chat') openChat(); else S.cards = { idx: 0, revealed: false }; },
+    play: (d) => { stopSpeaking(); S.sheet = null; S.explain = false; S.activity = d.v; if (d.v === 'story') newGame(0); else S.cards = { idx: 0, revealed: false }; },
     'cam-start': () => { startCamera(); },
     'cam-close': () => { closeCamera(); },
+    // The capture button: turns the camera on the first time, then takes the photo.
+    shutter: () => { if (S.scan.status === 'live') capture(); else startCamera(); },
+    'shutter-home': () => { if (S.scan.status !== 'live') { stopSpeaking(); S.scan.status = 'idle'; S.pending = null; S.sheet = null; S.explain = false; } },
+    rescan: () => { stopSpeaking(); S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pending = null; S.sheet = null; S.explain = false; },
+    settings: () => { stopSpeaking(); closeCamera(); S.tab = 'settings'; S.pending = null; S.sheet = null; S.explain = false; },
     'paste-open': () => { stopSpeaking(); S.paste = true; S.pending = null; S.sheet = null; S.explain = false; },
     'paste-go': () => { const t = (document.getElementById('pasteBox') || {}).value || ''; S.paste = false; if (t.trim()) handleText(t, 'paste'); },
     'share-help': () => { S.shareHelp = true; },
@@ -879,11 +819,8 @@
     'sync-copy': async () => { const u = (document.getElementById('readerUrl') || {}).textContent || ''; try { await navigator.clipboard.writeText(u); showToast('Reader link copied'); } catch { window.prompt('Open this on your laptop:', u); } },
     'share-try': () => { S.shareHelp = false; handleText(SHARE_SAMPLE, 'share'); },
     install: async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; },
-    'cam-text': () => { closeCamera(); S.activity = 'chat'; openChat(); },
     capture: () => { capture(); },
-    voice: (d) => { const m = S.chat.msgs[Number(d.i)]; if (m) speak('voice' + d.i, m.voice); },
-    'chat-sample': (d) => { chatDocument(d.v); },
-    quit: () => { if (S.activity === 'chat') stopSpeaking(); S.activity = null; S.game = null; },
+    quit: () => { S.activity = null; S.game = null; },
     'card-reveal': () => { S.cards.revealed = true; },
     'card-next': () => { S.cards.idx += 1; S.cards.revealed = false; },
     pick: (d) => { const g = S.game; g.sel = g.sel === d.k ? null : d.k; },
@@ -906,17 +843,9 @@
   });
   document.addEventListener('change', async (ev) => {
     const f = ev.target.files && ev.target.files[0];
-    if (!f || !['photo', 'chatPhoto', 'chatPhoto2'].includes(ev.target.id)) return;
+    if (!f || ev.target.id !== 'photo') return;
     ev.target.value = '';
-    const src = await fileToDataURL(f);
-    if (ev.target.id === 'photo') scanImage(src); else chatDocument(null, src);
-  });
-  document.addEventListener('submit', (ev) => {
-    if (ev.target.id !== 'chatForm') return;
-    ev.preventDefault();
-    const inp = document.getElementById('chatInput'); const w = inp.value.trim();
-    inp.value = ''; chatDraft = { value: '', focus: true };
-    if (w) chatInput(w);
+    scanImage(await fileToDataURL(f));
   });
   document.addEventListener('input', (ev) => {
     if (ev.target.id === 'q') { S.query = ev.target.value; render(); }
@@ -924,11 +853,12 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
     if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp || S.cityPick) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; S.cityPick = false; render(); }
-    else if (S.activity) { closeCamera(); S.activity = null; S.game = null; render(); }
+    else if (S.activity) { S.activity = null; S.game = null; render(); }
+    else if (S.tab === 'settings') { S.tab = 'lens'; render(); }
   });
 
-  // Test hook: feed an image to the scanner or chat without a camera.
-  window.lingerTest = { scan: (src) => scanImage(src), chatPhoto: (src) => chatDocument(null, src), chatText: (t) => chatInput(t) };
+  // Test hook: feed an image to the scanner without a camera.
+  window.lingerTest = { scan: (src) => scanImage(src) };
 
   // ---------- shared or pasted text ----------
   // Text arrives from the phone's Share menu as ?text=… (Android share target, or the iPhone Shortcut).
