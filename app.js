@@ -353,10 +353,10 @@
   async function countCameras() {
     try { const n = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput').length; if (n !== camCount) { camCount = n; render(); } } catch {}
   }
-  // Switch between the back and front camera while the camera is on.
+  // Switch between the back and front camera. Before the camera is on, it turns the camera on with the other one.
   async function flipCamera() {
-    if (S.scan.status !== 'live') return;
     const next = facing === 'environment' ? 'user' : 'environment';
+    if (S.scan.status !== 'live') { facing = next; try { localStorage.setItem('linger.facing', facing); } catch {} return startCamera(); }
     stopCamera();
     try {
       camStream = await openStream(next, true);
@@ -438,7 +438,7 @@
         <div class="lh-frame" id="camFrame">${corners}</div>
         <p class="lh-hint">${hint}</p>
         <button type="button" class="lh-shutter" data-action="shutter" aria-label="${live ? 'Take photo' : 'Turn on the camera'}"></button>
-        ${live && camCount !== 1 ? `<button type="button" class="lh-flip" data-action="cam-flip" aria-label="Switch to the ${facing === 'environment' ? 'front' : 'back'} camera">${flipIcon}</button>` : ''}
+        ${camCount !== 1 ? `<button type="button" class="lh-flip" data-action="cam-flip" aria-label="Switch to the ${facing === 'environment' ? 'front' : 'back'} camera">${flipIcon}</button>` : ''}
       </div></div>`;
   }
 
