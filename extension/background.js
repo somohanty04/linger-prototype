@@ -68,6 +68,13 @@ async function openSetup(fromTab) {
   const tab = await chrome.tabs.create({ url: chrome.runtime.getURL('calibrate.html') });
   await chrome.storage.session.set({ setupTab: tab.id });
 }
+// The reading test page (Task A / Task B on a letter). Reuse the tab if it came from there.
+async function openPractice(fromTab) {
+  const url = chrome.runtime.getURL('practice.html');
+  const t = fromTab && await chrome.tabs.get(fromTab).catch(() => null);
+  if (t && (t.url || t.pendingUrl || '').startsWith(url)) return chrome.tabs.update(t.id, { active: true });
+  await chrome.tabs.create({ url });
+}
 // Keep eye tracking on after Chrome restarts.
 const resume = async () => { const { eyeOn } = await chrome.storage.local.get({ eyeOn: false }); if (eyeOn) ensureTracker(); };
 chrome.runtime.onStartup.addListener(resume);
@@ -96,6 +103,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       return reply({ ok: true });
     }
     if (msg.type === 'eye-off') { await chrome.storage.local.set({ eyeOn: false }); await closeTracker(); return reply({ ok: true }); }
+    if (msg.type === 'open-practice') { await openPractice(null); return reply({ ok: true }); }
     if (msg.type === 'eye-recal') { await openSetup(msg.tabId || (sender.tab && sender.tab.id)); return reply({ ok: true }); }
     if (msg.type === 'eye-ensure') { const { eyeOn } = await chrome.storage.local.get({ eyeOn: false }); if (eyeOn) await ensureTracker(); return reply({ ok: true }); }
     if (msg.type === 'eye-start') { if (msg.restart) await closeTracker(); await ensureTracker(); return reply({ ok: true }); }
@@ -106,9 +114,10 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (msg.type === 'calib-done') await chrome.storage.local.set({ gazeModel: msg.model, eyeOn: true, gazeProblem: null });
       const { eyeOn } = await chrome.storage.local.get({ eyeOn: false });
       if (!eyeOn) await closeTracker();
-      // Go back to the page the person came from.
+      // Go back to the page the person came from (or open the reading test, if they picked that).
       const { setupFrom } = await chrome.storage.session.get({ setupFrom: null });
-      if (setupFrom) chrome.tabs.update(setupFrom, { active: true }).catch(() => {});
+      if (msg.practice) await openPractice(setupFrom);
+      else if (setupFrom) chrome.tabs.update(setupFrom, { active: true }).catch(() => {});
       if (sender.tab) chrome.tabs.remove(sender.tab.id).catch(() => {});
       return reply({ ok: true });
     }

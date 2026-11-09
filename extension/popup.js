@@ -46,6 +46,7 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
     if (r && r.setup) e.target.checked = false;
     window.close();
   };
+  $('practice').onclick = async () => { await chrome.runtime.sendMessage({ type: 'open-practice' }); window.close(); };
   $('recal').onclick = async () => { await chrome.runtime.sendMessage({ type: 'eye-recal', tabId: tab && tab.id }); window.close(); };
   $('secs').oninput = (e) => { $('secsOut').textContent = e.target.value; };
   $('secs').onchange = (e) => chrome.storage.local.set({ pauseSecs: Number(e.target.value) });

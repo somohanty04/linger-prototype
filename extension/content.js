@@ -55,7 +55,7 @@
   let count = 0;
   function okParent(node) {
     for (let el = node.parentElement; el; el = el.parentElement) {
-      if (SKIP.has(el.tagName) || el.isContentEditable || el.id === 'linger-ui' || el.classList.contains('linger-w')) return false;
+      if (SKIP.has(el.tagName) || el.isContentEditable || el.id === 'linger-ui' || el.hasAttribute('data-linger-skip') || el.classList.contains('linger-w')) return false;
       if (el.getAttribute && el.getAttribute('aria-hidden') === 'true') return false;
     }
     return true;

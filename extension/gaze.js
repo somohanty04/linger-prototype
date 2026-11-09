@@ -239,7 +239,12 @@
     a.style.top = Math.min(r.bottom + 8, innerHeight - 60) + 'px';
     ui.appendChild(a);
     send({ type: 'ask', open: true, swipe: swipes });
-    const log = (ans) => { try { chrome.storage.local.get({ gazeLog: [] }, (v) => chrome.storage.local.set({ gazeLog: [...v.gazeLog, { t: Date.now(), site: location.hostname, word: w, why, ans, how: a.dataset.how || 'click', err: G.acc }].slice(-500) })); } catch {} };
+    const log = (ans) => {
+      const how = a.dataset.how || 'click';
+      try { chrome.storage.local.get({ gazeLog: [] }, (v) => chrome.storage.local.set({ gazeLog: [...v.gazeLog, { t: Date.now(), site: location.hostname, word: w, why, ans, how, err: G.acc }].slice(-500) })); } catch {}
+      // The reading test page records answers per task. Only on Linger's own pages: websites must not see this.
+      if (location.protocol === 'chrome-extension:' || window.__lingerTest) window.dispatchEvent(new CustomEvent('linger-answer', { detail: JSON.stringify({ word: w, why, ans, how }) }));
+    };
     a.querySelector('.no').onclick = () => { log('no'); closeAsk(); clearLine(); G.cool = performance.now() + 6000; hist.length = 0; trail.length = 0; }; // don't nag
     a.querySelector('.yes').onclick = () => {
       log('yes'); closeAsk(); clearLine();
