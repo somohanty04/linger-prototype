@@ -1,8 +1,9 @@
 // Linger eye tracker. Runs once for the whole browser in a hidden (offscreen) extension page, so the camera is
 // asked for once, it works on every website (even ones that block cameras), and calibration carries across tabs.
 // Each camera frame → MediaPipe face + iris landmarks → features → screen point → smoothed → sent to the tab.
-import { FaceLandmarker } from './vendor/mediapipe/vision_bundle.mjs';
+import { FaceLandmarker, HandLandmarker } from './vendor/mediapipe/vision_bundle.mjs';
 import { features, predict, learn, headCheck, OneEuro, BlinkGate } from './gazemodel.mjs';
+import { SwipeDetector, palm } from './gestures.mjs';
 
 const url = (p) => chrome.runtime.getURL(p);
 const ports = new Set();
@@ -13,6 +14,11 @@ let offset = [0, 0], offsetT = 0;  // quick correction for drift (from clicks), 
 const fx = new OneEuro(), fy = new OneEuro();
 const gate = new BlinkGate(); // drops blinks, and the half-closed frames around them
 let saveTimer = null;
+// Hand swipes answer "Stuck on …?". Hand tracking only runs while a tab has that question open (it costs CPU).
+const asking = new Set();          // ports of tabs showing the question, with swipes turned on
+let hands = null, handsLoading = null;
+const swipe = new SwipeDetector();
+let files = null;
 const dbg = (self.lingerDebug = { frames: 0, faces: 0, path: '', err: '' }); // for testing
 
 function setStatus(s, msg = '') {
@@ -27,10 +33,14 @@ chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== 'gaze' && port.name !== 'calib') return;
   ports.add(port);
   port.postMessage({ status, hasModel: !!model });
-  port.onDisconnect.addListener(() => ports.delete(port));
+  port.onDisconnect.addListener(() => { ports.delete(port); asking.delete(port); });
   port.onMessage.addListener((m) => {
     if (m.type === 'model') { model = m.model; offset = [0, 0]; fx.reset(); fy.reset(); gate.reset(); }
     if (m.type === 'learn' && model) learnAt(m.s, m.strong);
+    if (m.type === 'ask') {
+      if (m.open && m.swipe) { asking.add(port); loadHands(); } else asking.delete(port);
+      if (!asking.size) swipe.reset();
+    }
   });
 });
 
@@ -57,6 +67,7 @@ function onFrame(src, W, H) {
   const now = performance.now();
   dbg.frames++;
   if (!ports.size) return; // nobody is looking: skip the work (the camera stays ready)
+  if (asking.size && hands) handFrame(src, now);
   let res;
   try { res = landmarker.detectForVideo(src, now); } catch (e) { dbg.err = String((e && e.message) || e); return; }
   const lm = res.faceLandmarks && res.faceLandmarks[0];
@@ -83,6 +94,27 @@ function send({ t, f }) {
   for (const p of ports) if (p.name === 'gaze') try { p.postMessage({ g }); } catch {}
 }
 
+// ---------- hand swipes ----------
+function handFrame(src, now) {
+  let res;
+  try { res = hands.detectForVideo(src, now); } catch (e) { dbg.handErr = String((e && e.message) || e); return; }
+  const lm = res.landmarks && res.landmarks[0];
+  if (lm) dbg.hands = (dbg.hands || 0) + 1;
+  const dir = swipe.push(now, palm(lm));
+  if (!dir) return;
+  dbg.swipes = (dbg.swipes || 0) + 1;
+  for (const p of asking) try { p.postMessage({ gesture: dir }); } catch {}
+}
+function loadHands() {
+  if (hands || handsLoading || !files) return;
+  const opts = (delegate) => ({ baseOptions: { modelAssetPath: url('vendor/mediapipe/hand_landmarker.task'), delegate }, runningMode: 'VIDEO', numHands: 1, minHandDetectionConfidence: 0.6 });
+  handsLoading = HandLandmarker.createFromOptions(files, opts('GPU'))
+    .catch(() => HandLandmarker.createFromOptions(files, opts('CPU')))
+    .then((h) => { hands = h; })
+    .catch((e) => { dbg.handErr = 'load: ' + ((e && e.message) || e); problem('hand swipes ' + ((e && e.message) || e)); })
+    .finally(() => { handsLoading = null; });
+}
+
 // ---------- start-up ----------
 async function start() {
   const got = await chrome.runtime.sendMessage({ type: 'get-model' }).catch(() => null);
@@ -97,11 +129,12 @@ async function start() {
     setStatus('error', msg); problem('camera ' + n); return;
   }
   setStatus('loading', 'Loading eye tracking…');
-  const files = { wasmLoaderPath: url('vendor/mediapipe/vision_wasm_internal.js'), wasmBinaryPath: url('vendor/mediapipe/vision_wasm_internal.wasm') };
+  files = { wasmLoaderPath: url('vendor/mediapipe/vision_wasm_internal.js'), wasmBinaryPath: url('vendor/mediapipe/vision_wasm_internal.wasm') };
   const opts = (delegate) => ({ baseOptions: { modelAssetPath: url('vendor/mediapipe/face_landmarker.task'), delegate }, runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true });
   try { landmarker = await FaceLandmarker.createFromOptions(files, opts('GPU')); }
   catch { try { landmarker = await FaceLandmarker.createFromOptions(files, opts('CPU')); } catch (e) { setStatus('error', 'Eye tracking couldn’t load.'); problem('model ' + ((e && e.message) || e)); return; } }
   setStatus(model ? 'ok' : 'nomodel', model ? '' : 'Set up eye tracking first.');
+  if (asking.size) loadHands();
   lastFace = performance.now();
 
   // Read frames straight from the camera track (works in a hidden page); fall back to a <video> element.

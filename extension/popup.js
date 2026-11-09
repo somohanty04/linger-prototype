@@ -15,13 +15,14 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
   if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain'].forEach((id) => { $(id).disabled = true; }); }
   if (usable && !status) $('blocked').textContent = 'Reload this page to start Linger here.';
 
-  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null });
+  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null });
   if (st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = 'Last problem: ' + st.gazeProblem.why + '. Open Recalibrate to check the camera.'; }
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
   $('bigger').checked = st.bigger;
   $('showGaze').checked = st.showGaze;
   $('spread').checked = st.spread;
+  $('handSwipe').checked = st.handSwipe;
   $('secs').value = st.pauseSecs; $('secsOut').textContent = st.pauseSecs;
   $('eye').checked = st.eyeOn;
   $('recal').hidden = !st.gazeModel;
@@ -32,6 +33,7 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
   $('bigger').onchange = (e) => chrome.storage.local.set({ bigger: e.target.checked });
   $('showGaze').onchange = (e) => chrome.storage.local.set({ showGaze: e.target.checked });
   $('spread').onchange = (e) => chrome.storage.local.set({ spread: e.target.checked });
+  $('handSwipe').onchange = (e) => chrome.storage.local.set({ handSwipe: e.target.checked });
   $('site').onchange = async (e) => {
     const { paused } = await chrome.storage.local.get({ paused: [] });
     chrome.storage.local.set({ paused: e.target.checked ? paused.filter((h) => h !== host) : [...new Set([...paused, host])] });
