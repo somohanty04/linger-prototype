@@ -356,6 +356,9 @@ button { cursor: pointer; }
 .lh-hint { position: absolute; left: 50%; bottom: 101px; transform: translateX(-50%); margin: 0; padding: 8px 14px; border-radius: 9999px; background: rgba(6, 14, 84, 0.85); color: #FFFFFF; font-size: 14px; font-weight: 600; line-height: 16px; white-space: nowrap; }
 .lh-shutter { position: absolute; left: 50%; bottom: 18px; width: 67px; height: 67px; margin-left: -33.5px; border: 4px solid var(--blue); border-radius: 50%; background: #FFFFFF; box-shadow: 0 4px 12px rgba(6, 14, 84, 0.25); cursor: pointer; }
 .lh-shutter:active { transform: scale(0.94); }
+.lh-flip { position: absolute; left: calc(50% + 70px); bottom: 24.5px; width: 54px; height: 54px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(6, 14, 84, 0.85); color: #FFFFFF; box-shadow: 0 4px 12px rgba(6, 14, 84, 0.25); cursor: pointer; }
+.lh-flip:active { transform: scale(0.94); }
+.lh-flip:focus-visible { outline: 3px solid #9FEAFF; outline-offset: 2px; }
 .screen.on-lens .scroll { overflow: hidden; background: #060E54; }
 .lens-results, .set-body { margin-top: 0; border-radius: 0; padding-top: 18px; }
 

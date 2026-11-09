@@ -107,6 +107,9 @@
     paste: false, shareHelp: false, toast: '', sync: { status: 'off', code: '', msg: '' }
   };
   let camStream = null;
+  // Which camera: 'environment' (back) or 'user' (front). Remembered between visits.
+  let facing = (() => { try { return localStorage.getItem('linger.facing') || 'environment'; } catch { return 'environment'; } })();
+  let camCount = 0; // how many cameras the phone has (known after the first camera permission)
 
   // ---------- helpers ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -336,12 +339,32 @@
     stopSpeaking(); warmUp();
     S.pending = null; S.sheet = null; S.explain = false;
     try {
-      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false });
+      camStream = await openStream(facing, false);
+      countCameras();
       S.tab = 'lens'; S.source = 'camera';
       S.scan = { status: 'live', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' };
     } catch {
       S.tab = 'lens'; S.source = 'camera';
       S.scan = { status: 'error', progress: 0, img: null, msg: 'Couldn’t open the camera. Allow camera access in your browser, or use Upload a photo.', conf: 0, origin: 'camera' };
+    }
+    render();
+  }
+  const openStream = (mode, exact) => navigator.mediaDevices.getUserMedia({ video: { facingMode: exact ? { exact: mode } : { ideal: mode }, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false });
+  async function countCameras() {
+    try { const n = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput').length; if (n !== camCount) { camCount = n; render(); } } catch {}
+  }
+  // Switch between the back and front camera while the camera is on.
+  async function flipCamera() {
+    if (S.scan.status !== 'live') return;
+    const next = facing === 'environment' ? 'user' : 'environment';
+    stopCamera();
+    try {
+      camStream = await openStream(next, true);
+      facing = next; try { localStorage.setItem('linger.facing', facing); } catch {}
+    } catch {
+      // No camera facing that way: go back to the one that worked.
+      try { camStream = await openStream(facing, false); showToast('This device has only one camera'); }
+      catch { S.scan = { status: 'error', progress: 0, img: null, msg: 'Couldn’t switch cameras. Tap the button to try again.', conf: 0, origin: 'camera' }; }
     }
     render();
   }
@@ -393,6 +416,7 @@
   // Lens (Figma: "final draft · Lens home"): a viewfinder with the scan frame and capture button. The camera only
   // turns on when the capture button is tapped. After a scan, upload or paste, the results show on the same screen.
   const gear = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+  const flipIcon = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-3.2l-1.6-2.4A1.3 1.3 0 0 0 14.1 4H9.9a1.3 1.3 0 0 0-1.1.6L7.2 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M8.5 12.5a3.6 3.6 0 0 1 6.2-2"/><path d="M15.5 13.5a3.6 3.6 0 0 1-6.2 2"/><path d="M15 8.4v2.3h-2.3"/><path d="M9 17.6v-2.3h2.3"/></svg>';
   const lensHead = (mode) => `<header class="lh-head">
       <div class="lh-rings" aria-hidden="true"><img src="icons/lens-rings.svg" width="351.387" height="351.387" alt=""></div>
       <div class="lh-title"><h1>Lens</h1><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button></div>
@@ -414,6 +438,7 @@
         <div class="lh-frame" id="camFrame">${corners}</div>
         <p class="lh-hint">${hint}</p>
         <button type="button" class="lh-shutter" data-action="shutter" aria-label="${live ? 'Take photo' : 'Turn on the camera'}"></button>
+        ${live && camCount !== 1 ? `<button type="button" class="lh-flip" data-action="cam-flip" aria-label="Switch to the ${facing === 'environment' ? 'front' : 'back'} camera">${flipIcon}</button>` : ''}
       </div></div>`;
   }
 
@@ -806,6 +831,7 @@
     play: (d) => { stopSpeaking(); S.sheet = null; S.explain = false; S.activity = d.v; if (d.v === 'story') newGame(0); else S.cards = { idx: 0, revealed: false }; },
     'cam-start': () => { startCamera(); },
     'cam-close': () => { closeCamera(); },
+    'cam-flip': () => { flipCamera(); },
     // The capture button: turns the camera on the first time, then takes the photo.
     shutter: () => { if (S.scan.status === 'live') capture(); else startCamera(); },
     'shutter-home': () => { if (S.scan.status !== 'live') { stopSpeaking(); S.scan.status = 'idle'; S.pending = null; S.sheet = null; S.explain = false; } },
