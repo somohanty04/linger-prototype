@@ -13,9 +13,12 @@ Underlines hard English words on any website, explains them in plain words, and 
 ## What it does
 
 - **Underlines hard words** on every page with Linger's orange dotted line: words outside the ~10,000 most common English words, Linger's legal, lease and billing words, and local slang from the city guides. Names, acronyms, links, buttons and text boxes are skipped.
-- **Click an underlined word** (or double-click any word) for a card: meaning, the sentence in plain English, local note for slang, 🔊 Hear it, ★ Save to Linger.
+- **Highlight anything with the mouse** (a word, a phrase or a whole sentence), or click an underlined word. A card opens right beside it: the meaning in this context, the original sentence, the same sentence with an easier synonym swapped in, other easier words, and for phrases and sentences a plain-English version and how it's put together. 🔊 reads it aloud and the bookmark saves it. The easiest word (or a translation, chosen in the menu) also appears right next to a highlighted word on the page.
+- **✦ Ask Linger**: open questions about a highlighted passage or the whole page.
+- **📷 Read this screen** (toolbar menu, or right-click → *Read this image with Linger* / *Read this screen with Linger*): for photos, picture menus and PDFs. Linger sends a screenshot of the tab, the image, or the whole PDF to the AI and writes the text out in a side panel, with a short note for each item (spicy dishes get 🌶). Highlight anything in the panel or use Ask Linger there. The screenshot, image or PDF is sent to Anthropic.
+- **AI explanations** (optional, toolbar menu): add a Claude API key. Without one, Linger uses its word list, Wiktionary, Datamuse synonyms and MyMemory translations, and Read this screen and Ask Linger are off.
 - **Explain this page** (toolbar menu): "What this page wants from you" with key dates and amounts. Select text first to explain only that part.
-- **Save to Linger** keeps the word in the menu's Saved list and, once paired, sends it to the phone app's Words tab right away (Firebase).
+- **Save to Linger** keeps the word (with its meaning in context, easier words and original sentence) in the menu's Saved list and, once paired, sends it to the phone app's Words tab right away (Firebase).
 - **Eye tracking** (toolbar menu, off by default): uses the webcam with Google's MediaPipe face and iris model. It runs **once for the whole browser**, so it works on every tab and website (even ones that block cameras), and you set it up only once. The first time, a setup page opens: check your face and lighting, then follow a dot full screen through 20 spots, plus 5 green check spots that measure accuracy (about 35 seconds). It measures where the iris sits inside each eye *and* how your head is turned and positioned, so small head movements don't throw it off. Reading normally won't trigger it: Linger looks at the last few seconds as a whole, and only asks "Stuck on …?" when your eyes stay in one place (no sweeping across or moving down) for the pause time, or go clearly back up to re-read. It keeps learning: every click (people look at what they click) corrects drift right away and improves the model, and so does every "Yes, explain". The chip at the bottom left says when it can't see your eyes or when you've moved far from where you sat during setup. Options: **Show where I'm looking** (a soft dot where it thinks you’re looking) and **More space between lines**. The video never leaves the laptop.
 - **Toolbar menu**: underline on/off, turn off for this site, bigger words, eye tracking with sensitivity and recalibrate, phone pairing, saved words.
 
@@ -26,6 +29,10 @@ Underlines hard English words on any website, explains them in plain words, and 
 - **"Linger couldn't see your eyes well enough"**: add light in front of you (a window or lamp), sit about an arm's length away, and calibrate again.
 - **"Sit like you did when you set it up"**: you've moved a lot closer, farther or to the side. Move back, or press Recalibrate.
 The menu shows the last problem under Eye tracking.
+
+## Changing the code without reinstalling
+
+Load `extension/` once with **Load unpacked**. After that, saving any file in it reloads Linger and the tab you're on within about 2 seconds (only for unpacked installs). `test.html` runs the same `content.js` on a sample page without Chrome: serve the repo (`python3 -m http.server`) and open `/extension/test.html`.
 
 ## Pair with the phone
 

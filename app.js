@@ -45,7 +45,7 @@
   };
   const PHRASES = [[/remit (the )?payment/gi, 'pay'], [/failure to (\w+) (may|will|could) result in/gi, 'if you don’t $1, it could lead to'], [/failure to/gi, 'if you don’t'], [/may result in/gi, 'could lead to'], [/termination of (your )?service/gi, 'your service being cut off'], [/for your records/gi, 'so you have it later'], [/prior written consent/gi, 'written permission first'], [/in full/gi, 'completely'], [/no later than/gi, 'by'], [/in accordance with/gi, 'following'], [/you are hereby notified that/gi, 'this letter tells you that'], [/is hereby/gi, 'is'], [/are hereby/gi, 'are']];
   const SCAN_PLACE = 'Camera scan';
-  const ORIGIN_LABEL = { camera: 'Your scan', share: 'Shared from another app', paste: 'Pasted text' };
+  const ORIGIN_LABEL = { camera: 'Your scan', share: 'Shared from another app', paste: 'Pasted text', example: 'Example · landlord recommendation letter' };
   const SHARE_URL = 'https://somohanty04.github.io/linger-prototype/';
   const SHARE_SAMPLE = 'Your water bill has a past due balance of $86.40. Payment must be received no later than November 18 to avoid a late fee. Failure to pay may result in termination of service.';
   TEXTS.camera = '';
@@ -105,7 +105,9 @@
     speaking: null, // which text is being read aloud
     scan: { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }, // camera: idle | live | reading | done | error; origin: camera | share | paste
     paste: false, shareHelp: false, toast: '', sync: { status: 'off', code: '', msg: '' },
-    chat: { msgs: [], busy: false }
+    chat: { msgs: [], busy: false },
+    lensHome: true, lensScanning: false, // Lens opens on the scan screen; scanning something opens the reader
+    placeQ: '', placeLook: { status: 'idle', msg: '' }
   };
   let camStream = null;
 
@@ -119,6 +121,22 @@
   const speaker = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   const xIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
   const logo = '<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="11.5" fill="none" stroke="#44C9E6" stroke-width="3"/><circle cx="15" cy="15" r="5" fill="#44C9E6"/></svg>';
+  // ---------- app language ----------
+  // i18n.js translates the whole app into the chosen language. The English being learned
+  // (the letter, word names, example sentences) is marked translate="no" so it stays in English.
+  const LANGS = [['en', 'English'], ['es', 'Español'], ['zh-CN', '中文（简体）'], ['zh-TW', '中文（繁體）'], ['ar', 'العربية'], ['hi', 'हिन्दी'], ['bn', 'বাংলা'], ['ur', 'اردو'], ['fa', 'فارسی'], ['ps', 'پښتو'],
+    ['vi', 'Tiếng Việt'], ['tl', 'Tagalog'], ['ko', '한국어'], ['ja', '日本語'], ['fr', 'Français'], ['pt', 'Português'], ['ru', 'Русский'], ['uk', 'Українська'], ['ht', 'Kreyòl ayisyen'], ['so', 'Soomaali'],
+    ['sw', 'Kiswahili'], ['am', 'አማርኛ'], ['ti', 'ትግርኛ'], ['om', 'Oromoo'], ['ne', 'नेपाली'], ['my', 'မြန်မာ'], ['km', 'ខ្មែរ'], ['lo', 'ລາວ'], ['th', 'ไทย'], ['hmn', 'Hmoob'],
+    ['ta', 'தமிழ்'], ['te', 'తెలుగు'], ['gu', 'ગુજરાતી'], ['pa', 'ਪੰਜਾਬੀ'], ['mr', 'मराठी'], ['ml', 'മലയാളം'], ['kn', 'ಕನ್ನಡ'], ['si', 'සිංහල'], ['id', 'Bahasa Indonesia'], ['ms', 'Bahasa Melayu'],
+    ['tr', 'Türkçe'], ['ku', 'Kurdî'], ['ckb', 'کوردی'], ['he', 'עברית'], ['de', 'Deutsch'], ['it', 'Italiano'], ['pl', 'Polski'], ['ro', 'Română'], ['el', 'Ελληνικά'], ['nl', 'Nederlands'],
+    ['hu', 'Magyar'], ['cs', 'Čeština'], ['sk', 'Slovenčina'], ['bg', 'Български'], ['sr', 'Српски'], ['hr', 'Hrvatski'], ['bs', 'Bosanski'], ['sq', 'Shqip'], ['hy', 'Հայերեն'], ['ka', 'ქართული'],
+    ['az', 'Azərbaycan'], ['uz', 'Oʻzbek'], ['kk', 'Қазақ'], ['ky', 'Кыргызча'], ['tg', 'Тоҷикӣ'], ['mn', 'Монгол'], ['yo', 'Yorùbá'], ['ig', 'Igbo'], ['ha', 'Hausa'], ['zu', 'isiZulu'],
+    ['rw', 'Kinyarwanda'], ['ln', 'Lingála'], ['mg', 'Malagasy'], ['ceb', 'Cebuano'], ['qu', 'Runasimi'], ['gn', 'Avañeʼẽ'], ['ay', 'Aymar aru'], ['sv', 'Svenska'], ['fi', 'Suomi'], ['da', 'Dansk'], ['no', 'Norsk']];
+  const curLang = () => (window.LingerI18n ? LingerI18n.lang : 'en');
+  const setLang = (code) => { if (window.LingerI18n) LingerI18n.set(code); };
+  const globe = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>';
+  const langPick = () => `<label class="lang-pick notranslate" translate="no" title="App language">${globe}<select id="langSel" aria-label="App language">${LANGS.map(([c, n]) => `<option value="${c}" ${c === curLang() ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`;
+
   const isSaved = (k) => S.saved.includes(k);
   function toggleSave(k) {
     const i = S.saved.indexOf(k);
@@ -366,6 +384,7 @@
     closeCamera(); stopSpeaking();
     S.tab = 'lens'; S.source = 'camera';
     S.pending = null; S.sheet = null; S.explain = false;
+    S.lensHome = false;
     S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0, origin: 'camera' }; render();
     try {
       const { text, conf } = await readImage(src, (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; });
@@ -431,11 +450,53 @@
   const heroDeco = rings([['ring', 'width:190px;height:190px;right:-50px;top:-70px'], ['dot', 'width:78px;height:78px;right:24px;top:-18px']]);
   const pairPill = `<a class="pair" href="glasses.html" aria-label="Phone mode, glasses not paired. Open the glasses simulation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="14" r="4"/><circle cx="18" cy="14" r="4"/><path d="M10 14h4M2 12l2-5M22 12l-2-5"/></svg>Phone mode</a>`;
   const hero = (title, sub, over) => `<header class="hero">${heroDeco}
-    <div class="hero-top">${logo}${pairPill}</div>
+    <div class="hero-top">${logo}<span class="hero-right">${langPick()}${pairPill}</span></div>
     ${over ? `<div class="over">${pin}${esc(over)}</div>` : ''}
     <h1>${esc(title)}</h1>${sub ? `<div class="hsub">${esc(sub)}</div>` : ''}</header>`;
 
+  // The example in the frame: what a scanned landlord letter looks like. Tapping the shutter "scans" it.
+  const EXAMPLE_LETTER = 'Landlord Recommendation Letter. October 2, 2026. To Whom It May Concern, I, Robert Klein, without reservation recommend Amina Yusuf as a tenant in your residential space. As my tenant from August 1, 2024 to July 31, 2026, there were a total of 0 occurrences where the rent was late. During such time, the monthly rent was $1,250. During my relationship with the tenant I have experienced an individual who always carried themselves in a polite, respectable manner. In addition, the tenant properly maintained the property and made no unreasonable demands or complaints during their tenancy. I would gladly rent any property of mine to the tenant again. If you have any questions, feel free to contact me at any time. Sincerely, Robert Klein. Phone: (412) 555-0147.';
+  function scanExample() {
+    if (S.lensScanning) return;
+    S.lensScanning = true; render();
+    setTimeout(() => { S.lensScanning = false; handleText(EXAMPLE_LETTER, 'example'); render(); }, 1200);
+  }
+  function viewLensHome() {
+    return `<div class="lhome">
+      <header class="lh-head">${rings([['ring', 'width:250px;height:250px;right:-90px;top:-40px'], ['dot', 'width:96px;height:96px;right:14px;top:22px']])}
+        <div class="lh-top">${logo}${langPick()}</div>
+        <h1>Lens</h1>
+        <div class="lh-seg" role="group" aria-label="How to add text">
+          <button type="button" class="on" aria-pressed="true" data-action="cam-start">Scan</button>
+          <label class="seg-btn">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label>
+          <button type="button" data-action="paste-open">Paste text</button>
+        </div>
+      </header>
+      <section class="lh-view">
+        <div class="vf ${S.lensScanning ? 'scanning' : ''}"><i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i>
+          <button type="button" class="doc notranslate" translate="no" data-action="lens-example" aria-label="Scan the example letter">
+            <h3>Landlord Recommendation Letter</h3>
+            <p>From<br>Robert Klein<br>14 Liberty Ave, Apt 2<br>Pittsburgh, PA 15222</p>
+            <p>Date: October 2, 2026</p>
+            <p>To Whom It May Concern,</p>
+            <p>I, Robert Klein, without reservation recommend Amina Yusuf as a tenant in your residential space. As my tenant from August 1, 2024 to July 31, 2026, there were a total of 0 occurrences where the rent was late. During such time, the monthly rent was $1,250.</p>
+            <p>During my relationship with the tenant I have experienced an individual who always carried themselves in a polite, respectable manner. In addition, the tenant properly maintained the property and made no unreasonable demands or complaints during their tenancy. I would gladly rent any property of mine to the tenant again.</p>
+            <p>If you have any questions, feel free to contact me at any time.</p>
+            <p>Sincerely,<br>Robert Klein<br>Phone: (412) 555-0147</p>
+          </button>
+          ${S.lensScanning ? '<span class="scan-line" aria-hidden="true"></span>' : ''}
+        </div>
+        <div class="fit-pill" role="status">${S.lensScanning ? 'Reading the letter…' : 'Fit the whole page inside the frame'}</div>
+        <button type="button" class="shutter-btn" data-action="lens-example" aria-label="Scan the example letter"></button>
+        <p class="lh-note">This is an example. Tap the button to see how Linger reads it.</p>
+        <div class="lh-alt"><button type="button" data-action="cam-start">📷 Use my camera</button><button type="button" data-action="play" data-v="chat">💬 Text it to Linger</button><button type="button" data-action="lens-samples">More samples</button></div>
+      </section>
+      <div class="lh-bottom" aria-hidden="true"></div>
+    </div>`;
+  }
+
   function viewLens() {
+    if (S.lensHome && !S.sheet && !S.pending && !S.explain) return viewLensHome();
     const active = S.pending || S.sheet;
     const cam = S.source === 'camera';
     const toks = tokens().map((raw, i) => {
@@ -457,13 +518,13 @@
     else if (cam && sc.status === 'error') { hasText = false; inner = `<div class="lens-label">Camera</div><div class="cam-empty"><p>${esc(sc.msg)}</p><div class="cam-buttons"><button type="button" class="btn primary" data-action="cam-start">📷 Try the camera again</button><label class="btn white">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label></div></div>`; }
     else {
       const label = cam ? ORIGIN_LABEL[sc.origin] : S.source === 'cafe' ? 'Sample · café notice board' : 'Sample · letter from landlord';
-      inner = `<div class="lens-label">${label}</div><div class="paper">${toks}</div>
+      inner = `<div class="lens-label">${label}</div><div class="paper notranslate" translate="no">${toks}</div>
         ${cam && sc.conf && sc.conf < 60 ? '<p class="cam-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}
         ${cam ? '<button type="button" class="rescan" data-action="cam-start">📷 Scan something else</button>' : ''}`;
     }
-    const samples = [['lease', 'Lease letter'], ['cafe', 'Café sign']].concat(scanned || cam ? [['camera', sc.origin === 'camera' ? '📷 Your scan' : '📋 Your text']] : []);
+    const samples = [['lease', 'Lease letter'], ['cafe', 'Café sign']].concat(scanned || cam ? [['camera', sc.origin === 'camera' ? '📷 Your scan' : sc.origin === 'example' ? '📄 Example letter' : '📋 Your text']] : []);
     return `<header class="hero lens-hero">${heroDeco}
-      <div class="hero-top">${logo}${pairPill}</div>
+      <div class="hero-top"><button type="button" class="back-pill" data-action="lens-home">‹ Scan</button><span class="hero-right">${langPick()}${pairPill}</span></div>
       <h1>What do you need to read?</h1>
       <div class="hsub">Scan it or text it. Linger explains it in plain English.</div>
       <div class="big-actions">
@@ -542,7 +603,7 @@
     const days = ['S', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
     const filters = [['all', 'All words'], ['slang', 'Slang/customs'], ['hard', 'Hard words']];
     return `<header class="hero">${rings([['ring', 'width:230px;height:230px;right:-70px;top:-40px'], ['dot', 'width:96px;height:96px;right:20px;top:-26px']])}
-      <div class="hero-top">${logo}<span class="cal" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span></div>
+      <div class="hero-top">${logo}<span class="hero-right">${langPick()}<span class="cal" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span></span></div>
       <h1>${esc(day)},<br>${esc(date)}</h1>
       <div class="hsub">${n === 1 ? '1 word saved' : n + ' words saved'}</div>
       <div class="week"><span class="arrow">◀</span>${days.map((d, i) => `<span class="d ${i === now.getDay() ? 'on' : ''}">${d}</span>`).join('')}<span class="arrow">▶</span></div>
@@ -565,7 +626,7 @@
   const CITIES = window.LINGER_CITIES || {};
   const PGH_IC = { Winter: '🪑', 'Getting around': '🧭', Celebrations: '🍪', Sports: '🏈', Driving: '🚗' };
   const city = () => CITIES[S.city] || CITIES.pgh;
-  const cityName = (c) => `${c.name}, ${c.state}`;
+  const cityName = (c) => (c.state ? `${c.name}, ${c.state}` : c.name);
   // Slang from other cities becomes a normal word entry, so Save and Words work the same everywhere.
   function citySlang(id) {
     if (id === 'pgh') return SLANG;
@@ -590,24 +651,74 @@
       render();
     }, () => { showToast('Couldn’t get your location. Pick a city instead.'); render(); }, { timeout: 10000, maximumAge: 600000 });
   }
-  function setCity(id) { if (!CITIES[id]) return; S.city = id; S.cityPick = false; try { localStorage.setItem('linger.city', id); } catch {} }
+  function setCity(id) { if (!CITIES[id]) return; S.city = id; S.cityPick = false; S.placeQ = ''; S.placeLook = { status: 'idle', msg: '' }; if (!CITIES[id].web && S.localSeg === 'about') S.localSeg = 'slang'; try { if (id !== 'web') localStorage.setItem('linger.city', id); } catch {} }
+  const placeMatches = (q) => { q = q.trim().toLowerCase(); return Object.entries(CITIES).filter(([id, c]) => id !== 'web' && (!q || `${c.name} ${c.state} ${c.nick}`.toLowerCase().includes(q))); };
+  // Places without a Linger guide: look them up on Wikipedia (culture, etiquette, and how people speak).
+  const WIKI = 'https://en.wikipedia.org';
+  async function wikiFind(q) {
+    const r = await fetch(`${WIKI}/w/api.php?origin=*&format=json&action=query&list=search&srlimit=5&srsearch=${encodeURIComponent(q)}`);
+    const j = await r.json(); return ((j.query && j.query.search) || []).map((x) => x.title);
+  }
+  async function wikiSum(t) { if (!t) return null; const r = await fetch(`${WIKI}/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g, '_'))}`); return r.ok ? r.json() : null; }
+  async function lookupPlace(q) {
+    q = q.trim(); if (!q || S.placeLook.status === 'loading') return;
+    S.placeLook = { status: 'loading', msg: '' }; render();
+    try {
+      const [title] = await wikiFind(q);
+      const place = await wikiSum(title);
+      if (!place || !place.extract) throw new Error('none');
+      const name = title.split(',')[0].replace(/\s*\(.*\)$/, '');
+      // A page about this place whose title has one of the words we want (e.g. "Culture of Kenya").
+      const topic = async (query, re, who) => { const ts = await wikiFind(query); const t = ts.find((x) => x.includes(who) && re.test(x) && x !== title); return t ? wikiSum(t) : null; };
+      // For a city, the country's culture page usually exists when the city's doesn't ("Capital of Kenya" → Kenya).
+      const country = ((place.description || '').match(/\b(?:of|in) (?:the )?([A-Z][A-Za-z .'-]+)$/) || [])[1] || '';
+      const either = async (make, re) => (await topic(make(name), re, name)) || (country && country !== name ? topic(make(country), re, country) : null);
+      const [culture, etiquette, speech] = await Promise.all([
+        either((n) => `Culture of ${n}`, /cultur|tradition/i),
+        either((n) => `Etiquette in ${n}`, /etiquette|custom/i),
+        either((n) => `${n} English slang dialect`, /English|slang|dialect|language|Singlish|Sheng/i)
+      ]);
+      const card = (x, ic, tag) => (x && x.extract ? { ic, tag, title: x.title, body: x.extract, url: x.content_urls && x.content_urls.mobile && x.content_urls.mobile.page } : null);
+      CITIES.web = {
+        web: true, name, state: country && country !== name ? country : '', nick: place.description || 'From Wikipedia', emoji: '🌍',
+        lat: place.coordinates ? place.coordinates.lat : 0, lon: place.coordinates ? place.coordinates.lon : 0,
+        transit: '', talk: `Ask people what they love about ${name}, and which local food you should try first.`,
+        customs: [card(etiquette, '🤝', 'Etiquette'), card(culture, '🎎', 'Culture and traditions')].filter(Boolean),
+        speech: card(speech, '💬', 'How people talk'),
+        around: [{ ic: '🗺️', title: `About ${name}`, body: place.extract }],
+        url: place.content_urls && place.content_urls.mobile && place.content_urls.mobile.page
+      };
+      setCity('web'); S.localSeg = CITIES.web.customs.length ? 'customs' : 'around';
+    } catch {
+      S.placeLook = { status: 'error', msg: 'Couldn’t find that place. Check the spelling, or try the country or a bigger city nearby.' };
+    }
+    render();
+  }
 
   function viewLocal() {
     const c = city(), id = CITIES[S.city] ? S.city : 'pgh';
-    const segs = [['slang', '💬', 'Slang'], ['customs', '🤝', 'Customs'], ['around', '🚌', 'Getting around'], ['hotspots', '📍', 'Pause map']];
+    const segs = c.web ? [['slang', '💬', 'Slang'], ['customs', '🤝', 'Customs'], ['around', '🗺️', 'About']] : [['slang', '💬', 'Slang'], ['customs', '🤝', 'Customs'], ['around', '🚌', 'Getting around'], ['hotspots', '📍', 'Pause map']];
+    if (c.web && S.localSeg === 'hotspots') S.localSeg = 'customs';
     let body = '';
-    if (S.localSeg === 'slang') {
+    const wikiNote = c.web ? `<p class="small web-src">From Wikipedia${c.url ? ` · <a href="${esc(c.url)}" target="_blank" rel="noopener">read more</a>` : ''}. Linger’s own guides (like ${Object.values(CITIES).filter((x) => !x.web).slice(0, 3).map((x) => esc(x.name)).join(', ')}) have slang with pronunciation.</p>` : '';
+    if (c.web && S.localSeg === 'slang') {
+      body = c.speech ? `<p class="sec-note">How people talk in ${esc(c.name)}.</p><article class="tip"><span class="tip-ic" aria-hidden="true">💬</span><div><span class="tip-tag">${esc(c.speech.tag)}</span><div class="tip-title">${esc(c.speech.title)}</div><div class="tip-body">${esc(c.speech.body)}</div></div></article>${wikiNote}`
+        : `<p class="sec-note">Linger doesn’t have a slang list for ${esc(c.name)} yet.</p>${wikiNote}`;
+    } else if (c.web && S.localSeg === 'customs') {
+      body = (c.customs.length ? `<p class="sec-note">Customs and traditions in ${esc(c.name)}.</p>` + c.customs.map((t) => `<article class="tip"><span class="tip-ic" aria-hidden="true">${t.ic}</span><div><span class="tip-tag">${esc(t.tag)}</span><div class="tip-title">${esc(t.title)}</div><div class="tip-body">${esc(t.body)}</div></div></article>`).join('')
+        : `<p class="sec-note">Couldn’t find customs for ${esc(c.name)}. Try searching for the country.</p>`) + wikiNote;
+    } else if (S.localSeg === 'slang') {
       body = `<p class="sec-note">Words you’ll hear around ${esc(c.name)}. Tap 🔊 to hear how they sound.</p>` + citySlang(id).map((k) => { const e = D[k], sv = isSaved(k); return `<article class="phrase">
-        <div class="ph-top"><div class="ph-name"><span class="ph-word">${esc(e.word)}</span>${e.say ? `<span class="ph-say">/${esc(e.say)}/</span>` : ''}</div>
+        <div class="ph-top"><div class="ph-name"><span class="ph-word notranslate" translate="no">${esc(e.word)}</span>${e.say ? `<span class="ph-say notranslate" translate="no">/${esc(e.say)}/</span>` : ''}</div>
           <div class="ph-acts"><button type="button" class="hear" data-action="hear" data-k="${k}" aria-label="Hear ${esc(e.word)}">${speaker}</button>
           <button type="button" class="save ${sv ? 'saved' : ''}" data-action="save" data-k="${k}">${sv ? 'Saved ✓' : 'Save'}</button></div></div>
         <div class="ph-mean">${esc(e.meaning)}</div>
-        <div class="ph-ex">“${esc(e.sentence)}”</div>
+        <div class="ph-ex notranslate" translate="no">“${esc(e.sentence)}”</div>
         ${e.local ? `<div class="ph-local">${pin}<span>${esc(e.local)}</span></div>` : ''}</article>`; }).join('');
     } else if (S.localSeg === 'customs') {
       body = `<p class="sec-note">Unwritten rules that help you fit in.</p>` + cityCustoms(id).map((t) => `<article class="tip"><span class="tip-ic" aria-hidden="true">${t.ic}</span><div><span class="tip-tag">${esc(t.tag)}</span><div class="tip-title">${esc(t.title)}</div><div class="tip-body">${esc(t.body)}</div></div></article>`).join('');
     } else if (S.localSeg === 'around') {
-      body = `<p class="sec-note">How people move around ${esc(c.name)}, and the words on the signs.</p><div class="routes">` + (c.around || []).map((r) => `<div class="route"><span class="route-ic" aria-hidden="true">${r.ic}</span><div><div class="tip-title">${esc(r.title)}</div><div class="tip-body">${esc(r.body)}</div></div></div>`).join('') + '</div>';
+      body = `<p class="sec-note">${c.web ? `About ${esc(c.name)}.` : `How people move around ${esc(c.name)}, and the words on the signs.`}</p><div class="routes">` + (c.around || []).map((r) => `<div class="route"><span class="route-ic" aria-hidden="true">${r.ic}</span><div><div class="tip-title">${esc(r.title)}</div><div class="tip-body">${esc(r.body)}</div></div></div>`).join('') + '</div>' + wikiNote;
     } else {
       const hs = cityHotspots(id), max = Math.max(...hs.map((h) => h.n));
       body = `<div class="dark local-dark"><div style="font-weight: 800; font-size: 16px; margin-bottom: 4px">Where newcomers pause in ${esc(c.name)}</div>When lots of people new to the area linger on the same word, Linger adds it here. Only the word and the area are shared, never your eye data.</div>`
@@ -616,16 +727,17 @@
           <div class="tip-body">${esc(h.note)}</div></div></div>`).join('')
         + '<div class="small" style="font-size: 12px; text-align: center">Sample data for the prototype</div>';
     }
-    const ess = [['🚨', '911', 'Emergencies: police, fire, ambulance'], ['☎️', '311', 'City help: trash, noise, potholes'], ['🚌', 'Transit', c.transit], ['💵', 'Tipping', '18–20% at sit-down restaurants']];
+    const ess = c.ess || (c.web ? [] : [['🚨', '911', 'Emergencies: police, fire, ambulance'], ['☎️', '311', 'City help: trash, noise, potholes'], ['🚌', 'Transit', c.transit], ['💵', 'Tipping', '18–20% at sit-down restaurants']]);
     return `<header class="hero local-hero">${rings([['ring', 'width:200px;height:200px;right:-60px;top:-60px;border-color:rgba(155,227,196,0.45)'], ['dot', 'width:80px;height:80px;right:22px;top:-16px;background:rgba(155,227,196,0.5)']])}
-      <div class="hero-top">${logo}${pairPill}</div>
+      <div class="hero-top">${logo}<span class="hero-right">${langPick()}${pairPill}</span></div>
       <div class="over">${pin}Your city guide</div>
       <button type="button" class="city-btn" data-action="city-pick" aria-haspopup="dialog"><span class="city-emoji" aria-hidden="true">${c.emoji}</span>
         <span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span><span class="chev" aria-hidden="true">▾</span></button>
+      <button type="button" class="place-search" data-action="city-pick"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search any city or country</button>
       <button type="button" class="locate" data-action="city-locate">◎ Use my location</button>
     </header>
     <div class="body local-body">
-      <div class="ess" role="list">${ess.map(([ic, t, d]) => `<div class="ess-card" role="listitem"><span class="ess-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</div>
+      <div class="ess" role="list" ${ess.length ? '' : 'hidden'}>${ess.map(([ic, t, d]) => `<div class="ess-card" role="listitem"><span class="ess-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</div>
       <nav class="ltabs" aria-label="City guide sections">${segs.map(([v, ic, l]) => `<button type="button" class="ltab ${S.localSeg === v ? 'on' : ''}" data-action="seg" data-v="${v}" aria-pressed="${S.localSeg === v}"><span aria-hidden="true">${ic}</span>${l}</button>`).join('')}</nav>
       <div class="lcontent">${body}</div>
       <div class="talk"><span class="talk-ic" aria-hidden="true">🗨️</span><div><strong>Easy small talk</strong><div class="tip-body">${esc(c.talk)}</div></div></div>
@@ -737,12 +849,16 @@
         <div class="prompt-actions"><button type="button" class="p-no" data-action="dismiss">Not now</button><button type="button" class="p-yes" data-action="accept">Show me</button></div></div>`;
     }
     if (S.cityPick) {
+      const hits = placeMatches(S.placeQ), q = S.placeQ.trim(), L = S.placeLook;
       html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
-        <div class="panel" role="dialog" aria-label="Choose a city"><div class="grab"></div>
-          <div class="sum-title">Where are you?</div>
+        <div class="panel" role="dialog" aria-label="Search places"><div class="grab"></div>
+          <div class="sum-title">Where do you want to explore?</div>
+          <form class="place-form" id="placeForm"><input id="placeQ" class="place-q" type="search" enterkeyhint="search" placeholder="Search a city or country, e.g. Nairobi" value="${esc(S.placeQ)}" autocomplete="off" aria-label="Search a city or country"></form>
           <button type="button" class="btn ghost" data-action="city-locate">◎ Use my location</button>
-          <div class="city-list">${Object.entries(CITIES).map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${c.emoji}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>
-          <div class="small">More cities coming. Each guide has slang, customs, getting around and a pause map.</div></div></div>`;
+          ${hits.length ? `<div class="label" style="color: var(--muted)">${q ? 'Linger guides' : 'Linger guides · slang, customs, getting around'}</div><div class="city-list">${hits.map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${c.emoji}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>` : ''}
+          ${q ? `<button type="button" class="btn primary" data-action="place-web" ${L.status === 'loading' ? 'disabled' : ''}>${L.status === 'loading' ? 'Looking it up…' : `🔎 Look up “${esc(q)}”`}</button>` : ''}
+          ${L.status === 'error' ? `<div class="small" style="color: var(--bad-ink)" role="alert">${esc(L.msg)}</div>` : ''}
+          <div class="small">Any place you search shows its customs, traditions and how people talk, from Wikipedia.</div></div></div>`;
     }
     if (S.paste) {
       html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
@@ -790,15 +906,15 @@
       const spk = `<button type="button" class="speak ${on ? 'on' : ''}" data-action="speak-word" aria-label="Say it aloud" ${canSpeak ? '' : 'disabled'}>${speaker}</button>`;
       if (e) {
         const s = isSaved(S.sheet);
-        inner = `<div class="item-head"><div style="display: flex; align-items: center; gap: 10px"><div class="sheet-word">${esc(e.word)}</div>${spk}</div>${badge(e.kind)}</div>
+        inner = `<div class="item-head"><div style="display: flex; align-items: center; gap: 10px"><div class="sheet-word notranslate" translate="no">${esc(e.word)}</div>${spk}</div>${badge(e.kind)}</div>
           <div class="meaning">${esc(e.meaning)}</div>
-          <div style="display: flex; flex-direction: column; gap: 4px"><div class="label" style="color: var(--muted)">In this sentence</div><div>${esc(e.ctx)}</div><div class="ctx">“${esc(e.sentence)}”</div></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><div class="label" style="color: var(--muted)">In this sentence</div><div>${esc(e.ctx)}</div><div class="ctx notranslate" translate="no">“${esc(e.sentence)}”</div></div>
           ${e.local ? `<div class="local"><div class="label">${pin}Around here</div><div style="font-size: 14px">${esc(e.local)}</div></div>` : ''}
           <div class="small" style="font-size: 12px">Seen at ${esc(placeOf(e))}</div>
           <div class="grid2"><button type="button" class="btn" data-action="close">Close</button><button type="button" class="btn ${s ? 'saved' : 'primary'}" data-action="save" data-k="${S.sheet}">${s ? 'Saved ✓' : 'Save to Words'}</button></div>`;
       } else {
         const sentence = TEXTS[S.source].split(/(?<=[.!?])\s/).find((x) => x.includes(S.sheetRaw)) || '';
-        inner = `<div class="item-head"><div style="display: flex; align-items: center; gap: 10px"><div class="sheet-word">${esc(S.sheetRaw)}</div>${spk}</div>${badge('common')}</div>
+        inner = `<div class="item-head"><div style="display: flex; align-items: center; gap: 10px"><div class="sheet-word notranslate" translate="no">${esc(S.sheetRaw)}</div>${spk}</div>${badge('common')}</div>
           <div class="meaning">An everyday word.</div>
           <div style="display: flex; flex-direction: column; gap: 4px"><div class="label" style="color: var(--muted)">In this sentence</div>
           <div>In the full app, Linger would explain this word in the context of the sentence you were reading. This prototype only has detailed entries for the slang and hard words.</div>
@@ -820,7 +936,8 @@
   function render() {
     const views = { lens: viewLens, words: viewWords, local: viewLocal, review: viewReview };
     const top = scroll.scrollTop;
-    const focusQ = document.activeElement && document.activeElement.id === 'q';
+    const focusId = document.activeElement && ['q', 'placeQ'].includes(document.activeElement.id) ? document.activeElement.id : '';
+    const focusQ = !!focusId;
     const ciOld = document.getElementById('chatInput'); chatDraft = { value: ciOld ? ciOld.value : '', focus: document.activeElement === ciOld };
     const caret = focusQ ? document.activeElement.selectionStart : 0;
     scroll.innerHTML = views[S.tab]();
@@ -835,12 +952,12 @@
     document.querySelectorAll('.tabbar button').forEach((b) => {
       if (b.dataset.tab === S.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
-    if (focusQ) { const q = document.getElementById('q'); if (q) { q.focus(); q.setSelectionRange(caret, caret); } }
+    if (focusQ) { const q = document.getElementById(focusId); if (q) { q.focus(); q.setSelectionRange(caret, caret); } }
   }
 
   // ---------- actions ----------
   const actions = {
-    tab: (d) => { stopSpeaking(); closeCamera(); S.tab = d.tab; S.pending = null; S.sheet = null; S.explain = false; },
+    tab: (d) => { stopSpeaking(); closeCamera(); if (d.tab === 'lens' && S.tab === 'lens') S.lensHome = true; S.tab = d.tab; S.pending = null; S.sheet = null; S.explain = false; },
     source: (d) => { stopSpeaking(); S.source = d.v; S.pending = null; S.sheet = null; S.explain = false; },
     word: (d) => {
       const raw = tokens()[Number(d.i)];
@@ -854,7 +971,7 @@
     open: (d) => { S.sheet = d.k; S.sheetRaw = d.k; S.pending = null; },
     accept: () => { S.sheet = S.pending; S.sheetRaw = S.pendingRaw; S.pending = null; },
     dismiss: () => { S.pending = null; },
-    close: () => { S.paste = false; S.shareHelp = false; S.cityPick = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
+    close: () => { S.placeQ = ''; S.paste = false; S.shareHelp = false; S.cityPick = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
     explain: () => { stopSpeaking(); S.explain = true; S.pending = null; S.sheet = null; },
     read: () => { readLens(); },
     'speak-summary': () => { speak('summary', summaryText(SUMMARY[S.source])); },
@@ -864,7 +981,11 @@
     save: (d) => { toggleSave(d.k); },
     filter: (d) => { S.wordFilter = d.v; },
     seg: (d) => { S.localSeg = d.v; },
-    'city-pick': () => { S.cityPick = true; },
+    'city-pick': () => { S.cityPick = true; setTimeout(() => { const i = document.getElementById('placeQ'); if (i) i.focus(); }, 50); },
+    'place-web': () => { lookupPlace(S.placeQ); },
+    'lens-home': () => { stopSpeaking(); S.lensHome = true; S.sheet = null; S.pending = null; S.explain = false; },
+    'lens-example': () => { scanExample(); },
+    'lens-samples': () => { S.lensHome = false; S.source = 'lease'; },
     'city-set': (d) => { stopSpeaking(); setCity(d.v); },
     'city-locate': () => { S.cityPick = false; locateCity(); },
     hear: (d) => { const e = D[d.k]; if (e) speak('hear-' + d.k, `${e.word}. ${e.sentence}`); },
@@ -905,6 +1026,7 @@
     render();
   });
   document.addEventListener('change', async (ev) => {
+    if (ev.target.id === 'langSel') { setLang(ev.target.value); return; }
     const f = ev.target.files && ev.target.files[0];
     if (!f || !['photo', 'chatPhoto', 'chatPhoto2'].includes(ev.target.id)) return;
     ev.target.value = '';
@@ -912,6 +1034,12 @@
     if (ev.target.id === 'photo') scanImage(src); else chatDocument(null, src);
   });
   document.addEventListener('submit', (ev) => {
+    if (ev.target.id === 'placeForm') {
+      ev.preventDefault();
+      const hits = placeMatches(S.placeQ);
+      if (hits.length === 1 && S.placeQ.trim()) { setCity(hits[0][0]); render(); } else lookupPlace(S.placeQ);
+      return;
+    }
     if (ev.target.id !== 'chatForm') return;
     ev.preventDefault();
     const inp = document.getElementById('chatInput'); const w = inp.value.trim();
@@ -920,10 +1048,11 @@
   });
   document.addEventListener('input', (ev) => {
     if (ev.target.id === 'q') { S.query = ev.target.value; render(); }
+    if (ev.target.id === 'placeQ') { S.placeQ = ev.target.value; if (S.placeLook.status === 'error') S.placeLook = { status: 'idle', msg: '' }; render(); }
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
-    if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp || S.cityPick) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; S.cityPick = false; render(); }
+    if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp || S.cityPick) { S.placeQ = ''; S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; S.cityPick = false; render(); }
     else if (S.activity) { closeCamera(); S.activity = null; S.game = null; render(); }
   });
 
@@ -936,7 +1065,7 @@
     stopSpeaking(); closeCamera();
     const t = raw.replace(/\s+/g, ' ').trim();
     if (!t) return;
-    S.tab = 'lens'; S.activity = null; S.pending = null; S.sheet = null; S.explain = false;
+    S.tab = 'lens'; S.activity = null; S.pending = null; S.sheet = null; S.explain = false; S.lensHome = false;
     const words = t.split(' ');
     if (words.length <= 3) { // a word or short phrase: show its meaning
       const k = keyOf(words.find((w) => keyOf(w).length > 2) || words[0]);

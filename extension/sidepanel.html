@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linger</title>
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+<header class="top">
+  <img src="icons/icon-32.png" width="28" height="28" alt="">
+  <div><strong>Linger</strong><span>Read this screen</span></div>
+</header>
+
+<div class="controls">
+  <button type="button" class="btn primary" id="readScreen">📷 Read what’s on my screen</button>
+  <button type="button" class="btn" id="readPdf" hidden>📄 Read the whole PDF</button>
+  <p class="hint" id="status" role="status">For photos, picture menus and PDFs. Linger writes out the text so you can highlight it and ask about it.</p>
+</div>
+
+<main id="out" hidden>
+  <h1 id="title"></h1>
+  <p class="summary" id="summary"></p>
+  <button type="button" class="btn ask" id="ask">✦ Ask Linger about this</button>
+  <p class="hint">Highlight any line or word below to see what it means.</p>
+  <div id="sections"></div>
+  <p class="from" id="from"></p>
+</main>
+
+<script src="sidepanel-setup.js"></script>
+<script src="words.js"></script>
+<script src="cities.js"></script>
+<script src="content.js"></script>
+<script src="sidepanel.js"></script>
+</body>
+</html>

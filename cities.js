@@ -155,5 +155,104 @@ window.LINGER_CITIES = {
       { ic: '🛣️', title: 'Freeways', body: '“The 10”, “the 101”: freeways are the main way around. Rush hour is roughly 7–10 a.m. and 3–7 p.m.' },
       { ic: '🚇', title: 'Metro lines', body: 'Metro Rail lines have letters and colors (like the B Line, red). They connect downtown, Hollywood, the beach and more.' }
     ]
+  },
+
+  // ---------- outside the US: these have their own emergency numbers and essentials (ess) ----------
+  london: {
+    name: 'London', state: 'UK', nick: 'The Big Smoke', lat: 51.5074, lon: -0.1278, emoji: '🎡',
+    transit: 'Contactless card or Oyster · the Tube, buses and Overground',
+    talk: 'Talk about the weather (really), or ask which part of London someone lives in. Football teams start long conversations.',
+    ess: [['🚨', '999', 'Emergencies: police, fire, ambulance'], ['☎️', '111', 'NHS help when it’s urgent but not an emergency'], ['🚇', 'Transit', 'Tap the same card in and out on the Tube'], ['💷', 'Tipping', 'Restaurants often add a 12.5% service charge']],
+    slang: [
+      { k: 'cheers', word: 'cheers', say: 'cheerz', meaning: 'Thanks. Also a friendly “bye”.', sentence: 'Cheers, see you tomorrow!', local: 'You’ll hear it many times a day, to bus drivers and in shops.' },
+      { k: 'quid', word: 'quid', say: 'kwid', meaning: 'A pound (£1). The plural is also “quid”.', sentence: 'The sandwich was five quid.', local: 'Casual. Prices on signs still say £.' },
+      { k: 'knackered', word: 'knackered', say: 'NAK-erd', meaning: 'Very tired.', sentence: 'I’m knackered after that commute.', local: 'Casual, fine with coworkers.' },
+      { k: 'innit', word: 'innit', say: 'IN-it', meaning: '“Isn’t it?” added to the end of a sentence to ask someone to agree.', sentence: 'It’s cold today, innit?', local: 'Very casual, mostly younger Londoners.' },
+      { k: 'loo', word: 'loo', say: 'loo', meaning: 'Toilet, bathroom.', sentence: 'Where’s the loo?', local: 'Polite and common. “Restroom” sounds American here.' },
+      { k: 'fancy', word: 'fancy', say: 'FAN-see', meaning: 'To want or like something.', sentence: 'Do you fancy a cup of tea?', local: 'An invitation, not about expensive things.' }
+    ],
+    customs: [
+      { ic: '🧍', tag: 'Queues', title: 'Always queue', body: 'People line up (“queue”) for buses, shops and bars. Cutting in line is very rude.' },
+      { ic: '🚇', tag: 'Tube', title: 'Stand on the right', body: 'On escalators, stand on the right and walk on the left. Keep your voice low on trains.' },
+      { ic: '🍺', tag: 'Pubs', title: 'Order at the bar', body: 'In most pubs you order and pay at the bar. Friends often take turns buying a “round” for the group.' },
+      { ic: '🙂', tag: 'Talk', title: 'Polite and indirect', body: '“That’s interesting” or “not bad” can mean the opposite. People say “sorry” a lot, even when it isn’t their fault.' }
+    ],
+    around: [
+      { ic: '💳', title: 'Tap in and out', body: 'Use one contactless card or phone for the Tube, buses and trains. Buses don’t take cash.' },
+      { ic: '⚠️', title: 'Mind the gap', body: 'Tube lines have names and colors (like the Central line, red), not numbers. Watch the gap between train and platform.' },
+      { ic: '👀', title: 'Look right', body: 'Cars drive on the left. Crossings are painted “LOOK RIGHT” to remind you.' }
+    ]
+  },
+  toronto: {
+    name: 'Toronto', state: 'Canada', nick: 'The 6ix', lat: 43.6532, lon: -79.3832, emoji: '🍁',
+    transit: 'PRESTO card or contactless · TTC subway, streetcars and buses',
+    talk: 'Ask about the Leafs or the Raptors, the best neighborhood for food, or how someone survives the winter.',
+    ess: [['🚨', '911', 'Emergencies: police, fire, ambulance'], ['☎️', '311', 'City help: garbage, roads, noise'], ['🚋', 'Transit', 'Tap PRESTO or a contactless card'], ['💵', 'Tipping', '15–20% at sit-down restaurants']],
+    slang: [
+      { k: 'doubledouble', word: 'double-double', say: 'DUH-bul DUH-bul', meaning: 'A coffee with two creams and two sugars.', sentence: 'Can I get a large double-double?', local: 'Made famous by Tim Hortons, a coffee chain everywhere in Canada.' },
+      { k: 'toque', word: 'toque', say: 'took', meaning: 'A warm knitted winter hat.', sentence: 'Wear a toque, it’s minus ten out.', local: 'Americans call it a beanie.' },
+      { k: 'loonie', word: 'loonie', say: 'LOO-nee', meaning: 'The one-dollar coin. The two-dollar coin is a “toonie”.', sentence: 'The locker takes a loonie.', local: 'Named after the loon, a bird on the coin.' },
+      { k: 'washroom', word: 'washroom', say: 'WASH-room', meaning: 'Bathroom, toilet.', sentence: 'The washroom is at the back.', local: 'The usual polite word in Canada.' },
+      { k: 'eh', word: 'eh', say: 'ay', meaning: 'Added to the end of a sentence to mean “right?” or “don’t you agree?”.', sentence: 'Nice day, eh?', local: 'Friendly and casual.' }
+    ],
+    customs: [
+      { ic: '🙏', tag: 'Manners', title: 'Say sorry', body: 'Canadians say “sorry” to be polite, even when bumping into someone was not their fault.' },
+      { ic: '🥾', tag: 'Homes', title: 'Shoes off inside', body: 'Take your shoes off when you enter someone’s home, especially in winter.' },
+      { ic: '🚪', tag: 'Manners', title: 'Hold the door', body: 'Hold the door for the person behind you. They will usually say thank you.' },
+      { ic: '❄️', tag: 'Winter', title: 'Dress in layers', body: 'Winters are long and cold. Locals wear boots, a toque and a warm coat from about November to March.' }
+    ],
+    around: [
+      { ic: '🚋', title: 'Streetcars', body: 'Red streetcars run on tracks in the street. When the doors open, cars must stop behind them.' },
+      { ic: '🏙️', title: 'The PATH', body: 'Downtown has an underground walkway (the PATH) linking offices and shops, useful in winter.' },
+      { ic: '🚆', title: 'GO Transit', body: 'Green-and-white GO trains and buses go to the suburbs. PRESTO works on them too.' }
+    ]
+  },
+  sydney: {
+    name: 'Sydney', state: 'Australia', nick: 'The Harbour City', lat: -33.8688, lon: 151.2093, emoji: '🏖️',
+    transit: 'Opal card or contactless · trains, buses, ferries and light rail',
+    talk: 'Ask about the beach someone likes best, their footy team, or weekend plans.',
+    ess: [['🚨', '000', 'Emergencies: police, fire, ambulance'], ['🗣️', '131 450', 'Free phone interpreter (TIS National)'], ['🚆', 'Transit', 'Tap on and off with Opal or a contactless card'], ['💵', 'Tipping', 'Not expected; about 10% for great service']],
+    slang: [
+      { k: 'arvo', word: 'arvo', say: 'AH-voh', meaning: 'Afternoon.', sentence: 'See you this arvo.', local: 'Australians shorten many words: brekkie (breakfast), barbie (barbecue).' },
+      { k: 'servo', word: 'servo', say: 'SER-voh', meaning: 'A gas station.', sentence: 'Let’s stop at the servo for petrol.', local: 'Gas is called petrol.' },
+      { k: 'heaps', word: 'heaps', say: 'heeps', meaning: 'A lot, or very.', sentence: 'Thanks heaps!', local: 'Very common and friendly.' },
+      { k: 'noworries', word: 'no worries', say: 'noh WUH-reez', meaning: 'You’re welcome, or it’s okay.', sentence: '“Thanks for the help.” “No worries!”', local: 'You’ll hear it all day.' },
+      { k: 'thongs', word: 'thongs', say: 'thongz', meaning: 'Flip-flops (sandals).', sentence: 'You can wear thongs to the beach.', local: 'Not underwear, as it means in the US.' }
+    ],
+    customs: [
+      { ic: '🍻', tag: 'Friends', title: 'Shouting', body: '“It’s my shout” means “I’ll pay”. Friends take turns buying drinks for the group.' },
+      { ic: '🍷', tag: 'Food', title: 'BYO', body: 'Many restaurants are BYO: bring your own wine. There may be a small “corkage” fee.' },
+      { ic: '☀️', tag: 'Health', title: 'Sun safety', body: 'The sun is very strong. Wear sunscreen, a hat and sunglasses, and swim between the red and yellow flags.' },
+      { ic: '👋', tag: 'Talk', title: 'First names', body: 'People use first names with almost everyone, including bosses and doctors.' }
+    ],
+    around: [
+      { ic: '💳', title: 'Tap on, tap off', body: 'Tap your Opal card or phone when you get on and off trains, buses, ferries and light rail.' },
+      { ic: '⛴️', title: 'Ferries', body: 'Ferries are normal public transport here, from Circular Quay to Manly and around the harbour.' },
+      { ic: '👀', title: 'Look right', body: 'Cars drive on the left. Look right first when you cross the road.' }
+    ]
+  },
+  singapore: {
+    name: 'Singapore', state: 'Singapore', nick: 'The Lion City', lat: 1.3521, lon: 103.8198, emoji: '🦁',
+    transit: 'EZ-Link card or contactless · MRT trains and buses',
+    talk: 'Ask about the best hawker stall for chicken rice or laksa. Food is the favorite topic.',
+    ess: [['🚨', '999', 'Police'], ['🚑', '995', 'Ambulance and fire'], ['🚇', 'Transit', 'Tap in and out on MRT and buses'], ['💵', 'Tipping', 'Not expected; bills include a 10% service charge']],
+    slang: [
+      { k: 'lah', word: 'lah', say: 'lah', meaning: 'Added to the end of a sentence to make it softer or stronger.', sentence: 'Don’t worry lah, we’ll make it.', local: 'Part of Singlish, the casual English of Singapore.' },
+      { k: 'chope', word: 'chope', say: 'chohp', meaning: 'To save a seat, often by leaving a tissue packet on the table.', sentence: 'I’ll chope the table, you order.', local: 'If you see tissues on a table, that seat is taken.' },
+      { k: 'shiok', word: 'shiok', say: 'shee-OHK', meaning: 'Great, very satisfying, often about food.', sentence: 'This laksa is so shiok!', local: 'Happy, casual word.' },
+      { k: 'makan', word: 'makan', say: 'MAH-kahn', meaning: 'To eat, or food. From Malay.', sentence: 'Want to go makan?', local: 'People of every background use it.' },
+      { k: 'kiasu', word: 'kiasu', say: 'kee-AH-soo', meaning: 'Afraid of missing out, so you rush or queue early.', sentence: 'So kiasu, he queued two hours early.', local: 'From Hokkien. Often said as a joke.' }
+    ],
+    customs: [
+      { ic: '🍜', tag: 'Hawker centres', title: 'Return your tray', body: 'At hawker centres and food courts, take your tray and dishes back to the return point. You can be fined if you don’t.' },
+      { ic: '🚫', tag: 'Rules', title: 'Fines are real', body: 'No eating or drinking on the MRT, no littering and no jaywalking. Durians are not allowed on trains.' },
+      { ic: '🥿', tag: 'Homes', title: 'Shoes off', body: 'Take your shoes off before entering someone’s home.' },
+      { ic: '🤝', tag: 'Respect', title: 'Many cultures', body: 'Chinese, Malay, Indian and other communities live side by side. Learn the main holidays, like Chinese New Year, Hari Raya and Deepavali.' }
+    ],
+    around: [
+      { ic: '🚇', title: 'MRT', body: 'Trains are fast, clean and air-conditioned. Lines have colors and codes, like NS (North–South, red).' },
+      { ic: '🚌', title: 'Buses', body: 'Tap your card when you get on and when you get off, so you pay the right fare.' },
+      { ic: '📱', title: 'Ride apps', body: 'Grab is the main app for taxis and rides, and also for food delivery.' }
+    ]
   }
 };

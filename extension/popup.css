@@ -37,3 +37,8 @@ h2 { margin: 0; font-size: 14px; color: var(--indigo-900); display: flex; align-
 .blocked { margin: 0; padding: 10px 12px; border-radius: 12px; background: #FFE7DF; color: #A81F64; }
 
 .problem { margin: 0; padding: 8px 10px; border-radius: 10px; background: #FFE7DF; color: #A81F64; font-size: 12px; }
+
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--ink); }
+.field input, .field select { height: 32px; border: 1px solid var(--indigo-300); border-radius: 10px; padding: 0 10px; font: inherit; font-weight: 400; background: #FFFFFF; }
+#saved li em { display: block; font-style: normal; font-size: 11px; color: var(--ok); margin-top: 2px; }
+#saved li q { display: block; font-style: italic; font-size: 11px; color: var(--muted); margin-top: 2px; }

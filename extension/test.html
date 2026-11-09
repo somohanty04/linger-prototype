@@ -3,24 +3,102 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Linger extension test page</title>
+<title>Linger test page</title>
 <style>
-  body { font-family: Georgia, serif; max-width: 760px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #222; }
-  h1 { font-family: Arial, sans-serif; }
-  .note { font-family: Arial, sans-serif; font-size: 13px; background: #f3f3f3; padding: 10px 14px; border-radius: 8px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F6F8FF; color: #14161F; font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .dev { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 10px 16px; background: linear-gradient(160deg, #1F2DA8, #5464D9); color: #FFFFFF; font-size: 13px; }
+  .dev strong { font-size: 15px; margin-right: auto; }
+  .dev label { display: flex; align-items: center; gap: 6px; }
+  .dev input, .dev select { height: 30px; border: 0; border-radius: 8px; padding: 0 8px; font: inherit; color: #14161F; }
+  .dev input { width: 170px; }
+  .dev button { height: 30px; border: 0; border-radius: 99px; padding: 0 12px; font: inherit; font-weight: 700; background: #FFFFFF; color: #1F2AA8; cursor: pointer; }
+  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+  .tip { background: #EAEFFF; border-radius: 12px; padding: 10px 14px; font-size: 14px; margin-bottom: 14px; color: #1F2AA8; }
+  article { background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 16px; padding: 28px 34px; font: 18px/1.75 Georgia, 'Times New Roman', serif; }
+  article h1 { font-size: 28px; line-height: 1.25; margin: 0 0 4px; }
+  article h2 { font-size: 21px; margin: 28px 0 4px; }
+  .by { font: 13px system-ui, sans-serif; color: #5B6070; margin-bottom: 18px; }
+  aside { background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 16px; padding: 14px; align-self: start; position: sticky; top: 64px; max-height: calc(100vh - 84px); overflow: auto; }
+  aside h3 { margin: 0 0 10px; font-size: 15px; color: #1F2AA8; display: flex; justify-content: space-between; }
+  aside h3 button { border: 0; background: none; color: #5B6070; cursor: pointer; font: inherit; font-size: 12px; text-decoration: underline; }
+  .sw { border: 1px solid #EAEFFF; background: #F6F8FF; border-radius: 12px; padding: 10px; margin-bottom: 8px; font-size: 13px; }
+  .sw b { color: #1F2AA8; font-size: 14px; }
+  .sw .k { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #5B6070; margin-left: 4px; }
+  .sw .syn { color: #115940; font-weight: 700; margin-top: 4px; }
+  .sw q { display: block; font-style: italic; color: #5B6070; margin-top: 4px; }
+  .empty { color: #5B6070; font-size: 13px; }
 </style>
 </head>
 <body>
-<p class="note">Test page for the Linger extension. It loads the extension's page script directly (without Chrome's extension features) so the underlining and word cards can be checked.</p>
-<h1>City of Pittsburgh · Notice to Tenants</h1>
-<p>Dear Resident, the Department of Permits, Licenses, and Inspections will commence annual inspections of rental premises on November 12, 2026. Landlords are obligated to ensure that each unit is accessible during the scheduled window.</p>
-<p>Tenants with delinquent utility balances must remit payment no later than December 1. Failure to pay may result in termination of service. A penalty of $45 will be assessed on overdue accounts, pursuant to the lease agreement.</p>
-<p>Subletting is prohibited without prior written consent from the lessor. Please retain this notice for your records. Questions? Call <a href="#">311</a>.</p>
-<h2>Neighborhood news</h2>
-<p>Volunteers from Lawrenceville gathered on Saturday to clean up the riverfront trail. Organizers said the turnout was unprecedented, and the city plans to replicate the initiative in other neighborhoods next spring.</p>
-<p>Heads up, yinz: the lot gets slippy after snow, so grab a jumbo sandwich and a pop and stay inside n'at.</p>
+<div class="dev">
+  <strong>Linger test page</strong>
+  <label>Claude API key <input type="password" id="key" placeholder="optional · sk-ant-…" autocomplete="off"></label>
+  <label>Beside a word
+    <select id="lang">
+      <option value="easy">Easier word</option><option value="es">Spanish</option><option value="zh-CN">Chinese</option>
+      <option value="hi">Hindi</option><option value="ar">Arabic</option><option value="fr">French</option>
+      <option value="pt">Portuguese</option><option value="ko">Korean</option><option value="vi">Vietnamese</option>
+    </select></label>
+  <button id="ask" type="button">✦ Ask Linger</button>
+</div>
+
+<div class="wrap">
+  <main>
+    <div class="tip">This page runs the real extension code from this folder. <b>Highlight</b> a word, a phrase or a whole sentence with your mouse to see what it means. Click an orange-underlined word to open it right away. The page reloads by itself when you save a change to the code.</div>
+    <article>
+      <h1>The Quiet Cost of Convenience</h1>
+      <div class="by">Sample reading · 3 min</div>
+      <p>Smartphones have become ubiquitous in daily life, and by and large, most people welcome the convenience they bring. Notwithstanding these benefits, researchers have begun to ask what is lost when every answer is a tap away. The shift to constant connectivity precipitated a change in how we read: skimming, once a fallback, became the default, while slow, careful reading fell by the wayside.</p>
+      <p>Some educators argue that technology is a double-edged sword. Apps designed ostensibly to help students focus have, in many cases, exacerbated the very distraction they promised to cure. Whether these tools help or harm appears contingent on how they are used, not merely on whether they are used at all.</p>
+      <p>Not until students were asked to summarize what they had read did the gap between recognizing words and understanding arguments become apparent. The picture that emerges is nuanced: the goal is not to abandon our devices, but to mitigate their effects on attention.</p>
+      <h2>Notice to Tenant</h2>
+      <p>Pursuant to Section 4 of your lease, rent remitted after the 5th of the month is considered delinquent and a late penalty of $50 will be assessed. Tenants are prohibited from subletting the premises without the prior written consent of the lessor. Failure to remit the outstanding balance by November 30 may result in termination of the lease.</p>
+    </article>
+  </main>
+  <aside>
+    <h3>★ Saved Words <button id="clear" type="button">Clear</button></h3>
+    <div id="saved"></div>
+  </aside>
+</div>
+
 <script src="words.js"></script>
 <script src="cities.js"></script>
+<script src="explain.js"></script>
 <script src="content.js"></script>
+<script>
+  // Test-page controls (in the extension these live in the toolbar menu).
+  const get = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+  const set = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+  const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  key.value = get('linger-ai-key', '');
+  key.onchange = () => set('linger-ai-key', key.value.trim());
+  lang.value = get('linger-inline-lang', 'easy');
+  lang.onchange = () => { set('linger-inline-lang', lang.value); window.__lingerAPI.settings.inlineLang = lang.value; };
+  ask.onclick = () => window.__lingerAPI.openAsk(String(getSelection() || '').trim());
+
+  function drawSaved() {
+    let list = [];
+    try { list = JSON.parse(get('linger-saved', '[]')); } catch {}
+    document.getElementById('saved').innerHTML = list.length ? list.map((w) => `<div class="sw"><b>${esc(w.w)}</b><span class="k">${esc(w.kind)}</span>
+      <div>${esc(w.m)}</div>${w.syn ? `<div class="syn">Easier: ${esc(w.syn)}</div>` : ''}${w.s && w.kind !== 'sentence' ? `<q>${esc(w.s)}</q>` : ''}</div>`).join('')
+      : '<p class="empty">Nothing saved yet. Open a word, phrase or sentence and click ★ Save.</p>';
+  }
+  window.addEventListener('linger-saved', drawSaved);
+  clear.onclick = () => { set('linger-saved', '[]'); drawSaved(); };
+  drawSaved();
+
+  // Live reload: when any extension file changes on disk, reload this page.
+  const FILES = ['content.js', 'explain.js', 'words.js', 'cities.js', 'test.html'];
+  let last = null;
+  setInterval(async () => {
+    try {
+      const now = (await Promise.all(FILES.map((f) => fetch(f, { cache: 'no-store' }).then((r) => r.text())))).join('\u0000');
+      if (last !== null && now !== last) location.reload();
+      last = now;
+    } catch {}
+  }, 1000);
+</script>
 </body>
 </html>
