@@ -17,6 +17,38 @@ async function lookup(word) {
   } catch { return { meaning: null, example: null }; }
 }
 
+// Linger AI: meaning in context from Claude, through the Firebase function in /functions (which holds the API key).
+// After deploying, put the URL the deploy prints here. Empty = AI off (cards use the dictionary only).
+const AI_URL = 'https://us-central1-linger-f41a7.cloudfunctions.net/explain';
+const aiCache = new Map();
+async function askAI({ mode, text, context }) {
+  const { aiOn } = await chrome.storage.local.get({ aiOn: true });
+  if (!AI_URL || !aiOn) return null;
+  const key = JSON.stringify([mode, text, context]);
+  if (aiCache.has(key)) return aiCache.get(key);
+  const stop = new AbortController(), t = setTimeout(() => stop.abort(), 30000);
+  try {
+    const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, text, context }), signal: stop.signal });
+    const out = r.ok ? await r.json() : null;
+    if (!out || out.error) return null;
+    aiCache.set(key, out);
+    if (aiCache.size > 300) aiCache.delete(aiCache.keys().next().value);
+    return out;
+  } catch { return null; } finally { clearTimeout(t); }
+}
+
+// Ask Linger: a question about the whole page (no caching: every question is different).
+async function askPage(body) {
+  const { aiOn } = await chrome.storage.local.get({ aiOn: true });
+  if (!AI_URL || !aiOn) return { error: 'off' };
+  const stop = new AbortController(), t = setTimeout(() => stop.abort(), 60000);
+  try {
+    const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, mode: 'ask' }), signal: stop.signal });
+    if (r.status === 429) return { error: 'busy' };
+    return r.ok ? await r.json() : { error: 'failed' };
+  } catch { return { error: 'failed' }; } finally { clearTimeout(t); }
+}
+
 // Synonyms with how common each word is (Datamuse, which uses WordNet and word counts from books and the web).
 const synCache = new Map();
 async function synonyms(word) {
@@ -84,6 +116,8 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   (async () => {
     if (msg.type === 'lookup') return reply(await lookup(msg.word));
     if (msg.type === 'synonyms') return reply(await synonyms(msg.word));
+    if (msg.type === 'ai') return reply(await askAI(msg));
+    if (msg.type === 'ai-ask') return reply(await askPage(msg.body || {}));
     if (msg.type === 'save') {
       const { saved = [], pairCode = '' } = await chrome.storage.local.get({ saved: [], pairCode: '' });
       const list = [{ key: msg.key, ...msg.word, at: Date.now() }, ...saved.filter((x) => x.key !== msg.key)].slice(0, 200);

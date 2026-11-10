@@ -35,15 +35,65 @@
     <p class="lede">Your pause is the search bar.</p>
     <p>For adults who speak English as a second language and moved to the US. Linger spots hard words, local slang and confusing letters, explains them in context and for your area, reads them aloud, and helps you practice the words you meet.</p>
     <p class="hint">Try it: the app opens on <strong>Lens</strong>. Tap the round button to turn on the camera, fit a letter, sign or bill in the frame, and tap again to scan it. No camera? Use <strong>Upload a photo</strong> or <strong>Paste text</strong>. Tap any underlined word for its meaning, then press <strong>Start Activity</strong> on Words to practice.</p>
-    <a class="glasses-link" href="glasses.html">See it through the glasses →</a>
-    <a class="glasses-link" href="https://github.com/somohanty04/linger-prototype/tree/main/extension" target="_blank" rel="noopener" style="background: var(--surface); color: var(--indigo-900); border: 1px solid var(--indigo-300)">Get the Chrome extension →</a>
+    <button type="button" class="glasses-link" id="getExt" aria-haspopup="dialog">Get the Chrome extension →</button>
     <a class="glasses-link" href="reader.html" style="background: var(--surface); color: var(--indigo-900); border: 1px solid var(--indigo-300)">Try the laptop pause test →</a>
     <p class="note">Clickable prototype with sample content set in Pittsburgh. Pause-map numbers are sample data.</p>
   </aside>
 </main>
+<!-- How to add the Chrome extension: plain steps for people who've never installed one by hand. -->
+<dialog class="ext-guide" id="extGuide" aria-labelledby="extTitle">
+  <div class="ext-head">
+    <h2 id="extTitle">Add Linger to Chrome</h2>
+    <button type="button" class="ext-x" id="extClose" aria-label="Close">✕</button>
+  </div>
+  <p class="ext-sub">It takes about 2 minutes. You need the Chrome browser on a laptop or desktop computer.</p>
+  <ol class="ext-steps">
+    <li>
+      <strong>Download Linger.</strong>
+      <a class="ext-dl" href="linger-extension.zip" download>Download Linger for Chrome</a>
+    </li>
+    <li>
+      <strong>Open the file you downloaded.</strong>
+      <span>It's called <b>linger-extension.zip</b>, in your Downloads folder. On a Mac, double-click it. On Windows, right-click it and choose <b>Extract All</b>. You now have a folder called <b>linger-extension</b>.</span>
+    </li>
+    <li>
+      <strong>Open Chrome's extensions page.</strong>
+      <span>Copy this, paste it in Chrome's address bar, and press Enter:</span>
+      <span class="ext-copy"><code>chrome://extensions</code><button type="button" id="extCopy">Copy</button></span>
+    </li>
+    <li>
+      <strong>Turn on <b>Developer mode</b>.</strong>
+      <span>It's a switch in the top-right corner of that page.</span>
+    </li>
+    <li>
+      <strong>Click <b>Load unpacked</b>.</strong>
+      <span>Choose the <b>linger-extension</b> folder from step 2, then click <b>Select</b>.</span>
+    </li>
+    <li>
+      <strong>Pin Linger so it's easy to find.</strong>
+      <span>Click the puzzle piece 🧩 at the top right of Chrome, then the pin next to <b>Linger</b>.</span>
+    </li>
+  </ol>
+  <p class="ext-done">Done! Open any website: hard words get a dotted underline. Click one, or highlight any sentence, to see what it means.</p>
+</dialog>
 <script src="firebase-config.js?v=2"></script>
 <script src="sync.js?v=2"></script>
 <script src="cities.js?v=1"></script>
 <script src="app.js?v=17"></script>
+<script>
+  // "Get the Chrome extension" opens the step-by-step guide.
+  (() => {
+    const d = document.getElementById('extGuide');
+    document.getElementById('getExt').onclick = () => d.showModal();
+    document.getElementById('extClose').onclick = () => d.close();
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); }); // click outside the box
+    const copy = document.getElementById('extCopy');
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText('chrome://extensions'); copy.textContent = 'Copied!'; }
+      catch { copy.textContent = 'Select and copy'; }
+      setTimeout(() => { copy.textContent = 'Copy'; }, 2000);
+    };
+  })();
+</script>
 </body>
 </html>
