@@ -37,6 +37,25 @@ button { cursor: pointer; }
 }
 .glasses-link { align-self: flex-start; display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 99px; background: var(--indigo-900); color: #FFFFFF; font-weight: 700; text-decoration: none; }
 .glasses-link:hover { background: var(--indigo-700); }
+button.glasses-link { border: 0; font-size: 15px; }
+
+/* "Add Linger to Chrome" guide */
+.ext-guide { width: min(480px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 22px 22px 20px; border: 0; border-radius: 20px; background: var(--surface); color: var(--ink); box-shadow: 0 24px 60px rgba(16, 20, 80, 0.3); }
+.ext-guide::backdrop { background: rgba(20, 22, 31, 0.45); }
+.ext-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ext-head h2 { margin: 0; font-size: 24px; font-weight: 800; color: var(--indigo-900); }
+.ext-x { width: 32px; height: 32px; flex: none; border: 0; border-radius: 50%; background: var(--indigo-100); color: var(--indigo-900); font-size: 15px; }
+.ext-sub { margin: 6px 0 16px; color: var(--muted); }
+.ext-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 14px; }
+.ext-steps li { counter-increment: step; position: relative; padding-left: 42px; display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); }
+.ext-steps li::before { content: counter(step); position: absolute; left: 0; top: -2px; width: 28px; height: 28px; border-radius: 50%; background: var(--indigo-900); color: #FFFFFF; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.ext-steps strong { color: var(--ink); font-size: 16px; }
+.ext-dl { align-self: flex-start; margin-top: 4px; display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 99px; background: var(--cta); color: #FFFFFF; font-weight: 700; text-decoration: none; }
+.ext-dl::before { content: '↓'; margin-right: 8px; font-weight: 800; }
+.ext-copy { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; padding: 4px 4px 4px 12px; border: 1px solid var(--indigo-300); border-radius: 10px; background: var(--indigo-50); }
+.ext-copy code { font-size: 14px; color: var(--indigo-900); }
+.ext-copy button { height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: var(--indigo-900); color: #FFFFFF; font-weight: 700; font-size: 13px; }
+.ext-done { margin: 18px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--ok-bg); color: var(--ok-ink); font-weight: 600; }
 
 /* Scroll area: gradient hero on top, white sheet below, floating tab bar */
 .scroll { position: absolute; inset: 0; overflow-y: auto; background: var(--surface); }
