@@ -1,0 +1,51 @@
+extension/content.js
+  s_99ec2d8108581c::t_5176686cde5e2d 38,49-50,191-225,256-268,271-279,304-306,337,356,362-373,397-402,417,447-620,637-641,664-749,756,759,764
+firebase.json
+  s_99ec2d8108581c::t_d6ed1eb61d7403 1-3
+extension/README.md
+  s_99ec2d8108581c::t_5176686cde5e2d 16-18
+index.html
+  s_99ec2d8108581c::t_5176686cde5e2d 38,43-78,83-97
+styles.css
+  s_99ec2d8108581c::t_5176686cde5e2d 40-58
+functions/test.js
+  s_99ec2d8108581c::t_5176686cde5e2d 1-41
+extension/popup.html
+  s_99ec2d8108581c::t_5176686cde5e2d 24-25
+functions/README.md
+  s_99ec2d8108581c::t_d6ed1eb61d7403 1-45
+functions/index.js
+  s_99ec2d8108581c::t_d6ed1eb61d7403 1-44
+.firebaserc
+  s_99ec2d8108581c::t_d6ed1eb61d7403 1-3
+extension/background.js
+  s_99ec2d8108581c::t_5176686cde5e2d 20-51,119-120
+functions/package.json
+  s_99ec2d8108581c::t_5176686cde5e2d 1-16
+extension/popup.js
+  s_99ec2d8108581c::t_5176686cde5e2d 20,25-28
+.gitignore
+  s_99ec2d8108581c::t_5176686cde5e2d 2
+functions/explain.js
+  s_99ec2d8108581c::t_d6ed1eb61d7403 1-153
+extension/manifest.json
+  s_99ec2d8108581c::t_27a71b57e26644 4
+functions/package-lock.json
+  s_99ec2d8108581c::t_177b5191d4b100 1-3115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e3a46867f4ba1343bed9c18d8a0558174b3f3c44",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
