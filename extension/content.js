@@ -35,7 +35,7 @@
   }
 
   // ---------- settings ----------
-  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true };
+  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true };
   const host = location.hostname || 'file';
   const active = () => S.highlight && !S.paused.includes(host);
 
@@ -46,7 +46,8 @@
     .linger-w:hover, .linger-w.linger-on { background: rgba(255, 217, 138, 0.45) !important; }
     .linger-big .linger-w { font-size: 1.25em !important; padding: 0 2px !important; }
     .linger-spread p, .linger-spread li, .linger-spread dd, .linger-spread td, .linger-spread blockquote { line-height: 2.1 !important; }
-    .linger-line { background: rgba(255, 217, 138, 0.28) !important; box-shadow: 0 0 0 3px rgba(255, 190, 70, 0.25) !important; border-radius: 4px; }`;
+    .linger-line { background: rgba(255, 217, 138, 0.28) !important; box-shadow: 0 0 0 3px rgba(255, 190, 70, 0.25) !important; border-radius: 4px; }
+    ::highlight(linger-sel) { background-color: rgba(255, 217, 138, 0.55); }`;
   (document.head || document.documentElement).appendChild(style);
 
   // ---------- underlining ----------
@@ -187,6 +188,14 @@
     .wc-note:empty { display: none; }
     .wc-words { display: flex; flex-direction: column; gap: 12px; }
     .wc-msg { color: #FFFFFF; font-size: 20px; font-weight: 600; line-height: 22px; }
+    /* Highlighted phrase or sentence: same card, the text as the title, plain words + hard words in the body */
+    .wc-word.wc-phrase { font-size: 22px; line-height: 28px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .wc-def { color: #252A39; font-size: 16px; font-weight: 600; line-height: 22px; overflow-wrap: anywhere; }
+    .wc-def b { color: #2B39B2; font-weight: 800; }
+    .wc-easy { color: #5B6070; }
+    .wc-easy b { color: #6D79FF; }
+    .selchip { position: fixed; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); white-space: nowrap; }
+    .selchip:focus-visible { outline: 2px solid #1F2AA8; outline-offset: 2px; }
     /* Not in the dictionary (Figma node 140:496): red, header only, 20px icons */
     .wc.wc-missing { width: 372px; }
     .wc-missing .wc-top { border-radius: 12px; background: linear-gradient(176.9195deg, rgb(168, 31, 31) 1.4073%, rgb(217, 84, 84) 105.55%); }
@@ -217,10 +226,30 @@
       try { const ff = new FontFace('Linger Figtree', `url(${asset(f)})`, { style, weight: '300 900' }); document.fonts.add(ff); ff.load().catch(() => {}); } catch {}
     });
   }
+  // Linger AI (Claude): meaning in context. In the extension the background worker calls the Linger server; on the
+  // test page, window.LINGER_AI_URL can point at it. Returns null when AI is off or unreachable (cards still work).
+  async function askAI(mode, text, context) {
+    if (!S.aiOn) return null;
+    if (api) return send({ type: 'ai', mode, text, context });
+    if (!window.LINGER_AI_URL) return null;
+    try {
+      const r = await fetch(window.LINGER_AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, text, context }) });
+      const out = r.ok ? await r.json() : null;
+      return out && !out.error ? out : null;
+    } catch { return null; }
+  }
+  const AI_WAIT = '✦ Checking what it means here…';
   const speakIt = (t) => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; u.rate = 0.9; speechSynthesis.speak(u); } catch {} };
 
-  let card = null, cardSpan = null;
-  function closeCard() { if (card) card.remove(); card = null; if (cardSpan) cardSpan.classList.remove('linger-on'); cardSpan = null; window.dispatchEvent(new CustomEvent('linger-card-closed')); }
+  let card = null, cardSpan = null, cardRange = null;
+  // Highlighted phrases stay marked while their card is open (CSS Custom Highlight: no changes to the page's HTML).
+  const HL = typeof Highlight === 'function' && window.CSS && CSS.highlights ? CSS.highlights : null;
+  function closeCard() {
+    if (card) card.remove(); card = null;
+    if (cardSpan) cardSpan.classList.remove('linger-on'); cardSpan = null;
+    if (cardRange && HL) HL.delete('linger-sel'); cardRange = null;
+    window.dispatchEvent(new CustomEvent('linger-card-closed'));
+  }
   function place(el, rect) {
     const w = el.offsetWidth, h = el.offsetHeight;
     let x = Math.min(Math.max(8, rect.left), innerWidth - w - 8);
@@ -245,7 +274,9 @@
     const locate = (t) => { const m = t ? wordRe.exec(t) || new RegExp('\\b' + k.slice(0, Math.max(4, k.length - 3)) + '\\w*', 'i').exec(t) : null; return m ? { at: m.index, len: m[0].length, word: m[0] } : null; };
     // A real sentence: 4+ words that end like a sentence, or 8+ words (not a heading, menu item or label).
     const usable = (t) => { const n = t ? t.trim().split(/\s+/).length : 0; return !!(t && locate(t) && n >= 4 && (/[.!?…"”’)]\s*$/.test(t.trim()) || n >= 8)); };
-    const ctx = { s: '', loc: null, syn: PLAIN[k] || '', fromPage: false };
+    const ctx = { s: '', loc: null, syn: PLAIN[k] || '', more: '', ai: false, fromPage: false };
+    // Ask Claude right away (in parallel with the dictionary) what the word means in this sentence.
+    const aiP = askAI('word', raw, sentence);
     const useSentence = (t, fromPage) => { ctx.s = t; ctx.loc = locate(t); ctx.fromPage = fromPage; };
     if (usable(sentence)) useSentence(sentence, true);
     else if (d && usable(d.sentence)) useSentence(d.sentence, false);
@@ -276,6 +307,7 @@
       return `<p class="wc-lbl">In context:</p><div class="wc-box">
           ${ctx.loc ? `<p class="wc-lbl">${ctx.fromPage ? 'This word:' : 'Example:'}</p><p class="wc-s">“${mark(ctx.loc.word)}”</p>` : ''}
           ${syn ? `<p class="wc-lbl">Synonym:</p><p class="wc-s">“${syn}”</p>` : ''}
+          ${ctx.more ? `<p class="wc-def wc-easy">Other easier words: <b>${esc(ctx.more)}</b></p>` : ''}
           ${local}</div>`;
     }
     const redraw = () => { if (!card || cardSpan !== sp) return; const el = card.querySelector('#ctx'); el.innerHTML = ctxHtml(); el.hidden = !el.innerHTML.trim(); place(card, sp.getBoundingClientRect()); };
@@ -294,11 +326,24 @@
       <div class="wc-body">
         <p class="wc-meaning" id="m">${meaning ? esc(meaning) : 'Looking up…'}</p>
         <div class="wc-ctx" id="ctx"></div>
+        <p class="wc-note" id="ai">${S.aiOn ? AI_WAIT : ''}</p>
         <p class="wc-note" id="note"></p>
       </div>`;
     layer.appendChild(card);
     redraw();
     card.querySelector('#hear').onclick = () => speakIt(raw);
+    // Claude's answer: the meaning in this sentence, and easier words that fit here.
+    const useAI = (a) => {
+      if (!card || cardSpan !== sp) return;
+      card.querySelector('#ai').textContent = '';
+      if (!a || !a.meaning) return;
+      meaning = a.meaning; ctx.ai = true;
+      card.querySelector('#m').textContent = meaning;
+      const syns = (a.synonyms || []).filter((w) => w.toLowerCase() !== k);
+      if (syns.length && kind !== 'slang') { ctx.syn = syns[0]; ctx.more = syns.slice(1).join(', '); }
+      redraw();
+    };
+    if (aiP) aiP.then(useAI);
     // Not in the dictionary: the red card with just the word (and the speaker and bookmark still work).
     function showMissing() {
       if (!card || cardSpan !== sp) return;
@@ -322,8 +367,12 @@
     let dict = null;
     if (!meaning || !ctx.loc) {
       dict = api ? await send({ type: 'lookup', word: k }) : await directLookup(k);
-      if (!meaning && !(dict && dict.meaning)) { showMissing(); return; }
-      if (!meaning) meaning = dict.meaning;
+      if (!meaning && !(dict && dict.meaning)) {
+        // Not in the dictionary: Claude may still know it (new words, slang, names of things).
+        const a = await aiP;
+        if (!(a && a.meaning)) { if (card && cardSpan === sp) card.querySelector('#ai').textContent = ''; showMissing(); return; }
+      }
+      if (!meaning) meaning = ctx.ai ? meaning : dict.meaning;
       if (card && cardSpan === sp) card.querySelector('#m').textContent = meaning;
       if (!ctx.loc && dict && usable(dict.example)) { useSentence(dict.example, false); redraw(); }
     }
@@ -338,7 +387,7 @@
       redraw();
     }
     // An easier synonym from the thesaurus, checked against the meaning so it's the right sense of the word.
-    if (synP) { const w = easier(k, await synP, meaning); if (w) { ctx.syn = w; redraw(); } }
+    if (synP) { const w = easier(k, await synP, meaning); if (w && !ctx.ai) { ctx.syn = w; redraw(); } }
   }
   // An easier synonym: a single, clearly more common word from the thesaurus that the dictionary meaning also uses.
   // The thesaurus mixes every sense of a word (turnout → "output", replicate → "double"); the meaning shown on the
@@ -368,6 +417,180 @@
     } catch { return null; }
   }
 
+  // ---------- highlight a phrase or sentence ----------
+  // Select any text and an "Explain" button appears next to it. One word opens the normal word card; a phrase or
+  // sentence opens the same card with the text in plain words, the sentence it came from, and its hard words
+  // (meaning + an easier word).
+  let chip = null, chipT = null;
+  const MAX_WORDS = 80;
+  function hideChip() { clearTimeout(chipT); if (chip) chip.remove(); chip = null; }
+  const selOk = (node) => {
+    for (let el = node && (node.nodeType === 1 ? node : node.parentElement); el; el = el.parentElement) {
+      if (/^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName) || el.isContentEditable || el.id === 'linger-ui' || el.id === 'linger-gaze') return false;
+    }
+    return !!node;
+  };
+  function showChip() {
+    hideChip();
+    if (!active() || card) return;
+    const sel = getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const text = sel.toString().replace(/\s+/g, ' ').trim();
+    if (!/[A-Za-z]{2}/.test(text) || text.split(' ').length > MAX_WORDS || text.length > 700) return;
+    const range = sel.getRangeAt(0).cloneRange();
+    if (!selOk(range.startContainer) || !selOk(range.endContainer)) return;
+    const rects = range.getClientRects(), first = rects[0], last = rects[rects.length - 1];
+    if (!last) return;
+    attach();
+    chip = document.createElement('button');
+    chip.type = 'button'; chip.className = 'selchip'; chip.textContent = '✦ Explain';
+    chip.setAttribute('aria-label', 'Explain the highlighted text');
+    layer.appendChild(chip);
+    const w = chip.offsetWidth, h = chip.offsetHeight;
+    let y = last.bottom + 8;
+    if (y + h > innerHeight - 8) y = Math.max(8, first.top - h - 8);
+    chip.style.left = Math.min(Math.max(8, last.right - w / 2), innerWidth - w - 8) + 'px';
+    chip.style.top = y + 'px';
+    chip.onmousedown = (e) => e.preventDefault(); // keep the page's selection
+    chip.onclick = () => { hideChip(); explainRange(range, text); };
+  }
+  // A single word: use the word card (underline it the same way a double-click does).
+  function wordSpan(range) {
+    const n = range.startContainer;
+    if (n !== range.endContainer || n.nodeType !== 3) return null;
+    const on = n.parentElement && n.parentElement.closest('.linger-w');
+    if (on) return on;
+    const t = n.nodeValue;
+    let a = range.startOffset, b = range.endOffset;
+    while (a < b && !/[A-Za-z]/.test(t[a])) a++;
+    while (b > a && !/[A-Za-z]/.test(t[b - 1])) b--;
+    const w = t.slice(a, b);
+    if (!/^[A-Za-z][A-Za-z'’-]{0,30}$/.test(w)) return null;
+    const r = document.createRange(); r.setStart(n, a); r.setEnd(n, b);
+    const sp = document.createElement('span'); sp.className = 'linger-w'; sp.dataset.kind = classify(w, true) || 'common'; sp.dataset.k = keyOf(w);
+    try { r.surroundContents(sp); } catch { return null; }
+    return sp;
+  }
+  function explainRange(range, text) {
+    const sp = text.split(' ').length === 1 ? wordSpan(range) : null;
+    getSelection().removeAllRanges();
+    if (sp) openCard(sp); else openPhrase(range, text);
+  }
+  const localMeaning = (k) => (SLANG[k] && SLANG[k].meaning) || (D[k] && D[k].meaning) || '';
+  async function openPhrase(range, text) {
+    attach(); closeCard();
+    cardRange = range;
+    if (HL) HL.set('linger-sel', new Highlight(range));
+    addFonts();
+    const nWords = text.split(' ').length;
+    const badge = /[.!?…]["”’)]?$/.test(text) || nWords >= 10 ? 'Sentence' : 'Phrase';
+    // The sentence it came from (only worth showing when the highlight is part of a longer sentence).
+    const node = range.commonAncestorContainer, el = node.nodeType === 1 ? node : node.parentElement;
+    const block = (el && el.closest('p, li, td, th, dd, dt, blockquote, h1, h2, h3, h4, h5, h6, figcaption, article, section, div')) || el;
+    const sentence = (block && sentencesOf(block.innerText || block.textContent || '').find((s) => s.includes(text))) || '';
+    const fromText = sentence.length > text.length + 3 ? sentence : '';
+    // In plain words: Linger's phrase rules and easy-word swaps (the same ones "Explain this page" uses).
+    const plain = plainify(text);
+    const letters = (s) => s.replace(/[^a-z]/gi, '').toLowerCase();
+    const changed = letters(plain) !== letters(text);
+    // The hard words inside it.
+    const hard = [], seen = new Set(), re = new RegExp(WORD_RE.source, 'g');
+    let m;
+    while ((m = re.exec(text)) && hard.length < 5) {
+      const k = keyOf(m[0]);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const kind = classify(m[0], false);
+      if (!kind) continue;
+      const meaning = localMeaning(k);
+      hard.push({ raw: m[0], k, kind, meaning: meaning || (PLAIN[k] ? cap(PLAIN[k]) + '.' : ''), easy: meaning ? PLAIN[k] || '' : '', done: !!(meaning || PLAIN[k]) });
+    }
+    // Ask Claude for the meaning here, with the whole paragraph as context (or the sentence, if it's very long).
+    const para = (block ? block.innerText || block.textContent || '' : '').replace(/\s+/g, ' ').trim();
+    let ai = null;
+    const aiP = askAI('phrase', text, para.length <= 1500 ? para : fromText || text);
+    const defHtml = (x) => `<p class="wc-def"><b>${esc(x.raw)}</b>: ${x.meaning ? esc(x.meaning) : x.done ? 'Not in the dictionary yet.' : 'Looking up…'}${x.easy ? ` <span class="wc-easy">Easier word: <b>${esc(x.easy)}</b></span>` : ''}</p>`;
+    function ctxHtml() {
+      const words = ai ? ai.hardWords.map((h) => ({ raw: h.word, meaning: h.meaning, easy: h.easier, done: true })) : hard;
+      if (!fromText && !words.length) return '';
+      const at = fromText.indexOf(text);
+      return `<p class="wc-lbl">In context:</p><div class="wc-box">
+          ${fromText ? `<p class="wc-lbl">From the text:</p><p class="wc-s">“${esc(fromText.slice(0, at))}<b>${esc(text)}</b>${esc(fromText.slice(at + text.length))}”</p>` : ''}
+          ${words.length ? `<p class="wc-lbl">Hard words:</p>${words.map(defHtml).join('')}` : ''}</div>`;
+    }
+    const meaningText = changed ? plain : hard.length ? 'No simpler way to say this yet. The hard words are explained below.' : 'These are everyday words. Linger doesn’t have a simpler way to say this yet.';
+    // Top of the body: Claude's meaning + plain version when there is one; otherwise Linger's own plain-words swap.
+    function mainHtml() {
+      if (ai) {
+        const showPlain = ai.plain && letters(ai.plain) !== letters(text) && letters(ai.plain) !== letters(ai.meaning);
+        return `<p class="wc-lbl">What it means here:</p><p class="wc-meaning" id="m">${esc(ai.meaning)}</p>
+          ${showPlain ? `<p class="wc-lbl">In plain words:</p><p class="wc-local">${esc(ai.plain)}</p>` : ''}`;
+      }
+      return `${changed ? '<p class="wc-lbl">In plain words:</p>' : ''}<p class="wc-meaning" id="m">${esc(meaningText)}</p>`;
+    }
+    const redraw = () => {
+      if (!card || cardRange !== range) return;
+      card.querySelector('#main').innerHTML = mainHtml();
+      const c = card.querySelector('#ctx'); c.innerHTML = ctxHtml(); c.hidden = !c.innerHTML.trim();
+      place(card, range.getBoundingClientRect());
+    };
+    card = document.createElement('div');
+    card.className = 'wc'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'Explanation of the highlighted ' + badge.toLowerCase());
+    card.innerHTML = `<div class="wc-top">
+        <div class="wc-rings"><img src="${asset('icons/card/header-rings.svg')}" width="252.51" height="252.51" alt=""></div>
+        <div class="wc-head">
+          <div class="wc-row"><span class="wc-badge">${badge}</span>
+            <div class="wc-icons"><span class="wc-saved" id="saved" hidden>Saved</span>
+              <button class="wc-icon" id="hear" aria-label="Read it out loud" title="Hear it"><img src="${asset('icons/card/volume.svg')}" width="24" height="24" alt=""></button>
+              <button class="wc-icon" id="save" aria-label="Save to Linger" aria-pressed="false" title="Save to Linger"><img src="${asset('icons/card/bookmark.svg')}" width="24" height="24" alt=""></button></div></div>
+          <div class="wc-words"><p class="wc-word wc-phrase" title="${esc(text)}">${esc(text)}</p></div>
+        </div></div>
+      <div class="wc-body">
+        <div class="wc-ctx" id="main"></div>
+        <div class="wc-ctx" id="ctx"></div>
+        <p class="wc-note" id="ai">${S.aiOn ? AI_WAIT : ''}</p>
+        <p class="wc-note" id="note"></p>
+      </div>`;
+    layer.appendChild(card);
+    redraw();
+    card.querySelector('#hear').onclick = () => speakIt(text);
+    if (aiP) aiP.then((a) => {
+      if (!card || cardRange !== range) return;
+      card.querySelector('#ai').textContent = '';
+      if (a && a.meaning) { ai = { meaning: a.meaning, plain: a.plain || '', hardWords: a.hardWords || [] }; redraw(); }
+    });
+    const key = 'phrase-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+    const showSaved = () => { card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true'); card.querySelector('#save').title = 'Saved to Linger'; };
+    if (api) chrome.storage.local.get({ saved: [] }, (v) => { if (card && cardRange === range && v.saved.some((x) => x.key === key)) showSaved(); });
+    card.querySelector('#save').onclick = async () => {
+      const m = ai ? ai.meaning : changed ? plain : hard.filter((x) => x.meaning).map((x) => `${x.raw}: ${x.meaning}`).join(' ');
+      const p = ai ? ai.plain : changed ? plain : '';
+      const r = await send({ type: 'save', key, word: { w: text, m, s: fromText || text, p, place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
+      if (!card || cardRange !== range) return;
+      showSaved();
+      card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Connect your phone in the Linger menu to send it there.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
+    };
+    // Look up the hard words Linger doesn't know yet, and find easier synonyms.
+    await Promise.all(hard.map(async (x) => {
+      if (!x.done) {
+        const d = api ? await send({ type: 'lookup', word: x.k }) : await directLookup(x.k);
+        x.meaning = (d && d.meaning) || ''; x.done = true;
+        redraw();
+      }
+      if (!x.easy && x.meaning && x.kind !== 'slang') {
+        const r = api ? await send({ type: 'synonyms', word: x.k }) : await directSynonyms(x.k);
+        const e = easier(x.k, r, x.meaning);
+        if (e) { x.easy = e; redraw(); }
+      }
+    }));
+  }
+  document.addEventListener('mouseup', (e) => {
+    if (e.button !== 0 || (e.composedPath && e.composedPath().includes(host$))) return;
+    clearTimeout(chipT);
+    chipT = setTimeout(showChip, 220); // after a double-click has had its turn
+  });
+  document.addEventListener('selectionchange', () => { if (chip) { const s = getSelection(); if (!s || s.isCollapsed) hideChip(); } });
+
   document.addEventListener('click', (e) => {
     if (e.composedPath && e.composedPath().includes(host$)) return;
     const sp = e.target.closest && e.target.closest('.linger-w');
@@ -384,8 +607,11 @@
     const sp = document.createElement('span'); sp.className = 'linger-w'; sp.dataset.kind = classify(w, true) || 'common'; sp.dataset.k = keyOf(w);
     try { r.surroundContents(sp); sel.removeAllRanges(); openCard(sp); } catch {}
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeCard(); closePanel(); } });
-  window.addEventListener('scroll', () => { if (card && cardSpan) place(card, cardSpan.getBoundingClientRect()); }, { passive: true });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideChip(); closeCard(); closePanel(); } });
+  window.addEventListener('scroll', () => {
+    hideChip();
+    if (card && (cardSpan || cardRange)) place(card, (cardSpan || cardRange).getBoundingClientRect());
+  }, { passive: true });
 
   // ---------- Explain this page ----------
   let panel = null;
@@ -416,7 +642,7 @@
     else { mo.disconnect(); unwrapAll(); closeCard(); }
   }
   if (api) {
-    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
