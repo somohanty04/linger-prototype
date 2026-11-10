@@ -858,7 +858,88 @@
       if (b.dataset.tab === S.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
     if (focusQ) { const q = document.getElementById('q'); if (q) { q.focus(); q.setSelectionRange(caret, caret); } }
+    sheetSetup();
   }
+
+  // ---------- pull-up sheet ----------
+  // The handle at the top of each white sheet works like a phone's bottom sheet: drag it up and the sheet covers
+  // the page (the header shrinks to a thin strip), drag it down to bring the header back. Tapping it toggles.
+  const SHEET_TOP = 40; // header height when the sheet is up (plus the phone's status bar)
+  let safeTop = null;
+  const statusBar = () => {
+    if (safeTop === null) { const p = document.createElement('div'); p.style.cssText = 'position:absolute;visibility:hidden;padding-top:env(safe-area-inset-top,0px)'; document.body.appendChild(p); safeTop = p.offsetHeight; p.remove(); }
+    return safeTop;
+  };
+  const sheetIsUp = () => !!(S.sheetUp && S.sheetUp[S.tab]);
+  function sheetSetup() {
+    // A freshly drawn screen takes its sheet position at once (no animation when switching tabs).
+    screenEl.classList.add('sheet-drag');
+    screenEl.classList.toggle('sheet-up', sheetIsUp());
+    void screenEl.offsetHeight;
+    screenEl.classList.remove('sheet-drag');
+    const body = scroll.querySelector('.hero + .body');
+    if (!body || body.querySelector(':scope > .sheet-grab')) return;
+    body.insertAdjacentHTML('afterbegin', `<button type="button" class="sheet-grab" aria-expanded="${sheetIsUp()}" aria-label="${sheetIsUp() ? 'Show the header again' : 'Pull the sheet up to fill the screen'}"></button>`);
+  }
+  // Animate the header to a height, then hand control back to CSS.
+  function sheetTo(up) {
+    const hero = scroll.querySelector('.hero');
+    if (!hero) return;
+    const from = hero.getBoundingClientRect().height;
+    // Measure the end height with animations off (otherwise the browser reports the starting height).
+    screenEl.classList.add('sheet-drag');
+    screenEl.classList.toggle('sheet-up', up); hero.style.height = '';
+    const to = hero.getBoundingClientRect().height;
+    hero.style.height = from + 'px'; hero.style.setProperty('--fade', up ? 1 : 0);
+    void hero.offsetHeight;
+    screenEl.classList.remove('sheet-drag');
+    void hero.offsetHeight;
+    hero.style.height = to + 'px'; hero.style.setProperty('--fade', up ? 0 : 1);
+    const done = () => { hero.style.height = ''; hero.style.removeProperty('--fade'); };
+    hero.addEventListener('transitionend', done, { once: true }); setTimeout(done, 450);
+    S.sheetUp = { ...(S.sheetUp || {}), [S.tab]: up };
+    const g = scroll.querySelector('.sheet-grab');
+    if (g) { g.setAttribute('aria-expanded', String(up)); g.setAttribute('aria-label', up ? 'Show the header again' : 'Pull the sheet up to fill the screen'); }
+  }
+  let drag = null;
+  document.addEventListener('pointerdown', (e) => {
+    const g = e.target.closest && e.target.closest('.sheet-grab'); if (!g) return;
+    const hero = scroll.querySelector('.hero'); if (!hero) return;
+    const up = sheetIsUp();
+    screenEl.classList.add('sheet-drag'); // measure with animations off
+    screenEl.classList.remove('sheet-up'); hero.style.height = '';
+    const full = hero.getBoundingClientRect().height; // the header's normal height
+    screenEl.classList.toggle('sheet-up', up);
+    void hero.offsetHeight;
+    screenEl.classList.remove('sheet-drag');
+    drag = { g, hero, y0: e.clientY, h0: hero.getBoundingClientRect().height, min: SHEET_TOP + statusBar(), max: full, moved: false };
+    try { g.setPointerCapture(e.pointerId); } catch {}
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dy = e.clientY - drag.y0;
+    if (!drag.moved && Math.abs(dy) < 6) return;
+    if (!drag.moved) { drag.moved = true; screenEl.classList.add('sheet-drag'); }
+    const h = Math.max(drag.min, Math.min(drag.max, drag.h0 + dy));
+    drag.hero.style.height = h + 'px';
+    drag.hero.style.setProperty('--fade', ((h - drag.min) / (drag.max - drag.min)).toFixed(3));
+  });
+  const endDrag = (e) => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    screenEl.classList.remove('sheet-drag');
+    if (!d.moved) return; // a tap: the click below toggles
+    d.g.dataset.dragged = '1';
+    const h = d.hero.getBoundingClientRect().height, dy = e.clientY - d.y0;
+    sheetTo(dy < -40 || (dy <= 40 && h < (d.min + d.max) / 2)); // a clear flick wins; otherwise the nearer end
+  };
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+  document.addEventListener('click', (e) => {
+    const g = e.target.closest && e.target.closest('.sheet-grab'); if (!g) return;
+    if (g.dataset.dragged) { delete g.dataset.dragged; return; }
+    sheetTo(!sheetIsUp());
+  });
 
   // ---------- actions ----------
   const actions = {
