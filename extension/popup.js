@@ -17,11 +17,15 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
   if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain'].forEach((id) => { $(id).disabled = true; }); }
   if (usable && !status) $('blocked').textContent = 'Reload this page to start Linger here.';
 
-  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null });
+  const st = await chrome.storage.local.get({ highlight: true, paused: [], bigger: false, aiOn: true, assistant: true, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null });
   if (st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = 'Last problem: ' + st.gazeProblem.why + '. Open Recalibrate to check the camera.'; }
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
   $('bigger').checked = st.bigger;
+  $('aiOn').checked = st.aiOn;
+  $('aiOn').onchange = (e) => chrome.storage.local.set({ aiOn: e.target.checked });
+  $('assistant').checked = st.assistant;
+  $('assistant').onchange = (e) => chrome.storage.local.set({ assistant: e.target.checked });
   $('showGaze').checked = st.showGaze;
   $('spread').checked = st.spread;
   $('handSwipe').checked = st.handSwipe;
