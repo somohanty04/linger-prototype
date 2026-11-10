@@ -1,0 +1,29 @@
+index.html
+  s_99ec2d8108581c::t_6b44a6a1a39688 17,82
+app.js
+  s_99ec2d8108581c::t_9c5dd0aa8f5779 889-890,892-893,895-897,909,913-914
+  s_99ec2d8108581c::t_b00ff9e2ab5aee 916
+  s_99ec2d8108581c::t_13637ec1fc5aa5 881-882,901,906,939
+  s_99ec2d8108581c::t_6b44a6a1a39688 861,864-874,877,880,883-888,891,894,898-900,902-905,907-908,910-912,915,917-938,940-942
+  s_99ec2d8108581c::t_c665d6cedfe6cb 875-876,878-879
+  s_99ec2d8108581c::t_f63f694915e36b 943
+styles.css
+  s_99ec2d8108581c::t_6b44a6a1a39688 518-519,524-528
+  s_99ec2d8108581c::t_13637ec1fc5aa5 520-523
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a56ab7938d3943cbe0b82c48937abac76fe0577e",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
