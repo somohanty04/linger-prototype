@@ -458,28 +458,38 @@
   // turns on when the capture button is tapped. After a scan, upload or paste, the results show on the same screen.
   const gear = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
   const flipIcon = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-3.2l-1.6-2.4A1.3 1.3 0 0 0 14.1 4H9.9a1.3 1.3 0 0 0-1.1.6L7.2 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M8.5 12.5a3.6 3.6 0 0 1 6.2-2"/><path d="M15.5 13.5a3.6 3.6 0 0 1-6.2 2"/><path d="M15 8.4v2.3h-2.3"/><path d="M9 17.6v-2.3h2.3"/></svg>';
-  const lensHead = (mode) => `<header class="lh-head">
-      <div class="lh-rings" aria-hidden="true"><img src="icons/lens-rings.svg" width="351.387" height="351.387" alt=""></div>
-      <div class="lh-title"><h1>Lens</h1><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button></div>
-      <div class="lh-switch" role="group" aria-label="How to read something">
+  // Lens header and mode switch, from Figma "final draft · Lens home v2 (Words style)" (node 257:545):
+  // the same header as Words (gradient, rings, logo, 36px title, subtitle), then the switch on the white sheet.
+  const lensHero = () => `<header class="hero wh lh2">
+      <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
+      ${logo}
+      <div class="wh-title"><div class="wh-row"><h1>Lens</h1><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button></div>
+        <div class="hsub">Point at a letter, sign or bill</div></div>
+    </header>`;
+  const lensSwitch = (mode) => `<div class="lh-switch" role="group" aria-label="How to read something">
         <button type="button" class="lh-seg ${mode === 'scan' ? 'on' : ''}" data-action="shutter-home" aria-pressed="${mode === 'scan'}">Scan</button>
         <label class="lh-seg ${mode === 'upload' ? 'on' : ''}">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label>
         <button type="button" class="lh-seg ${mode === 'paste' ? 'on' : ''}" data-action="paste-open">Paste text</button>
-      </div></header>`;
+      </div>`;
+  const camIcon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
 
   function viewLens() {
     const sc = S.scan;
     if (sc.status === 'reading' || (sc.status === 'done' && TEXTS.camera)) return viewResults();
     const live = sc.status === 'live';
     const corners = '<i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i>';
-    const hint = live ? 'Fit the whole page inside the frame' : sc.status === 'error' ? 'Tap the button to try again' : 'Tap the button to turn on the camera';
-    return `<div class="lens-home">${lensHead('scan')}
-      <div class="lh-view">
-        ${live ? '<video id="cam" playsinline muted autoplay></video>' : `<div class="lh-empty">${sc.status === 'error' ? `<p>${esc(sc.msg)}</p>` : '<p>Point your camera at a letter, sign or bill. Linger reads it and explains the hard words.</p>'}</div>`}
-        <div class="lh-frame" id="camFrame">${corners}</div>
-        <p class="lh-hint">${hint}</p>
-        <button type="button" class="lh-shutter" data-action="shutter" aria-label="${live ? 'Take photo' : 'Turn on the camera'}"></button>
-        ${camCount !== 1 ? `<button type="button" class="lh-flip" data-action="cam-flip" aria-label="Switch to the ${facing === 'environment' ? 'front' : 'back'} camera">${flipIcon}</button>` : ''}
+    const hint = live ? 'Fit the whole page inside the frame' : sc.status === 'error' ? 'Camera is off' : 'Tap Turn on camera to start';
+    const cta = live ? 'Take photo' : sc.status === 'error' ? 'Try again' : 'Turn on camera';
+    return `<div class="lens-home lh2-home">${lensHero()}
+      <div class="body wb lb">
+        ${lensSwitch('scan')}
+        <div class="lh-card">
+          ${live ? '<video id="cam" playsinline muted autoplay></video>' : `<div class="lh-empty">${sc.status === 'error' ? `<p>${esc(sc.msg)}</p>` : '<p>Linger reads it and explains the hard words.</p>'}</div>`}
+          <div class="lh-frame" id="camFrame">${corners}</div>
+          <p class="lh-hint">${hint}</p>
+          ${camCount !== 1 ? `<button type="button" class="lh-flip" data-action="cam-flip" aria-label="Switch to the ${facing === 'environment' ? 'front' : 'back'} camera">${flipIcon}</button>` : ''}
+        </div>
+        <button type="button" class="btn primary lh-cta" data-action="shutter">${camIcon}${cta}</button>
       </div></div>`;
   }
 
@@ -503,8 +513,9 @@
     let autos = [];
     if (S.autoHard && sc.status === 'done') { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
     const reading = S.speaking === 'lens';
-    return `${lensHead('')}
-    <div class="body lens-results">
+    return `${lensHero()}
+    <div class="body wb lens-results">
+      ${lensSwitch('')}
       <div class="lens">
         <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
         ${inner}

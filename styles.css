@@ -189,7 +189,6 @@ button.glasses-link { border: 0; font-size: 15px; }
 .tabbar { position: absolute; left: 24px; right: 24px; bottom: calc(31px + env(safe-area-inset-bottom, 0px)); height: 65px; padding: 0 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 9999px; box-shadow: 0 4px 4px rgba(0, 0, 0, 0.04); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); z-index: 4; }
 .tabbar button { border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; line-height: 16px; font-weight: 700; color: var(--idle); }
 .tabbar button[aria-current="page"] { color: #6D79FF; }
-.tabbar button[data-tab="lens"][aria-current="page"] { color: var(--blue); } /* Figma: Lens frame uses #2E50D8, the Words frame #6D79FF */
 .tabbar .ti { width: 22px; height: 22px; background: currentColor; -webkit-mask: var(--ic) center / 22px 22px no-repeat; mask: var(--ic) center / 22px 22px no-repeat; }
 .screen.full .tabbar { display: none; }
 
@@ -352,7 +351,7 @@ button.glasses-link { border: 0; font-size: 15px; }
 
 /* Lens home (Figma: "final draft · Lens home") */
 .lens-home { position: relative; min-height: 100%; height: 100%; display: flex; flex-direction: column; background: #060E54; padding-bottom: calc(122px + env(safe-area-inset-bottom, 0px)); }
-.lh-head { position: relative; overflow: hidden; flex: none; background: #060E54; color: #FFFFFF; padding: max(58px, calc(12px + env(safe-area-inset-top, 0px))) 24px 18px; }
+.lh-head { position: relative; overflow: hidden; flex: none; background: linear-gradient(163.52deg, #1F2DA8 1.41%, #5464D9 105.55%); color: #FFFFFF; padding: max(58px, calc(12px + env(safe-area-inset-top, 0px))) 24px 18px; }
 .lh-head > :not(.lh-rings) { position: relative; }
 .lh-rings { position: absolute; left: 115.66px; top: -174px; width: 489.359px; height: 489.359px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 .lh-rings img { display: block; flex: none; transform: rotate(-34.98deg); }
@@ -380,11 +379,11 @@ button.glasses-link { border: 0; font-size: 15px; }
 .lh-flip { position: absolute; left: calc(50% + 70px); bottom: 24.5px; width: 54px; height: 54px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(6, 14, 84, 0.85); color: #FFFFFF; box-shadow: 0 4px 12px rgba(6, 14, 84, 0.25); cursor: pointer; }
 .lh-flip:active { transform: scale(0.94); }
 .lh-flip:focus-visible { outline: 3px solid #9FEAFF; outline-offset: 2px; }
-.screen.on-lens .scroll { overflow: hidden; background: #060E54; }
-.lens-results, .set-body { margin-top: 0; border-radius: 0; padding-top: 18px; }
+.screen.on-lens .scroll { overflow: hidden; background: var(--surface); }
+.set-body { margin-top: 0; border-radius: 0; padding-top: 18px; }
 
 /* Settings */
-.set-head { display: flex; align-items: center; gap: 6px; background: #060E54; color: #FFFFFF; padding: max(58px, calc(12px + env(safe-area-inset-top, 0px))) 24px 18px 14px; }
+.set-head { display: flex; align-items: center; gap: 6px; background: linear-gradient(163.52deg, #1F2DA8 1.41%, #5464D9 105.55%); color: #FFFFFF; padding: max(58px, calc(12px + env(safe-area-inset-top, 0px))) 24px 18px 14px; }
 .set-head h1 { margin: 0; font-size: 34px; line-height: 38px; font-weight: 800; }
 .set-back { width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: #FFFFFF; font-size: 34px; line-height: 1; cursor: pointer; }
 a.share-card { text-decoration: none; color: inherit; }
@@ -491,3 +490,28 @@ a.share-card { text-decoration: none; color: inherit; }
 .story-view .tray .grid2 .btn:not(.deep) { border: 2px solid #EAEFFF; background: #FFFFFF; color: #6B7080; }
 .story-view .tray .grid2 .btn.deep { background: #2533AD; }
 .story .bw { white-space: nowrap; }
+
+/* ---------- Lens v2 (Figma "final draft · Lens home v2 (Words style)", node 257:545) ---------- */
+.lens-home.lh2-home { background: var(--surface); padding-bottom: 0; }
+.hero.wh.lh2 { flex: none; height: calc(200px + var(--sa)); }
+.hero.wh .lh-gear { width: 44px; height: 44px; margin: -10px -10px -10px 0; }
+.body.wb.lb { flex: 1; min-height: 0; padding: 32px 16px calc(115px + env(safe-area-inset-bottom, 0px)); }
+.body.wb.lens-results { padding-top: 32px; }
+.body.wb .lh-switch { flex: none; margin: 0; background: #EAEFFF; }
+.body.wb .lh-seg { color: #1F2AA8; }
+.body.wb .lh-seg.on { background: #6D79FF; color: #FFFFFF; }
+.lh-card { position: relative; flex: 1; min-height: 0; margin-bottom: -4px; /* Figma: 16px above Take photo, the sheet's gap is 20 */ overflow: hidden; border: 1px solid #E8E8E8; border-radius: 16px; background: #FFFFFF; }
+.lh-card video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lh-card .lh-empty { left: 13px; right: 13px; top: 13px; bottom: 71px; }
+.lh-card .lh-frame { left: 13px; right: 13px; top: 13px; bottom: 71px; }
+.lh-card .lh-frame .k { width: 35px; height: 35px; }
+.lh-card .lh-frame .k1 { top: 0; left: 0; border-top-left-radius: 10px; }
+.lh-card .lh-frame .k2 { top: 0; right: 0; border-top-right-radius: 10px; }
+.lh-card .lh-frame .k3 { bottom: 0; left: 0; border-bottom-left-radius: 10px; }
+.lh-card .lh-frame .k4 { bottom: 0; right: 0; border-bottom-right-radius: 10px; }
+.lh-card .lh-hint { bottom: 14px; background: rgba(31, 42, 168, 0.92); }
+.lh-card .lh-flip { left: auto; right: 10px; bottom: 10px; width: 40px; height: 40px; background: rgba(31, 42, 168, 0.92); }
+.lh-card .lh-flip svg { width: 20px; height: 20px; }
+.btn.primary.lh-cta { flex: none; width: 100%; height: 49px; gap: 8px; border: 2px solid #2533AD; background: linear-gradient(90deg, #6D79FF, #2B39B2); font-size: 16px; line-height: 16px; font-weight: 600; box-shadow: none; cursor: pointer; }
+.btn.primary.lh-cta:active { transform: scale(0.98); }
+.lh-card:has(.lh-flip) .lh-hint { left: calc(50% - 24px); } /* keep clear of the flip button */

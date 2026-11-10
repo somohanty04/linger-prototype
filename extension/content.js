@@ -668,7 +668,8 @@
   const askHist = [];
   const SUGGEST = ['What is this page about?', 'What do I need to do, and by when?', 'Help me decide what to do'];
   function showFab() {
-    const want = S.assistant && S.aiOn && active() && window === window.top;
+    // Follows "On this site" (and its own switch), not "Underline hard words": you can ask about a page without underlines.
+    const want = S.assistant && S.aiOn && !S.paused.includes(host) && window === window.top;
     if (!want) { if (fab) fab.remove(); fab = null; closeAsk(); return; }
     if (fab) return;
     attach(); addFonts();
