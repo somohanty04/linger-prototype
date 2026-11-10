@@ -7,44 +7,54 @@
 </head>
 <body>
 <header class="top">
-  <img src="icons/icon-32.png" width="28" height="28" alt="">
-  <div><strong>Linger</strong><span id="host">this page</span></div>
+  <img class="rings" src="icons/popup/rings.svg" width="252.51" height="252.51" alt="">
+  <h1>Linger</h1>
+  <button type="button" class="glass" id="recal"><img src="icons/popup/recalibrate.svg" width="18.818" height="19.004" alt=""> Recalibrate</button>
 </header>
 
 <main>
   <p class="blocked" id="blocked" hidden>Linger can’t run on this page (browser settings or the Chrome Web Store). Try a normal website.</p>
 
   <section>
-    <label class="sw"><span><b>Underline hard words</b><small>On every website</small></span><input type="checkbox" id="highlight"><i></i></label>
-    <label class="sw"><span><b>On this site</b><small id="siteLabel">Turn off for banking or work tools</small></span><input type="checkbox" id="site"><i></i></label>
-    <label class="sw"><span><b>Bigger words</b><small>Larger underlined words, easier to tap</small></span><input type="checkbox" id="bigger"><i></i></label>
-    <button type="button" class="btn primary" id="explain">✦ Explain this page</button>
+    <h2>Reading help</h2>
+    <div class="rows">
+      <label class="sw"><span><b>On this site</b><small id="siteLabel">this page</small></span><input type="checkbox" id="site"><i></i></label>
+      <label class="sw"><span><b>Underline hard words</b><small>On every website</small></span><input type="checkbox" id="highlight"><i></i></label>
+      <label class="sw"><span><b>Bigger words</b><small>Larger underlined words, easier to tap</small></span><input type="checkbox" id="bigger"><i></i></label>
+    </div>
+    <button type="button" class="btn primary wide" id="explain">Explain this page</button>
   </section>
 
   <section>
-    <h2>👁 Eye tracking</h2>
-    <label class="sw"><span><b>Notice when I’m stuck</b><small>On every tab. Uses your webcam; video stays on this laptop.</small></span><input type="checkbox" id="eye"><i></i></label>
-    <label class="slider"><span>Pause after <output id="secsOut">3</output> s on one line</span><input type="range" id="secs" min="1.5" max="6" step="0.5" value="3"></label>
-    <label class="sw"><span><b>Show where I’m looking</b><small>A soft dot where Linger thinks you’re looking</small></span><input type="checkbox" id="showGaze"><i></i></label>
-    <label class="sw"><span><b>Answer with a hand swipe</b><small>When it asks “Stuck on …?”: swipe right for yes, left for no</small></span><input type="checkbox" id="handSwipe"><i></i></label>
-    <label class="sw"><span><b>More space between lines</b><small>Makes lines easier for the webcam to tell apart</small></span><input type="checkbox" id="spread"><i></i></label>
-    <button type="button" class="btn ghost small" id="recal">Recalibrate</button>
+    <h2>Eye tracking</h2>
+    <div class="rows">
+      <label class="sw"><span><b>Notice when I’m stuck</b><small class="w207">On every tab. Uses your webcam; video stays on this laptop.</small></span><input type="checkbox" id="eye"><i></i></label>
+      <label class="slider"><span>Pause after <output id="secsOut">3</output> s on one line</span><input type="range" id="secs" min="1.5" max="6" step="0.5" value="3"></label>
+      <label class="sw"><span><b>Show where I’m looking</b><small>A dot where Linger thinks you’re looking</small></span><input type="checkbox" id="showGaze"><i></i></label>
+      <label class="sw"><span><b>Answer with a hand swipe</b><small class="w207">When it asks “Stuck on...?”: swipe right for yes, left for no</small></span><input type="checkbox" id="handSwipe"><i></i></label>
+      <label class="sw"><span><b>More space between lines</b><small>Makes lines easier for the webcam to tell apart</small></span><input type="checkbox" id="spread"><i></i></label>
+    </div>
     <p class="problem" id="eyeProblem" hidden></p>
-    <p class="hint" id="eyeHint">The first time, a setup page opens: follow a dot for about 35 seconds. Works best with light on your face, an arm’s length from the screen.</p>
+    <button type="button" class="btn wide" id="practice">Take the reading test</button>
   </section>
 
   <section>
-    <h2>📱 Your phone</h2>
-    <div id="paired" hidden><p class="ok"><span class="dot"></span>Saving to your phone · <span id="codeShow"></span></p><button type="button" class="link" id="unpair">Disconnect</button></div>
-    <form id="pairForm"><p class="hint">In the Linger app, open <b>Words → Turn on live sync</b> and type the code here.</p>
-      <div class="row"><input id="code" placeholder="xxxx-xxxx-xxxx" autocomplete="off" spellcheck="false"><button type="submit" class="btn primary small">Connect</button></div>
-      <p class="hint" id="pairMsg" role="status"></p></form>
+    <div class="head">
+      <h2>Your phone</h2>
+      <p class="hint" id="pairHint">In the Linger app, open <span>Words → Turn on live sync and type the code here.</span></p>
+    </div>
+    <form id="pairForm" class="pair">
+      <input id="code" placeholder="xxxx-xxxx-xxxx" autocomplete="off" spellcheck="false" aria-label="Code from the Linger app">
+      <button type="submit" class="btn primary">Connect</button>
+    </form>
+    <p class="hint msg" id="pairMsg" role="status"></p>
+    <div id="paired" class="paired" hidden><p class="ok"><span class="dot"></span>Saving to your phone · <span id="codeShow"></span></p><button type="button" class="link" id="unpair">Disconnect</button></div>
   </section>
 
   <section>
-    <h2>★ Saved <span class="count" id="savedCount">0</span></h2>
+    <h2 class="saved-h">Saved <span class="count" id="savedCount">0</span></h2>
     <ul id="saved"></ul>
-    <a class="link" href="https://somohanty04.github.io/linger-prototype/" target="_blank" rel="noopener">Open the Linger app →</a>
+    <a class="btn wide white" href="https://somohanty04.github.io/linger-prototype/" target="_blank" rel="noopener">Open the Linger app</a>
   </section>
 </main>
 <script src="popup.js"></script>

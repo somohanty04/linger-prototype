@@ -162,12 +162,14 @@ async function finish() {
   };
 }
 
-$('doneBtn').onclick = async () => {
+async function done(practice) {
   live = null;
   if (port) port.postMessage({ type: 'model', model });
   if (previewStream) previewStream.getTracks().forEach((t) => t.stop());
-  await chrome.runtime.sendMessage({ type: 'calib-done', model });
-};
+  await chrome.runtime.sendMessage({ type: 'calib-done', model, practice });
+}
+$('doneBtn').onclick = () => done(false);
+$('testBtn').onclick = () => done(true); // save, then open the reading test (Task A and Task B on a letter)
 
 // Test data: the eye numbers recorded at each dot (no video), for measuring accuracy changes offline.
 $('dataBtn').onclick = () => {

@@ -4,12 +4,14 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const tidy = (c) => String(c || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
 
+// The bar's filled part shows the pause time.
+function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min) * 100) + '%'); }
+
 (async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = tab && tab.url ? new URL(tab.url) : null;
   const usable = !!url && /^(https?|file):$/.test(url.protocol) && !/chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(url.href);
   const host = url ? url.hostname || 'file' : '';
-  $('host').textContent = usable ? host : 'this page';
   $('siteLabel').textContent = usable ? host : 'Not available here';
   const status = usable ? await chrome.tabs.sendMessage(tab.id, { type: 'status' }).catch(() => null) : null;
   if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain'].forEach((id) => { $(id).disabled = true; }); }
@@ -23,11 +25,11 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
   $('showGaze').checked = st.showGaze;
   $('spread').checked = st.spread;
   $('handSwipe').checked = st.handSwipe;
-  $('secs').value = st.pauseSecs; $('secsOut').textContent = st.pauseSecs;
+  $('secs').value = st.pauseSecs; $('secsOut').textContent = st.pauseSecs; fill();
   $('eye').checked = st.eyeOn;
   $('recal').hidden = !st.gazeModel;
   const acc = st.gazeModel && st.gazeModel.acc;
-  if (acc) $('eyeHint').textContent = `Set up ${new Date(st.gazeModel.at).toLocaleDateString()}: lands about ${acc.err}px from where you look. Works on every tab. Clicking around helps it keep learning.`;
+  if (acc) $('recal').title = `Set up ${new Date(st.gazeModel.at).toLocaleDateString()}: lands about ${acc.err}px from where you look`;
 
   $('highlight').onchange = (e) => chrome.storage.local.set({ highlight: e.target.checked });
   $('bigger').onchange = (e) => chrome.storage.local.set({ bigger: e.target.checked });
@@ -46,12 +48,13 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
     if (r && r.setup) e.target.checked = false;
     window.close();
   };
+  $('practice').onclick = async () => { await chrome.runtime.sendMessage({ type: 'open-practice' }); window.close(); };
   $('recal').onclick = async () => { await chrome.runtime.sendMessage({ type: 'eye-recal', tabId: tab && tab.id }); window.close(); };
-  $('secs').oninput = (e) => { $('secsOut').textContent = e.target.value; };
+  $('secs').oninput = (e) => { $('secsOut').textContent = e.target.value; fill(); };
   $('secs').onchange = (e) => chrome.storage.local.set({ pauseSecs: Number(e.target.value) });
 
   // Phone pairing: the same 12-character code the phone app shows under Words → live sync.
-  const showPair = (code) => { $('paired').hidden = !code; $('pairForm').hidden = !!code; $('codeShow').textContent = pretty(code); };
+  const showPair = (code) => { $('paired').hidden = !code; $('pairForm').hidden = !!code; $('pairHint').hidden = !!code; $('codeShow').textContent = pretty(code); };
   showPair(st.pairCode);
   $('pairForm').onsubmit = async (e) => {
     e.preventDefault();
@@ -69,5 +72,5 @@ const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
   $('savedCount').textContent = st.saved.length;
   $('saved').innerHTML = st.saved.length
     ? st.saved.slice(0, 12).map((w) => `<li><b>${esc(w.w)}</b> <span>· ${esc(w.m || '')}</span></li>`).join('')
-    : '<li><span>Click an underlined word, then ★ Save to Linger.</span></li>';
+    : '<li class="empty"><span>Click on an underlined word, then the bookmark icon.</span></li>';
 })();
