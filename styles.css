@@ -515,3 +515,14 @@ a.share-card { text-decoration: none; color: inherit; }
 .btn.primary.lh-cta { flex: none; width: 100%; height: 49px; gap: 8px; border: 2px solid #2533AD; background: linear-gradient(90deg, #6D79FF, #2B39B2); font-size: 16px; line-height: 16px; font-weight: 600; box-shadow: none; cursor: pointer; }
 .btn.primary.lh-cta:active { transform: scale(0.98); }
 .lh-card:has(.lh-flip) .lh-hint { left: calc(50% - 24px); } /* keep clear of the flip button */
+
+/* ---------- Pull-up sheet: drag the handle to cover the page (app.js: sheetSetup / sheetTo) ---------- */
+.sheet-grab { position: absolute; left: 0; right: 0; top: 0; height: 26px; z-index: 3; padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; border-radius: 24px 24px 0 0; }
+.sheet-grab:active { cursor: grabbing; }
+.sheet-grab:focus-visible { outline: 3px solid #B1B7FF; outline-offset: -3px; }
+.body.wb:not(.lb):not(.lens-results) .sheet-grab { height: 18px; } /* Words: keep clear of the search field 16px down */
+.hero { transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.hero > :not(.wh-rings):not(.ring):not(.dot) { opacity: var(--fade, 1); transition: opacity 0.2s; }
+.screen.sheet-drag .hero, .screen.sheet-drag .hero > * { transition: none; }
+.screen.sheet-up .hero { height: calc(40px + env(safe-area-inset-top, 0px)); padding-top: 0; padding-bottom: 0; }
+.screen.sheet-up .hero > :not(.wh-rings):not(.ring):not(.dot) { opacity: var(--fade, 0); pointer-events: none; }
