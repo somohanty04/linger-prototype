@@ -22,4 +22,20 @@ assert.deepEqual(readResult(text({ meaning: 'How many people came.', synonyms: [
   { meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people'], plainSentence: 'x' });
 assert.deepEqual(readResult({ stop_reason: 'refusal', content: [] }), { error: 'refused' });
 assert.deepEqual(readResult({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'not json' }] }), { error: 'bad answer' });
+// Page assistant
+assert.ok(readInput({ mode: 'ask', question: '  ' }).error);
+const ask = readInput({ mode: 'ask', question: 'Should I pay now?', page: 'Notice\n\n\nPay   by Dec 1.', title: 'Bill "A"', site: 'city.gov',
+  history: [{ q: 'What is this?', a: 'A bill.' }, { q: '', a: 'x' }, 'junk'] });
+assert.equal(ask.page, 'Notice\nPay by Dec 1.');
+assert.deepEqual(ask.history, [{ q: 'What is this?', a: 'A bill.' }]);
+const ar = buildRequest(ask);
+assert.deepEqual(ar.messages.map((m) => m.role), ['user', 'assistant', 'user']);
+assert.ok(ar.messages[0].content[0].text.includes('Pay by Dec 1.'));
+assert.deepEqual(ar.messages[0].content[0].cache_control, { type: 'ephemeral' });
+assert.equal(ar.messages[0].content[1].text, 'What is this?');
+assert.equal(ar.messages[2].content, 'Should I pay now?');
+const first = buildRequest(readInput({ mode: 'ask', question: 'What is this?', page: 'x', focus: 'remit payment' }));
+assert.equal(first.messages.length, 1);
+assert.ok(first.messages[0].content[1].text.includes('<highlight>remit payment</highlight>'));
+assert.deepEqual(readResult({ stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: 'Pay by Dec 1.' }] }, true), { answer: 'Pay by Dec 1.' });
 console.log('ok');

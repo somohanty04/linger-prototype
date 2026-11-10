@@ -31,7 +31,7 @@ export const explain = onRequest(
     client = client || new Anthropic({ apiKey: ANTHROPIC_API_KEY.value(), maxRetries: 1, timeout: 45000 });
     try {
       const response = await client.beta.messages.create(buildRequest(input));
-      const out = readResult(response);
+      const out = readResult(response, input.mode === 'ask');
       return res.status(out.error ? 502 : 200).json(out);
     } catch (e) {
       if (e instanceof Anthropic.RateLimitError) return res.status(429).json({ error: 'busy' });

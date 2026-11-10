@@ -35,7 +35,7 @@
   }
 
   // ---------- settings ----------
-  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true };
+  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true };
   const host = location.hostname || 'file';
   const active = () => S.highlight && !S.paused.includes(host);
 
@@ -196,6 +196,33 @@
     .wc-easy b { color: #6D79FF; }
     .selchip { position: fixed; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); white-space: nowrap; }
     .selchip:focus-visible { outline: 2px solid #1F2AA8; outline-offset: 2px; }
+    /* Ask Linger: the page assistant (button + chat panel) */
+    .ask-fab { position: fixed; right: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: linear-gradient(135deg, #6D79FF, #2B39B2); color: #FFFFFF; font-size: 20px; line-height: 1; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); transition: transform .12s; }
+    .ask-fab:hover { transform: scale(1.07); }
+    .ask-fab:focus-visible, .ask-panel button:focus-visible, .ask-panel textarea:focus-visible { outline: 2px solid #1F2AA8; outline-offset: 2px; }
+    .ask-panel { position: fixed; right: 16px; bottom: 72px; width: 380px; max-width: calc(100vw - 32px); height: min(540px, calc(100vh - 96px)); display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 16px; box-shadow: 0 14px 40px rgba(16, 20, 80, 0.28); overflow: hidden; font-family: 'Linger Figtree', 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #252A39; }
+    .ask-panel * { font-family: inherit; }
+    .ask-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px; color: #FFFFFF; background: linear-gradient(170deg, #1F2DA8, #5464D9); }
+    .ask-head strong { display: block; font-size: 17px; font-weight: 800; }
+    .ask-head small { font-size: 12px; font-weight: 600; opacity: 0.85; }
+    .ask-tools { display: flex; gap: 6px; }
+    .ask-x { width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.2); color: #FFFFFF; font-size: 14px; cursor: pointer; }
+    .ask-x.small { width: 22px; height: 22px; font-size: 11px; background: rgba(31, 42, 168, 0.1); color: #1F2AA8; flex: none; }
+    .ask-log { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: #FCFDFF; }
+    .msg-me { align-self: flex-end; max-width: 85%; padding: 8px 12px; border-radius: 14px 14px 4px 14px; background: #2B39B2; color: #FFFFFF; font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+    .msg-ai { align-self: flex-start; max-width: 92%; padding: 10px 12px; border-radius: 14px 14px 14px 4px; background: #F0F2FF; font-size: 14px; font-weight: 500; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .msg-ai.wait { color: #5B6070; font-style: italic; }
+    .msg-ai.err { background: #FFF2F2; color: #A81F1F; }
+    .ask-hear { display: block; margin-top: 6px; padding: 0; border: 0; background: none; color: #2B39B2; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .ask-sugg { display: flex; flex-direction: column; gap: 6px; }
+    .ask-sugg button { text-align: left; padding: 8px 10px; border: 1px solid #B1B7FF; border-radius: 12px; background: #FFFFFF; color: #1F2AA8; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .ask-sugg button:hover { background: #F0F2FF; }
+    .ask-note { margin: 2px 0 0; font-size: 12px; color: #5B6070; }
+    .ask-focus { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 10px; padding: 6px 8px; border-radius: 8px; background: #FFF6E0; color: #5B4A1F; font-size: 12px; font-weight: 600; }
+    .ask-focus[hidden] { display: none; }
+    .ask-form { display: flex; align-items: flex-end; gap: 8px; padding: 10px; border-top: 1px solid #E8E8E8; background: #FFFFFF; }
+    .ask-form textarea { flex: 1; min-height: 40px; max-height: 96px; resize: none; padding: 9px 12px; border: 1px solid #D5D9F5; border-radius: 12px; font-size: 14px; line-height: 1.4; color: #252A39; background: #FFFFFF; }
+    .ask-send { width: 40px; height: 40px; flex: none; border: 0; border-radius: 50%; background: linear-gradient(135deg, #6D79FF, #2B39B2); color: #FFFFFF; font-size: 18px; font-weight: 800; cursor: pointer; }
     /* Not in the dictionary (Figma node 140:496): red, header only, 20px icons */
     .wc.wc-missing { width: 372px; }
     .wc-missing .wc-top { border-radius: 12px; background: linear-gradient(176.9195deg, rgb(168, 31, 31) 1.4073%, rgb(217, 84, 84) 105.55%); }
@@ -607,7 +634,7 @@
     const sp = document.createElement('span'); sp.className = 'linger-w'; sp.dataset.kind = classify(w, true) || 'common'; sp.dataset.k = keyOf(w);
     try { r.surroundContents(sp); sel.removeAllRanges(); openCard(sp); } catch {}
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideChip(); closeCard(); closePanel(); } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideChip(); closeCard(); closePanel(); closeAsk(); } });
   window.addEventListener('scroll', () => {
     hideChip();
     if (card && (cardSpan || cardRange)) place(card, (cardSpan || cardRange).getBoundingClientRect());
@@ -634,19 +661,107 @@
     panel.querySelector('#read').onclick = () => speakIt(points.map((p) => p[1]).join(' '));
   }
 
+  // ---------- Ask Linger: the page assistant ----------
+  // A small button in the bottom-right corner opens a chat about the page: questions, or help with a decision.
+  // Claude gets the page's text (and the reader's highlight, if any). Turn the button off in the Linger menu.
+  let fab = null, askBox = null, askFocus = '', asking = false;
+  const askHist = [];
+  const SUGGEST = ['What is this page about?', 'What do I need to do, and by when?', 'Help me decide what to do'];
+  function showFab() {
+    const want = S.assistant && S.aiOn && active() && window === window.top;
+    if (!want) { if (fab) fab.remove(); fab = null; closeAsk(); return; }
+    if (fab) return;
+    attach(); addFonts();
+    fab = document.createElement('button');
+    fab.type = 'button'; fab.className = 'ask-fab'; fab.textContent = '✦';
+    fab.title = 'Ask Linger about this page'; fab.setAttribute('aria-label', 'Ask Linger about this page');
+    fab.onmousedown = (e) => e.preventDefault(); // keep the reader's highlight, so it can be the topic
+    fab.onclick = () => (askBox ? closeAsk() : openAsk());
+    layer.appendChild(fab);
+  }
+  function closeAsk() { if (askBox) askBox.remove(); askBox = null; if (fab) fab.setAttribute('aria-expanded', 'false'); }
+  // The page's readable text: the main article if there is one, otherwise the whole page.
+  function pageText() {
+    const main = document.querySelector('main, article, [role="main"]');
+    const src = main && (main.innerText || '').trim().length > 400 ? main : document.body;
+    return ((src && src.innerText) || '').slice(0, 40000);
+  }
+  async function askServer(question) {
+    const body = { mode: 'ask', question, history: askHist.slice(-8), page: pageText(), title: document.title, site: host, focus: askFocus };
+    if (api) return send({ type: 'ai-ask', body });
+    if (!window.LINGER_AI_URL) return { error: 'off' };
+    try { const r = await fetch(window.LINGER_AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.ok ? await r.json() : { error: 'failed' }; }
+    catch { return { error: 'failed' }; }
+  }
+  function openAsk() {
+    attach(); hideChip();
+    const sel = String(getSelection() || '').replace(/\s+/g, ' ').trim();
+    if (sel && /[A-Za-z]/.test(sel)) askFocus = sel.slice(0, 700);
+    askBox = document.createElement('div');
+    askBox.className = 'ask-panel'; askBox.setAttribute('role', 'dialog'); askBox.setAttribute('aria-label', 'Ask Linger about this page');
+    askBox.innerHTML = `<div class="ask-head"><div><strong>✦ Ask Linger</strong><small>About this page</small></div>
+        <div class="ask-tools"><button type="button" class="ask-x" id="new" title="Start over" aria-label="Start a new chat">↺</button><button type="button" class="ask-x" id="close" aria-label="Close">✕</button></div></div>
+      <div class="ask-log" id="log" aria-live="polite"></div>
+      <div class="ask-focus" id="focus" hidden></div>
+      <form class="ask-form" id="form"><textarea id="q" rows="1" placeholder="Ask anything about this page…" aria-label="Your question"></textarea><button type="submit" class="ask-send" aria-label="Send">↑</button></form>`;
+    layer.appendChild(askBox);
+    fab.setAttribute('aria-expanded', 'true');
+    const $ = (id) => askBox.querySelector('#' + id);
+    $('close').onclick = closeAsk;
+    $('new').onclick = () => { askHist.length = 0; askFocus = ''; drawLog(); drawFocus(); $('q').focus(); };
+    $('form').onsubmit = (e) => { e.preventDefault(); ask($('q').value); };
+    $('q').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask($('q').value); } };
+    $('q').oninput = () => { const t = $('q'); t.style.height = 'auto'; t.style.height = Math.min(96, t.scrollHeight) + 'px'; };
+    drawLog(); drawFocus();
+    $('q').focus();
+  }
+  function drawFocus() {
+    if (!askBox) return;
+    const f = askBox.querySelector('#focus');
+    f.hidden = !askFocus;
+    f.innerHTML = askFocus ? `<span>About your highlight: “${esc(askFocus.length > 90 ? askFocus.slice(0, 90) + '…' : askFocus)}”</span><button type="button" class="ask-x small" aria-label="Ask about the whole page instead">✕</button>` : '';
+    if (askFocus) f.querySelector('button').onclick = () => { askFocus = ''; drawFocus(); };
+  }
+  function drawLog(pending, err) {
+    if (!askBox) return;
+    const log = askBox.querySelector('#log');
+    const msgs = askHist.map((t, i) => `<div class="msg-me">${esc(t.q)}</div><div class="msg-ai">${esc(t.a)}<button type="button" class="ask-hear" data-i="${i}">🔊 Read aloud</button></div>`).join('');
+    const intro = askHist.length || pending ? '' : `<div class="msg-ai">Hi! Ask me anything about this page, or ask for help deciding what to do. I only use what’s on the page.</div>
+      <div class="ask-sugg">${SUGGEST.map((s) => `<button type="button">${esc(s)}</button>`).join('')}</div>
+      <p class="ask-note">You can hide this button in the Linger menu.</p>`;
+    log.innerHTML = intro + msgs + (pending ? `<div class="msg-me">${esc(pending)}</div><div class="msg-ai wait">Reading the page…</div>` : '') + (err ? `<div class="msg-ai err">${esc(err)}</div>` : '');
+    log.querySelectorAll('.ask-sugg button').forEach((b) => { b.onclick = () => ask(b.textContent); });
+    log.querySelectorAll('.ask-hear').forEach((b) => { b.onclick = () => speakIt(askHist[+b.dataset.i].a); });
+    log.scrollTop = log.scrollHeight;
+  }
+  async function ask(raw) {
+    const q = String(raw || '').trim();
+    if (!q || asking || !askBox) return;
+    asking = true;
+    const box = askBox.querySelector('#q'); box.value = ''; box.style.height = '';
+    drawLog(q);
+    const r = await askServer(q);
+    asking = false;
+    if (r && r.answer) { askHist.push({ q, a: r.answer.replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#+\s*/gm, '') }); drawLog(); }
+    else drawLog('', r && r.error === 'busy' ? 'Lots of questions right now. Please wait a minute and try again.' : r && r.error === 'off' ? 'AI is turned off in the Linger menu.' : 'Linger couldn’t answer right now. Check your internet connection and try again.');
+    if (askBox) askBox.querySelector('#q').focus();
+  }
+
   // ---------- settings and messages ----------
   function apply() {
     document.documentElement.classList.toggle('linger-big', !!S.bigger);
     document.documentElement.classList.toggle('linger-spread', !!S.spread);
     if (active()) { scan(document.body); mo.observe(document.body, { childList: true, subtree: true }); }
     else { mo.disconnect(); unwrapAll(); closeCard(); }
+    showFab();
   }
   if (api) {
-    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
       if (active() !== was || ch.bigger || ch.spread) apply();
+      if (ch.assistant || ch.aiOn || ch.paused || ch.highlight) showFab();
     });
     chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (msg.type === 'explain') { explainPage(); reply({ ok: true }); }

@@ -37,6 +37,18 @@ async function askAI({ mode, text, context }) {
   } catch { return null; } finally { clearTimeout(t); }
 }
 
+// Ask Linger: a question about the whole page (no caching: every question is different).
+async function askPage(body) {
+  const { aiOn } = await chrome.storage.local.get({ aiOn: true });
+  if (!AI_URL || !aiOn) return { error: 'off' };
+  const stop = new AbortController(), t = setTimeout(() => stop.abort(), 60000);
+  try {
+    const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, mode: 'ask' }), signal: stop.signal });
+    if (r.status === 429) return { error: 'busy' };
+    return r.ok ? await r.json() : { error: 'failed' };
+  } catch { return { error: 'failed' }; } finally { clearTimeout(t); }
+}
+
 // Synonyms with how common each word is (Datamuse, which uses WordNet and word counts from books and the web).
 const synCache = new Map();
 async function synonyms(word) {
@@ -105,6 +117,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg.type === 'lookup') return reply(await lookup(msg.word));
     if (msg.type === 'synonyms') return reply(await synonyms(msg.word));
     if (msg.type === 'ai') return reply(await askAI(msg));
+    if (msg.type === 'ai-ask') return reply(await askPage(msg.body || {}));
     if (msg.type === 'save') {
       const { saved = [], pairCode = '' } = await chrome.storage.local.get({ saved: [], pairCode: '' });
       const list = [{ key: msg.key, ...msg.word, at: Date.now() }, ...saved.filter((x) => x.key !== msg.key)].slice(0, 200);
