@@ -8,17 +8,20 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* Chrome draws the menu as a square window, so no rounded outer corners. The Figma frame is 439px wide;
+   zoom shrinks the whole design evenly to 342px so it doesn't take over the page. */
+html { zoom: 0.78; }
 body { margin: 0; width: 439px; font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--text-primary); background: #FFFFFF; }
 
 /* ---------- header ---------- */
-.top { position: relative; overflow: hidden; display: flex; align-items: center; gap: 16px; padding: 20px 14px 14px; border: 1px solid var(--border-default); border-bottom: 0; border-radius: 12px 12px 0 0; background: linear-gradient(178.59deg, #1F2DA8 1.41%, #5464D9 105.55%); }
+.top { position: relative; overflow: hidden; display: flex; align-items: center; gap: 16px; padding: 20px 14px 14px; background: linear-gradient(178.59deg, #1F2DA8 1.41%, #5464D9 105.55%); }
 .rings { position: absolute; left: calc(173.32px + (344.934px - 252.51px) / 2); top: calc(-136.47px + (344.934px - 252.51px) / 2); transform: rotate(-30deg); pointer-events: none; }
 .top h1 { position: relative; flex: 1; margin: 0; padding-bottom: 4px; font-size: 32px; font-weight: 800; line-height: 24px; height: 31.67px; display: flex; align-items: flex-start; color: #FFFFFF; }
 .glass { position: relative; flex: none; display: flex; align-items: center; gap: 4px; height: 44px; padding: 0 18px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px; background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(2px); color: var(--text-inverse); font: 700 14px/20px 'Figtree', system-ui, sans-serif; cursor: pointer; }
 .glass:hover { background: rgba(255, 255, 255, 0.24); }
 
 /* ---------- body ---------- */
-main { display: flex; flex-direction: column; gap: 16px; padding: 14px 14px 18px; border: 1px solid var(--border-default); border-radius: 0 0 12px 12px; background: linear-gradient(90deg, #FFFFFF, #FCFDFF); }
+main { display: flex; flex-direction: column; gap: 16px; padding: 14px 14px 18px; background: linear-gradient(90deg, #FFFFFF, #FCFDFF); }
 section { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 12px; border: 1px solid var(--border-default); border-radius: 12px; }
 h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-height: normal; color: var(--indigo-900); }
 .head { align-self: stretch; display: flex; flex-direction: column; gap: 8px; }
