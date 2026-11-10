@@ -120,7 +120,7 @@
   const pin = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const speaker = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   const xIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
-  const logo = '<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="11.5" fill="none" stroke="#44C9E6" stroke-width="3"/><circle cx="15" cy="15" r="5" fill="#44C9E6"/></svg>';
+  const logo = '<img class="logo" src="icons/figma/logo.svg" width="33" height="33.48" alt="Linger">';
   const isSaved = (k) => S.saved.includes(k);
   function toggleSave(k) {
     const i = S.saved.indexOf(k);
@@ -548,23 +548,26 @@
     const date = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
     const days = ['S', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
     const filters = [['all', 'All words'], ['slang', 'Slang/customs'], ['hard', 'Hard words']];
-    return `<header class="hero">${rings([['ring', 'width:230px;height:230px;right:-70px;top:-40px'], ['dot', 'width:96px;height:96px;right:20px;top:-26px']])}
-      <div class="hero-top">${logo}<span class="cal" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span></div>
-      <h1>${esc(day)},<br>${esc(date)}</h1>
-      <div class="hsub">${n === 1 ? '1 word saved' : n + ' words saved'}</div>
-      <div class="week"><span class="arrow">◀</span>${days.map((d, i) => `<span class="d ${i === now.getDay() ? 'on' : ''}">${d}</span>`).join('')}<span class="arrow">▶</span></div>
+    // Layout from Figma "final draft" (node 28:3330).
+    const arrow = (flip) => `<svg class="arrow" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"${flip ? ' style="transform: scaleX(-1)"' : ''}><path d="M8 5v14l11-7z" fill="#FFFFFF"/></svg>`;
+    return `<header class="hero wh">
+      <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
+      ${logo}
+      <div class="wh-title"><div class="wh-row"><h1>${esc(day)},<br>${esc(date)}</h1><span class="cal" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span></div>
+        <div class="hsub">${n === 1 ? '1 word saved' : n + ' words saved'}</div></div>
+      <div class="week">${arrow(true)}${days.map((d, i) => `<span class="d ${i === now.getDay() ? 'on' : ''}">${d}</span>`).join('')}${arrow(false)}</div>
     </header>
-    <div class="body">
-      <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" aria-label="Search your words"></label>
+    <div class="body wb">
+      <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" aria-label="Search your words"></label>
       <div class="chips">${filters.map(([id, l]) => `<button type="button" class="chip ${S.wordFilter === id ? 'on' : ''}" data-action="filter" data-v="${id}">${esc(l)}</button>`).join('')}</div>
-      ${syncCard()}
-      ${list.length ? list.map((k) => { const e = D[k]; return `<button type="button" class="item" data-action="open" data-k="${k}">
+      <div class="wlist">${list.length ? list.map((k) => { const e = D[k]; return `<button type="button" class="item" data-action="open" data-k="${k}">
         <span class="item-head"><span class="word">${esc(cap(e.word))}</span>${badge(e.kind)}</span>
-        <span style="font-size: 14px">${esc(e.meaning)}</span>
+        <span class="mean">${esc(e.meaning)}</span>
         <span class="quote">“${esc(e.sentence)}”</span>
-        <span class="meta">${pin}${esc(placeOf(e))} · ${esc(S.savedDates[k] || 'Today')}</span></button>`; }).join('')
+        <span class="meta"><img src="icons/figma/pin.svg" width="12" height="12" alt="">${esc(placeOf(e))}</span></button>`; }).join('')
         : `<div class="empty">${q ? 'No saved words match your search.' : 'Nothing here yet. Words you save from the lens or the local guide show up here.'}</div>`}
-      <button type="button" class="btn primary start" data-action="play" data-v="story">✦ Start Activity</button>
+      ${syncCard()}</div>
+      <div class="start-wrap"><button type="button" class="btn primary start" data-action="play" data-v="story"><img src="icons/figma/sparkle.svg" width="19.534" height="20.078" alt="">Start Activity</button></div>
     </div>`;
   }
 
@@ -657,8 +660,8 @@
 
   // ---------- full-screen activities ----------
   function viewCards() {
-    const deck = S.saved.filter((k) => D[k]);
     const c = S.cards;
+    const deck = [...S.saved.filter((k) => D[k]), ...(c.again || [])]; // flagged words come back once at the end
     const deco = rings([['ring', 'width:240px;height:240px;left:-110px;top:-70px'], ['dot', 'width:76px;height:76px;left:-10px;top:0'], ['ring', 'width:240px;height:240px;right:-90px;bottom:-60px'], ['dot', 'width:90px;height:90px;right:-4px;bottom:20px']]);
     const top = `<div class="topbar"><button type="button" class="x" data-action="quit" aria-label="Close flashcards">${xIcon}</button><span class="t">Flashcards</span><span class="n">${Math.min(c.idx + 1, deck.length)} of ${deck.length}</span></div>`;
     if (c.idx >= deck.length) {
@@ -668,15 +671,19 @@
     }
     const e = D[deck[c.idx]];
     const q = esc(e.sentence).replace(new RegExp(esc(e.word), 'i'), (m) => `<b>${m}</b>`);
-    return `<div class="full-view cards-view">${deco}${top}
-      <div class="flash"><div class="fh">${badge(e.kind)}<svg width="18" height="18" viewBox="0 0 24 24" fill="#5B6070" aria-hidden="true"><path d="M5 21V4h11l-1.5 4L16 12H7v9z"/></svg></div>
-        <div class="big">${esc(cap(e.word))}</div>
-        <div class="q">“${q}”</div>
-        <div class="meta">${pin}${esc(placeOf(e))}</div>
-        ${c.revealed ? `<div class="answer">${esc(e.meaning)}</div>` : ''}</div>
-      <div class="actions">${c.revealed
-        ? '<div class="grid2"><button type="button" class="btn white" data-action="card-next">Again soon</button><button type="button" class="btn white" data-action="card-next">Got it</button></div>'
-        : '<button type="button" class="btn primary" data-action="card-reveal">Show meaning</button>'}</div></div>`;
+    // Layout from Figma "final draft" (nodes 40:3801 front, 40:4073 after "Show meaning").
+    const flag = `<button type="button" class="fc-flag" data-action="card-flag" aria-pressed="${!!c.flag}" aria-label="${c.flag ? 'Flagged: this word comes back at the end' : 'Flag to practice this word again'}"><svg width="24" height="24" viewBox="0 0 24 24" fill="${c.flag ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg></button>`;
+    return `<div class="full-view cards-view fc">
+      <div class="fc-rings fc-r1" aria-hidden="true"><img src="icons/figma/rings-card-bottom.svg" width="453.097" height="496.459" alt=""></div>
+      <div class="fc-rings fc-r2" aria-hidden="true"><img src="icons/figma/rings-card-top.svg" width="351.387" height="351.387" alt=""></div>
+      <div class="fc-top"><button type="button" class="x" data-action="quit" aria-label="Close flashcards"><img src="icons/figma/x.svg" width="23" height="23" alt=""></button><span class="n">${Math.min(c.idx + 1, deck.length)} of ${deck.length}</span></div>
+      <div class="fc-stack">
+        <div class="fc-card">
+          <div class="fc-head"><div class="fc-row">${badge(e.kind)}${flag}</div><div class="fc-word">${esc(cap(e.word))}</div></div>
+          <div class="fc-body"><p class="fc-q">“${q}”</p>${c.revealed ? `<p class="fc-ans">${esc(e.meaning)}</p>` : ''}<div class="fc-meta"><img src="icons/figma/pin-16.svg" width="16" height="16" alt="">${esc(placeOf(e))}</div></div>
+        </div>
+        ${c.revealed ? '<button type="button" class="btn fc-btn white" data-action="card-next">Got it</button>' : '<button type="button" class="btn fc-btn primary" data-action="card-reveal">Show meaning</button>'}
+      </div></div>`;
   }
 
   function newGame(storyIdx) {
@@ -689,15 +696,17 @@
     const g = S.game, st = STORIES[g.story];
     const answers = st.parts.filter((_, i) => i % 2 === 1);
     let b = -1;
+    // Punctuation right after a blank stays with it, so a line never starts with ". She".
+    const punct = (i) => ((st.parts[i + 1] || '').match(/^[.,;:!?”’)]+/) || [''])[0];
     const text = st.parts.map((p, i) => {
-      if (i % 2 === 0) return esc(p);
+      if (i % 2 === 0) return esc(i > 0 ? p.slice(punct(i - 1).length) : p);
       b++;
       const w = g.placed[b];
       let cls = 'blank';
       if (g.checked) cls += w === answers[b] ? ' right' : ' wrong';
       else if (w) cls += ' filled';
       else if (g.sel) cls += ' target';
-      return `<button type="button" class="${cls}" data-action="blank" data-b="${b}" aria-label="${w ? 'Blank filled with ' + esc(D[w].word) : 'Empty blank ' + (b + 1)}">${w ? esc(D[w].word) : ''}</button>`;
+      return `<span class="bw"><button type="button" class="${cls}" data-action="blank" data-b="${b}" aria-label="${w ? 'Blank filled with ' + esc(D[w].word) : 'Empty blank ' + (b + 1)}">${w ? esc(D[w].word) : ''}</button>${esc(punct(i))}</span>`;
     }).join('');
     const left = g.placed.filter((x) => !x).length;
     let tray;
@@ -724,7 +733,7 @@
         <div class="grid2"><button type="button" class="btn" data-action="miss-next">Next word</button>${second}</div>`;
     }
     return `<div class="full-view story-view">
-      <div class="story-top"><div class="topbar"><button type="button" class="x" data-action="quit" aria-label="Close activity">${xIcon}</button><span class="t">Fill in the story</span><span class="n">${g.story + 1} of ${STORIES.length}</span></div></div>
+      <div class="story-top"><div class="st-bar"><button type="button" class="x" data-action="quit" aria-label="Close activity"><img src="icons/figma/x.svg" width="23" height="23" alt=""></button><div class="st-tt"><span class="t">Fill in the story</span><span class="n">${g.story + 1} of ${STORIES.length}</span></div></div></div>
       <div class="story"><h2>${esc(st.title)}</h2><p>${text}</p></div>
       <div class="tray">${tray}</div></div>`;
   }
@@ -889,7 +898,12 @@
     capture: () => { capture(); },
     quit: () => { S.activity = null; S.game = null; },
     'card-reveal': () => { S.cards.revealed = true; },
-    'card-next': () => { S.cards.idx += 1; S.cards.revealed = false; },
+    'card-next': () => {
+      const c = S.cards, deck = [...S.saved.filter((k) => D[k]), ...(c.again || [])], k = deck[c.idx];
+      if (c.flag && k && !(c.again || []).includes(k)) c.again = [...(c.again || []), k];
+      c.idx += 1; c.revealed = false; c.flag = false;
+    },
+    'card-flag': () => { S.cards.flag = !S.cards.flag; },
     pick: (d) => { const g = S.game; g.sel = g.sel === d.k ? null : d.k; },
     blank: (d) => {
       const g = S.game, b = Number(d.b);
