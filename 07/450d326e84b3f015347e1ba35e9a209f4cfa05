@@ -1,0 +1,75 @@
+index.html
+  s_99ec2d8108581c::t_31e864a5094ca0 26-29
+  s_99ec2d8108581c::t_758ba42c6a1b10 17,47
+extension/popup.html
+  s_99ec2d8108581c::t_f7cf6c388ca30f 10-12,19-25,29-36,38,42-51,55,57
+extension/popup.js
+  s_99ec2d8108581c::t_e9cbba58420dbc 7-9,28,32,53,57,75
+icons/figma/pin.svg
+  s_99ec2d8108581c::t_d89a91022828ed 1-6
+extension/popup.css
+  s_99ec2d8108581c::t_9902c6fb689775 10
+  s_99ec2d8108581c::t_3f0b1334883d5f 28-29
+  s_99ec2d8108581c::t_f74c26a3601411 1-8,11-27,30-33,35-51,53-65,67-73,75-77,79
+icons/figma/tab-eye.svg
+  s_99ec2d8108581c::t_d89a91022828ed 1-6
+icons/figma/tab-pin.svg
+  s_99ec2d8108581c::t_d89a91022828ed 1-6
+app.js
+  s_99ec2d8108581c::t_89ba030e9cf8a8 123,551-558,560-561,563,565,567,569-570
+  s_99ec2d8108581c::t_758ba42c6a1b10 664,674-686,736,901-906
+  s_99ec2d8108581c::t_57caabefea92ce 699-700,702,709
+extension/icons/popup/switch-off.svg
+  s_99ec2d8108581c::t_b1199500f9261e 1-19
+icons/figma/tab-book.svg
+  s_99ec2d8108581c::t_d89a91022828ed 1-6
+icons/figma/handle.svg
+  s_99ec2d8108581c::t_d89a91022828ed 1-3
+icons/figma/sparkle.svg
+  s_99ec2d8108581c::t_d89a91022828ed 1-6
+icons/figma/tab-cards.svg
+  s_99ec2d8108581c::t_d89a91022828ed 1-6
+styles.css
+  s_99ec2d8108581c::t_31e864a5094ca0 172-174,372-395,397-405,407
+  s_99ec2d8108581c::t_f73b97261bb090 406
+  s_99ec2d8108581c::t_57caabefea92ce 474
+  s_99ec2d8108581c::t_864dfd01b462fa 396
+  s_99ec2d8108581c::t_758ba42c6a1b10 408-410,412-473
+  s_99ec2d8108581c::t_59847c0c3a15f0 411
+icons/figma/logo.svg
+  s_99ec2d8108581c::t_d89a91022828ed 1-7
+icons/figma/rings-card-bottom.svg
+  s_99ec2d8108581c::t_d0b57fd874703c 1-7
+icons/figma/rings-card-top.svg
+  s_99ec2d8108581c::t_d0b57fd874703c 1-7
+icons/figma/pin-16.svg
+  s_99ec2d8108581c::t_d0b57fd874703c 1-6
+icons/figma/rings-words.svg
+  s_99ec2d8108581c::t_d89a91022828ed 1-7
+icons/figma/x.svg
+  s_99ec2d8108581c::t_f77b4c7cf7d548 1-5
+extension/manifest.json
+  s_99ec2d8108581c::t_101687bb1adbba 4
+extension/icons/popup/recalibrate.svg
+  s_99ec2d8108581c::t_28def315a42a3d 1-7
+extension/icons/popup/rings.svg
+  s_99ec2d8108581c::t_225ce839010b47 1-7
+extension/icons/popup/switch-on.svg
+  s_99ec2d8108581c::t_f75b2051da425d 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "07450d326e84b3f015347e1ba35e9a209f4cfa05",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
