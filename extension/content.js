@@ -541,11 +541,11 @@
   };
   function showChip() {
     hideChip();
-    if (!active() || card) return;
+    if (!S.highlight || S.paused.includes(host) || card) return; // also while the page is translated
     const sel = getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const text = sel.toString().replace(/\s+/g, ' ').trim();
-    if (!/[A-Za-z]{2}/.test(text) || text.split(' ').length > MAX_WORDS || text.length > 700) return;
+    if (!/\p{L}/u.test(text) || text.split(' ').length > MAX_WORDS || text.length > 700) return; // any language
     const range = sel.getRangeAt(0).cloneRange();
     if (!selOk(range.startContainer) || !selOk(range.endContainer)) return;
     const rects = range.getClientRects(), first = rects[0], last = rects[rects.length - 1];
@@ -580,9 +580,11 @@
     try { r.surroundContents(sp); } catch { return null; }
     return sp;
   }
-  function explainRange(range, text) {
-    const sp = text.split(' ').length === 1 ? wordSpan(range) : null;
+  async function explainRange(range, text) {
     getSelection().removeAllRanges();
+    const from = await foreignLang(text);
+    if (from !== 'en') return openForeign(range, text, from);
+    const sp = text.split(' ').length === 1 ? wordSpan(range) : null;
     if (sp) openCard(sp); else openPhrase(range, text);
   }
   const localMeaning = (k) => (SLANG[k] && SLANG[k].meaning) || (D[k] && D[k].meaning) || '';
@@ -727,6 +729,87 @@
     if (card && (cardSpan || cardRange)) place(card, (cardSpan || cardRange).getBoundingClientRect());
   }, { passive: true });
 
+  // ---------- highlighted text in another language ----------
+  // On a page Linger translated (or one written in another language), highlighting text used to do nothing: the
+  // Explain button only appeared for English letters. Now it shows the text in English, the original English from the
+  // page when Linger did the translating, and what it means (also in the reader's language).
+  let pageLangCache = null;
+  const NON_LATIN = /[^\u0000-ɏḀ-ỿ\s\d\p{P}\p{S}]/u;
+  async function detectText(text) {
+    try {
+      if (typeof LanguageDetector !== 'undefined' && (await LanguageDetector.availability()) === 'available') {
+        const [best] = await (await LanguageDetector.create()).detect(text);
+        if (best && best.confidence > 0.5 && best.detectedLanguage !== 'und') return best.detectedLanguage;
+      }
+    } catch {}
+    return '';
+  }
+  async function foreignLang(text) {
+    if (pageTr) return pageTr.to;
+    const d = await detectText(text);
+    if (d) return d;
+    if (!pageLangCache) pageLangCache = pageLang();
+    const p = await pageLangCache;
+    return base(p) !== 'en' ? p : NON_LATIN.test(text) ? 'und' : 'en';
+  }
+  async function openForeign(range, text, from) {
+    if (dead) return;
+    attach(); closeCard(); hideChip();
+    cardRange = range;
+    if (HL) HL.set('linger-sel', new Highlight(range));
+    addFonts();
+    const isCur = () => card && cardRange === range;
+    const orig = pageTr ? [...new Set([range.startContainer, range.endContainer].map((n) => pageTr.orig.get(n)).filter(Boolean))].map((x) => x.trim()).join(' … ') : '';
+    const dir = rtl(from) ? 'rtl' : 'auto', mine = S.transLang && S.transLang !== 'en' ? S.transLang : '';
+    let english = '', meaning = '';
+    card = document.createElement('div');
+    card.className = 'wc'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'Meaning of the highlighted text');
+    card.innerHTML = `<div class="wc-top">
+        <div class="wc-rings"><img src="${asset('icons/card/header-rings.svg')}" width="252.51" height="252.51" alt=""></div>
+        <div class="wc-head">
+          <div class="wc-row"><span class="wc-badge">${from === 'und' ? 'Translation' : esc(LANG(from).name)}</span>
+            <div class="wc-icons"><span class="wc-saved" id="saved" hidden>Saved</span>
+              <button class="wc-icon" id="hear" aria-label="Hear it in English" title="Hear it in English"><img src="${asset('icons/card/volume.svg')}" width="24" height="24" alt=""></button>
+              <button class="wc-icon" id="save" aria-label="Save to Linger" aria-pressed="false" title="Save to Linger"><img src="${asset('icons/card/bookmark.svg')}" width="24" height="24" alt=""></button></div></div>
+          <div class="wc-words"><p class="wc-word wc-phrase" lang="${esc(from)}" dir="${dir}" title="${esc(text)}">${esc(text)}</p></div>
+        </div></div>
+      <div class="wc-body">
+        <div class="wc-ctx"><p class="wc-lbl">In English:</p><p class="wc-meaning" id="en">Translating…</p></div>
+        ${orig ? `<div class="wc-ctx"><p class="wc-lbl">On the original page:</p><div class="wc-box"><p class="wc-s">“${esc(orig.length > 400 ? orig.slice(0, 400) + '…' : orig)}”</p></div></div>` : ''}
+        <div class="wc-ctx" id="mean" hidden></div>
+        <p class="wc-note" id="note"></p>
+      </div>`;
+    layer.appendChild(card);
+    place(card, range.getBoundingClientRect());
+    card.querySelector('#hear').onclick = () => speakIt(english || orig);
+    card.querySelector('#save').onclick = async () => {
+      const r = await send({ type: 'save', key: 'phrase-' + (english || text).toLowerCase().replace(/[^\p{L}0-9]+/gu, '-').slice(0, 60), word: { w: english || text, m: meaning || text, s: orig || text, p: '', place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
+      if (!isCur()) return;
+      card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true');
+      card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : 'Saved.';
+    };
+    // 1. In English (the original English is already right there when Linger translated this page).
+    const en = from === 'en' ? { text } : await translate(text, { from, to: 'en' });
+    if (!isCur()) return;
+    english = (en && en.text) || '';
+    card.querySelector('#en').textContent = english || (S.aiOn ? 'Couldn’t translate this right now. Check your internet connection.' : 'Turn on AI explanations in the Linger menu to translate this.');
+    place(card, range.getBoundingClientRect());
+    if (!english) return;
+    // 2. What it means, in plain English, and in the reader's language.
+    const words = english.split(/\s+/).length;
+    const a = await askAI(words <= 2 ? 'word' : 'phrase', english, orig || english);
+    if (!isCur() || !a || !a.meaning) return;
+    meaning = a.meaning;
+    const m = card.querySelector('#mean');
+    m.hidden = false;
+    m.innerHTML = `<p class="wc-lbl">What it means:</p><p class="wc-local">${esc(meaning)}</p>`;
+    if (mine) {
+      const t = await translate(meaning, { to: mine });
+      if (isCur() && t && t.text) m.insertAdjacentHTML('beforeend', `<p class="wc-lbl">In ${esc(LANG(mine).own)}:</p><p class="wc-local" lang="${esc(mine)}" dir="${rtl(mine) ? 'rtl' : 'auto'}">${esc(t.text)}</p>`);
+    }
+    if (isCur()) place(card, range.getBoundingClientRect());
+  }
+
   // ---------- translate the whole page ----------
   // Swaps each piece of text on the page for its translation (layout, links and buttons keep working) and can swap it
   // back. Uses Chrome's on-device translator only: a whole page is too much to send to Claude.
@@ -778,9 +861,10 @@
     if (!lang) return { ok: false, why: 'Pick your language first.' };
     const from = await pageLang(), to = pageTarget(from, lang);
     if (base(from) === base(to)) return { ok: false, why: `This page is already in ${LANG(to).name}.` };
-    if (typeof Translator === 'undefined') return { ok: false, why: 'This Chrome can’t translate whole pages. Update Chrome to version 138 or newer. You can still highlight text to translate it.' };
+    // Chrome's translator when it works here; otherwise Claude, a batch of text pieces at a time (needs AI explanations
+    // on). Before, a page whose Chrome translator wasn't ready (Hindi, for one) just said it couldn't translate.
     const t = await chromeTranslator(from, to);
-    if (!t) return { ok: false, why: `Chrome can’t translate ${LANG(from).name} into ${LANG(to).name} on this laptop. You can still highlight text to translate it.` };
+    if (!t && !S.aiOn) return { ok: false, why: `Chrome can’t translate ${LANG(from).name} into ${LANG(to).name} here. Turn on AI explanations in the Linger menu to translate with Claude.` };
     // Underlines split sentences into pieces, so they come off while the page is translated (and back after).
     pageTr = { from, to, orig: new Map(), bar: null };
     mo.disconnect(); unwrapAll(); closeCard(); hideChip();
@@ -792,22 +876,39 @@
     const order = nodes.map((nd) => [rank(nd), nd]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
     const label = `${LANG(from).name} → ${LANG(to).own}`, me = pageTr;
     trBar(`Translating ${label}…`);
+    const put = (nd, src, out) => { me.orig.set(nd, src); nd.nodeValue = src.match(/^\s*/)[0] + out + src.match(/\s*$/)[0]; };
+    const pct = (done) => trBar(`Translating ${label}… ${Math.round((done / order.length) * 100)}%`);
     (async () => {
       let done = 0;
-      for (const nd of order) {
-        if (pageTr !== me) return; // "Show original" was pressed
-        const src = nd.nodeValue, core = src.trim();
-        if (core && nd.isConnected) {
-          try {
-            const out = await t.translate(core);
-            if (pageTr !== me) return;
-            me.orig.set(nd, src);
-            nd.nodeValue = src.match(/^\s*/)[0] + out + src.match(/\s*$/)[0];
-          } catch {}
+      if (t) {
+        for (const nd of order) {
+          if (pageTr !== me) return; // "Show original" was pressed
+          const src = nd.nodeValue, core = src.trim();
+          if (core && nd.isConnected) { try { const out = await t.translate(core); if (pageTr !== me) return; put(nd, src, out); } catch {} }
+          if (++done % 25 === 0) pct(done);
         }
-        if (++done % 25 === 0) trBar(`Translating ${label}… ${Math.round((done / order.length) * 100)}%`);
+        return trBar(`Translated ${label} by Chrome on this laptop`);
       }
-      trBar(`Translated ${label} by Chrome on this laptop`);
+      // Claude: up to 40 pieces (5,000 letters) per request, screen first.
+      const batches = []; let cur = [], len = 0;
+      for (const nd of order) {
+        const core = nd.nodeValue.trim().slice(0, 600);
+        if (cur.length && (cur.length >= 40 || len + core.length > 4800)) { batches.push(cur); cur = []; len = 0; }
+        cur.push(nd); len += core.length;
+      }
+      if (cur.length) batches.push(cur);
+      let failed = 0;
+      for (const b of batches.slice(0, 25)) { // about 1,000 pieces at most, so one page can't run up the bill
+        if (pageTr !== me) return;
+        const srcs = b.map((nd) => nd.nodeValue);
+        const r = await askAI('translate-many', '', '', { lang: to, langName: LANG(to).name, from, texts: srcs.map((x) => x.trim().slice(0, 600)) });
+        if (pageTr !== me) return;
+        const outs = r && Array.isArray(r.translations) ? r.translations : null;
+        if (!outs || outs.length !== b.length) failed++;
+        if (outs) b.forEach((nd, i) => { if (outs[i] && nd.isConnected && nd.nodeValue === srcs[i]) put(nd, srcs[i], outs[i]); });
+        done += b.length; pct(done);
+      }
+      trBar(failed === batches.length ? 'Couldn’t translate this page right now. Check your internet connection.' : `Translated ${label} by Claude${failed ? ' (some parts were skipped)' : ''}`);
     })();
     return { ok: true, from, to };
   }

@@ -69,6 +69,16 @@ SCHEMAS.translate = {
     note: str('Written in the target language. If the text is an idiom, slang, a legal or official term, or something that does not translate word for word: one short sentence in the target language explaining what it really means. Otherwise an empty string.')
   }
 };
+// A whole page: many short pieces of text at once (when Chrome's on-device translator can't do the page).
+SCHEMAS['translate-many'] = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['translations'],
+  properties: {
+    translations: { type: 'array', items: { type: 'string' }, description: 'One translation per <t> item, in the same order and the same number of items. Keep names, numbers, links text and punctuation; translate only the words.' }
+  }
+};
+export const MANY = { items: 40, chars: 5000 };
 const TRANSLATE_SYSTEM = `You are Linger, a reading helper for adults who are new to a country and read in a second language. Translate the text the reader picked into their own language so they understand it.
 
 Write every field (translation, sentence and note) in the target language only, never in English, unless the target language is English.
@@ -101,6 +111,18 @@ export function readInput(body) {
     const history = (Array.isArray(body.history) ? body.history : []).slice(-LIMITS.turns)
       .map((t) => ({ q: clip(t && t.q, LIMITS.question), a: clip(t && t.a, LIMITS.answer) })).filter((t) => t.q && t.a);
     return { mode, question, page, title: clip(body.title, 200), site: clip(body.site, 100), focus: clip(body.focus, LIMITS.text), history };
+  }
+  if (mode === 'translate-many') {
+    const code = (v, d) => (/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(String(v || '')) ? String(v) : d);
+    const lang = code(body.lang, '');
+    if (!lang) return { error: 'lang must be a language code like "es"' };
+    const texts = []; let total = 0;
+    for (const t of Array.isArray(body.texts) ? body.texts : []) {
+      const x = clip(t, 600); if (texts.length >= MANY.items || total + x.length > MANY.chars) break;
+      texts.push(x); total += x.length;
+    }
+    if (!texts.length) return { error: 'texts is empty' };
+    return { mode, texts, lang, langName: clip(body.langName, 40).replace(/[^\p{L} ()-]/gu, '') || lang, from: code(body.from, 'en') };
   }
   if (mode === 'translate') {
     const code = (v, d) => (/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(String(v || '')) ? String(v) : d);
@@ -144,6 +166,17 @@ function buildAsk({ question, page, title, site, focus, history }) {
 // The Messages API request for one explanation.
 export function buildRequest(input) {
   if (input.mode === 'ask') return buildAsk(input);
+  if (input.mode === 'translate-many') {
+    const { texts, lang, langName, from } = input;
+    return {
+      model: MODEL,
+      max_tokens: 16000,
+      ...(FALLBACK ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : {}),
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMAS['translate-many'] } },
+      system: TRANSLATE_SYSTEM,
+      messages: [{ role: 'user', content: `These ${texts.length} pieces of text are from one web page, in order. Translate each from ${from} into ${langName} (${lang}). Return exactly ${texts.length} translations in the same order.\n\n${texts.map((t, i) => `<t i="${i}">${t}</t>`).join('\n')}` }]
+    };
+  }
   if (input.mode === 'translate') {
     const { text, context, lang, langName, from, sentence } = input;
     return {
@@ -186,6 +219,7 @@ export function readResult(response, asked = false) {
   let out;
   try { out = JSON.parse(block.text); } catch { return { error: 'bad answer' }; }
   const s = (v, n = 600) => clip(v, n);
+  if (Array.isArray(out.translations)) return { translations: out.translations.map((t) => s(t, 900)) };
   if (typeof out.translation === 'string') return { translation: s(out.translation, 900), sentence: s(out.sentence, 900), note: s(out.note, 400) };
   if (out.hardWords) {
     return { meaning: s(out.meaning), plain: s(out.plain, 900), hardWords: out.hardWords.slice(0, 5).map((h) => ({ word: s(h.word, 60), meaning: s(h.meaning, 200), easier: s(h.easier, 60) })) };

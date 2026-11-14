@@ -44,14 +44,14 @@ async function postAI(body, ms) {
     await new Promise((res) => setTimeout(res, r && r.status === 429 ? 2500 : 1200));
   }
 }
-async function askAI({ mode, text, context, lang, langName, from, sentence }) {
+async function askAI({ mode, text, context, lang, langName, from, sentence, texts }) {
   const { aiOn } = await chrome.storage.local.get({ aiOn: true });
   if (!AI_URL || !aiOn) return null;
-  const extra = mode === 'translate' ? { lang, langName, from, sentence: !!sentence } : {};
+  const extra = mode === 'translate' ? { lang, langName, from, sentence: !!sentence } : mode === 'translate-many' ? { lang, langName, from, texts } : {};
   const key = JSON.stringify([mode, text, context, extra]);
   if (aiCache.has(key)) return aiCache.get(key);
   try {
-    const r = await postAI({ mode, text, context, ...extra }, 25000);
+    const r = await postAI({ mode, text, context, ...extra }, mode === 'translate-many' ? 55000 : 25000);
     const out = r && r.ok ? await r.json() : null;
     if (!out || out.error) return null;
     aiCache.set(key, out);

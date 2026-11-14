@@ -50,3 +50,10 @@ assert.equal(trq.output_config.format.schema.required.join(), 'translation,sente
 assert.ok(trq.messages[0].content.includes('into Somaliscript (so)') && trq.messages[0].content.includes('Also translate the <context> sentence.'));
 assert.deepEqual(readResult(text({ translation: 'tirada dadka', sentence: 'Tirada dadka way badnayd.', note: '' })), { translation: 'tirada dadka', sentence: 'Tirada dadka way badnayd.', note: '' });
 console.log('translate ok');
+// Whole-page batches
+const many = readInput({ mode: 'translate-many', lang: 'hi', langName: 'Hindi', texts: ['Rent is due', 'x'.repeat(700), ...Array(60).fill('Pay now')] });
+assert.equal(many.texts.length, 40); assert.equal(many.texts[1].length, 600);
+assert.ok(readInput({ mode: 'translate-many', lang: 'hi', texts: [] }).error);
+assert.ok(buildRequest(many).messages[0].content.includes('Return exactly 40 translations'));
+assert.deepEqual(readResult(text({ translations: ['किराया देय है'] })), { translations: ['किराया देय है'] });
+console.log('translate-many ok');

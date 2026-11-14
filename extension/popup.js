@@ -92,14 +92,14 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
       const p = await chrome.tabs.sendMessage(tab.id, { type: 'page-lang', lang }).catch(() => null);
       if (p && p.from && p.from.split('-')[0] !== p.to.split('-')[0]) {
         const pair = { sourceLanguage: p.from, targetLanguage: p.to }, name = (c) => (self.lingerLang(c) || { name: c }).name;
+        // If Chrome can't (unavailable, or the download fails), the page falls back to Claude instead of giving up.
         try {
           const a = await Translator.availability(pair);
-          if (a === 'unavailable') return msg(`Chrome can’t translate ${name(p.from)} into ${name(p.to)} on this laptop. You can still highlight text to translate it.`);
-          if (a !== 'available') {
+          if (a === 'downloadable' || a === 'downloading') {
             msg(`Getting ${name(p.to)} ready (first time only)…`);
             await Translator.create({ ...pair, monitor: (m) => m.addEventListener('downloadprogress', (e) => msg(`Getting ${name(p.to)} ready (first time only)… ${Math.round(e.loaded * 100)}%`)) });
           }
-        } catch { return msg('Chrome couldn’t download that language. Check your internet connection and try again.'); }
+        } catch {}
       }
     }
     msg('Starting…');
