@@ -218,13 +218,13 @@
     S.speaking = null;
     document.querySelectorAll('.tok.speaking').forEach((t) => t.classList.remove('speaking'));
   }
-  function speak(id, text, onWord) {
+  function speak(id, text, onWord, lang = 'en-US') {
     if (!canSpeak) return;
     const again = S.speaking === id;
     stopSpeaking();
     if (again) { render(); return; } // second tap stops
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US'; u.rate = 0.9;
+    u.lang = lang; u.rate = 0.9;
     if (onWord) u.onboundary = (e) => { if (e.name === 'word' || e.name === undefined) onWord(e.charIndex); };
     u.onend = u.onerror = () => { if (S.speaking === id) { S.speaking = null; document.querySelectorAll('.tok.speaking').forEach((t) => t.classList.remove('speaking')); render(); } };
     S.speaking = id;
@@ -445,6 +445,89 @@
     render();
   }
 
+  // ---------- my language ----------
+  // The reader picks their own language (Lens → globe button, or Settings). Word sheets and the "Explain" summary then
+  // also show the meaning in that language. Phones don't have Chrome's on-device translator, so the Linger AI server
+  // (Claude) translates; on a laptop Chrome that has the translator, it's used first (free, stays on the computer).
+  const LANGS = window.LINGER_LANGS || [];
+  const langOf = (c) => LANGS.find((l) => l.code === c) || null;
+  const rtl = (c) => !!(window.lingerRTL && window.lingerRTL(c));
+  const AI_URL = 'https://us-central1-linger-f41a7.cloudfunctions.net/explain';
+  const LANG_KEY = 'linger.lang';
+  S.lang = (() => { try { const v = localStorage.getItem(LANG_KEY) || ''; return langOf(v) && v !== 'en' ? v : ''; } catch { return ''; } })();
+  S.langPick = false; S.langQuery = '';
+  // Random ID for the server's per-person limit (shared Wi-Fi shouldn't block a whole class).
+  const lingerId = (() => { try { let v = localStorage.getItem('linger.id'); if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); localStorage.setItem('linger.id', v); } return v; } catch { return 'anon-' + Date.now(); } })();
+  const TR = new Map(); // `${lang}|${text}|${context}` → { status: 'wait' | 'ok' | 'fail', t, sentence, note }
+  const onDevice = new Map();
+  async function deviceTranslator(to) {
+    if (typeof window.Translator === 'undefined') return null;
+    if (onDevice.has(to)) return onDevice.get(to);
+    try {
+      if ((await Translator.availability({ sourceLanguage: 'en', targetLanguage: to })) !== 'available') return null;
+      const t = await Translator.create({ sourceLanguage: 'en', targetLanguage: to });
+      onDevice.set(to, t); return t;
+    } catch { return null; }
+  }
+  async function fetchTr(text, context, withSentence, to) {
+    const dev = await deviceTranslator(to);
+    if (dev) {
+      try { return { t: await dev.translate(text), sentence: withSentence && context ? await dev.translate(context) : '', note: '' }; } catch {}
+    }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Linger-Id': lingerId },
+          body: JSON.stringify({ mode: 'translate', text, context, lang: to, langName: (langOf(to) || {}).name || to, sentence: withSentence }) });
+        const j = r.ok ? await r.json() : null;
+        if (j && j.translation) return { t: j.translation, sentence: j.sentence || '', note: j.note || '' };
+        if (r.status !== 429 && r.status < 500) return null;
+      } catch {}
+      await new Promise((res) => setTimeout(res, 1500));
+    }
+    return null;
+  }
+  // The translation if it's ready (and starts it if not). The screen redraws when it arrives.
+  function tr(text, context = '', withSentence = false) {
+    const to = S.lang;
+    if (!to || !text) return null;
+    const key = `${to}|${text}|${withSentence ? context : ''}`;
+    if (!TR.has(key)) {
+      TR.set(key, { status: 'wait' });
+      fetchTr(text, context, withSentence, to).then((r) => { TR.set(key, r ? { status: 'ok', ...r } : { status: 'fail' }); render(); });
+    }
+    return TR.get(key);
+  }
+  const langAttrs = () => `lang="${esc(S.lang)}" dir="${rtl(S.lang) ? 'rtl' : 'auto'}"`;
+  const langLabel = () => { const l = langOf(S.lang); return l ? l.own : 'English only'; };
+  // The "In <language>" box on a word sheet.
+  function trBox(word, meaning, sentence) {
+    if (!S.lang) return '';
+    const w = tr(word, sentence, !!sentence), m = meaning ? tr(meaning) : null;
+    const L = langOf(S.lang), A = langAttrs();
+    const waiting = (w && w.status === 'wait') || (m && m.status === 'wait');
+    const failed = w && w.status === 'fail';
+    let body;
+    if (failed) body = '<div class="small">Couldn’t translate right now. Check your internet connection and open the word again.</div>';
+    else body = `${w && w.status === 'ok' ? `<div class="tr-word" ${A}>${esc(w.t)}<button type="button" class="speak tr-say" data-action="speak-tr" data-t="${esc(w.t)}" aria-label="Say it in ${esc(L.name)}" ${canSpeak ? '' : 'disabled'}>${speaker}</button></div>` : ''}
+      ${m && m.status === 'ok' ? `<div ${A}>${esc(m.t)}</div>` : ''}
+      ${w && w.sentence ? `<div class="ctx" ${A}>“${esc(w.sentence)}”</div>` : ''}
+      ${w && w.note ? `<div class="small" ${A}>${esc(w.note)}</div>` : ''}
+      ${waiting ? '<div class="small">Translating…</div>' : ''}`;
+    return `<div class="tr-box"><div class="label">🌐 In ${esc(L.own)}</div>${body}</div>`;
+  }
+  function langSheet() {
+    const q = S.langQuery.trim().toLowerCase();
+    const list = LANGS.filter((l) => l.code !== 'en' && (!q || l.name.toLowerCase().includes(q) || l.own.toLowerCase().includes(q)));
+    const row = (code, own, name) => `<button type="button" class="city-row ${S.lang === code ? 'on' : ''}" data-action="lang-set" data-v="${code}"><span class="city-txt"><strong ${code ? `lang="${code}" dir="auto"` : ''}>${esc(own)}</strong>${name ? `<small>${esc(name)}</small>` : ''}</span>${S.lang === code ? '<span class="tick">✓</span>' : ''}</button>`;
+    return `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
+      <div class="panel" role="dialog" aria-label="Choose your language"><div class="grab"></div>
+        <div class="sum-title">Your language</div>
+        <div class="small">Word meanings and summaries also show in this language. Linger still teaches the English.</div>
+        <label class="search"><input id="langQ" type="search" placeholder="Search languages" value="${esc(S.langQuery)}" aria-label="Search languages"></label>
+        <div class="city-list lang-list">${!q ? row('', 'English only', 'No translation') : ''}${list.map((l) => row(l.code, l.own, l.own === l.name ? '' : l.name)).join('')}
+          ${list.length ? '' : '<div class="small">No language matches. Try its English name.</div>'}</div></div></div>`;
+  }
+
   // ---------- views ----------
   const rings = (a) => a.map(([cls, st]) => `<span class="${cls}" style="${st}"></span>`).join('');
   const heroDeco = rings([['ring', 'width:190px;height:190px;right:-50px;top:-70px'], ['dot', 'width:78px;height:78px;right:24px;top:-18px']]);
@@ -463,7 +546,7 @@
   const lensHero = () => `<header class="hero wh lh2">
       <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
       ${logo}
-      <div class="wh-title"><div class="wh-row"><h1>Lens</h1><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button></div>
+      <div class="wh-title"><div class="wh-row"><h1>Lens</h1><span class="lh-tools"><button type="button" class="lh-lang" data-action="lang-open" aria-label="Your language: ${esc(langLabel())}. Change it">🌐 <span ${S.lang ? langAttrs() : ''}>${esc(S.lang ? langLabel() : 'Language')}</span></button><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button></span></div>
         <div class="hsub">Point at a letter, sign or bill</div></div>
     </header>`;
   const lensSwitch = (mode) => `<div class="lh-switch" role="group" aria-label="How to read something">
@@ -543,6 +626,7 @@
         <div class="switch-row"><div><strong>Auto-define hard words</strong><span class="small">Underlined and explained right away</span></div>
           <button type="button" class="switch" role="switch" aria-label="Auto-define hard words" aria-checked="${S.autoHard}" data-action="auto"></button></div>
       </div>
+      <button type="button" class="act share-card" data-action="lang-open"><span class="ic">🌐</span><span><strong>My language</strong><span class="small" ${S.lang ? langAttrs() : ''}>${esc(langLabel())} · meanings and summaries also show in it</span></span><span class="go">›</span></button>
       <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">Select text anywhere, tap Share, then “Explain with Linger”</span></span><span class="go">›</span></button>
       <a class="act share-card" href="glasses.html"><span class="ic">👓</span><span><strong>Glasses</strong><span class="small">Phone mode · see it through the glasses</span></span><span class="go">›</span></a>
     </div>`;
@@ -769,6 +853,7 @@
           <div class="city-list">${Object.entries(CITIES).map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${c.emoji}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>
           <div class="small">More cities coming. Each guide has slang, customs, getting around and a pause map.</div></div></div>`;
     }
+    if (S.langPick) html += langSheet();
     if (S.paste) {
       html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
         <div class="panel" role="dialog" aria-label="Paste text"><div class="grab"></div>
@@ -802,7 +887,8 @@
         <div class="panel" role="dialog" aria-label="${esc(s.title)}"><div class="grab"></div>
           <div class="item-head" style="align-items: flex-start"><div class="sum-title">${esc(s.title)}</div>
             <button type="button" class="speak ${on ? 'on' : ''}" data-action="speak-summary" aria-label="${on ? 'Stop reading' : 'Read summary aloud'}" ${canSpeak ? '' : 'disabled'}>${speaker}</button></div>
-          <ul class="points">${s.points.map(([ic, t]) => `<li><span class="pi" aria-hidden="true">${ic}</span><span>${t}</span></li>`).join('')}</ul>
+          <ul class="points">${s.points.map(([ic, t]) => { const x = tr(t.replace(/<[^>]+>/g, '')); return `<li><span class="pi" aria-hidden="true">${ic}</span><span>${t}${x ? `<span class="tr-line" ${langAttrs()}>${x.status === 'ok' ? esc(x.t) : x.status === 'wait' ? 'Translating…' : ''}</span>` : ''}</span></li>`; }).join('')}</ul>
+          ${S.lang ? `<div class="small">🌐 Also in ${esc(langLabel())}. <button type="button" class="link-btn" data-action="lang-open">Change</button></div>` : ''}
           ${s.dates.length ? `<div style="display: flex; flex-direction: column; gap: 6px"><div class="label" style="color: var(--muted)">Key dates</div><div class="dates">${s.dates.map((d) => `<span class="date">${esc(d)}</span>`).join('')}</div></div>` : ''}
           <div class="small">${esc(s.note)} ${n} words on this page are underlined. Tap one for its meaning.</div>
           <button type="button" class="btn primary" data-action="close">Got it</button></div></div>`;
@@ -817,6 +903,7 @@
         const s = isSaved(S.sheet);
         inner = `<div class="item-head"><div style="display: flex; align-items: center; gap: 10px"><div class="sheet-word">${esc(e.word)}</div>${spk}</div>${badge(e.kind)}</div>
           <div class="meaning">${esc(e.meaning)}</div>
+          ${e.pending ? '' : trBox(e.word, e.meaning, e.sentence)}
           <div style="display: flex; flex-direction: column; gap: 4px"><div class="label" style="color: var(--muted)">In this sentence</div><div>${esc(e.ctx)}</div><div class="ctx">“${esc(e.sentence)}”</div></div>
           ${e.local ? `<div class="local"><div class="label">${pin}Around here</div><div style="font-size: 14px">${esc(e.local)}</div></div>` : ''}
           <div class="small" style="font-size: 12px">Seen at ${esc(placeOf(e))}</div>
@@ -825,6 +912,7 @@
         const sentence = TEXTS[S.source].split(/(?<=[.!?])\s/).find((x) => x.includes(S.sheetRaw)) || '';
         inner = `<div class="item-head"><div style="display: flex; align-items: center; gap: 10px"><div class="sheet-word">${esc(S.sheetRaw)}</div>${spk}</div>${badge('common')}</div>
           <div class="meaning">An everyday word.</div>
+          ${trBox(S.sheetRaw.replace(/[^A-Za-z'’-]/g, ''), '', sentence)}
           <div style="display: flex; flex-direction: column; gap: 4px"><div class="label" style="color: var(--muted)">In this sentence</div>
           <div>In the full app, Linger would explain this word in the context of the sentence you were reading. This prototype only has detailed entries for the slang and hard words.</div>
           ${sentence ? `<div class="ctx">“${esc(sentence)}”</div>` : ''}</div>
@@ -956,12 +1044,15 @@
     open: (d) => { S.sheet = d.k; S.sheetRaw = d.k; S.pending = null; },
     accept: () => { S.sheet = S.pending; S.sheetRaw = S.pendingRaw; S.pending = null; },
     dismiss: () => { S.pending = null; },
-    close: () => { S.paste = false; S.shareHelp = false; S.cityPick = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
+    close: () => { S.paste = false; S.shareHelp = false; S.cityPick = false; S.langPick = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
     explain: () => { stopSpeaking(); S.explain = true; S.pending = null; S.sheet = null; },
     read: () => { readLens(); },
     'speak-summary': () => { speak('summary', summaryText(SUMMARY[S.source])); },
     'speak-word': () => { const e = D[S.sheet]; speak('word', e ? `${e.word}. ${e.meaning} ${e.sentence}` : S.sheetRaw); },
     ask: () => { S.askFirst = !S.askFirst; },
+    'lang-open': () => { S.langPick = true; S.langQuery = ''; S.sheet = null; S.explain = false; },
+    'lang-set': (d) => { S.lang = d.v; S.langPick = false; try { localStorage.setItem(LANG_KEY, d.v); } catch {} if (d.v) showToast(`🌐 Meanings will also show in ${langLabel()}`); },
+    'speak-tr': (d) => { speak('tr', d.t, null, S.lang); },
     auto: () => { S.autoHard = !S.autoHard; },
     save: (d) => { toggleSave(d.k); },
     filter: (d) => { S.wordFilter = d.v; },
@@ -1022,10 +1113,15 @@
   });
   document.addEventListener('input', (ev) => {
     if (ev.target.id === 'q') { S.query = ev.target.value; render(); }
+    if (ev.target.id === 'langQ') {
+      S.langQuery = ev.target.value; const pos = ev.target.selectionStart;
+      over.innerHTML = overlay();
+      const q = document.getElementById('langQ'); if (q) { q.focus(); q.setSelectionRange(pos, pos); }
+    }
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
-    if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp || S.cityPick) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; S.cityPick = false; render(); }
+    if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp || S.cityPick || S.langPick) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; S.cityPick = false; S.langPick = false; render(); }
     else if (S.activity) { S.activity = null; S.game = null; render(); }
     else if (S.tab === 'settings') { S.tab = 'lens'; render(); }
   });
