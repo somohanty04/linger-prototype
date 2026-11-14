@@ -21,14 +21,15 @@ async function lookup(word) {
 // After deploying, put the URL the deploy prints here. Empty = AI off (cards use the dictionary only).
 const AI_URL = 'https://us-central1-linger-f41a7.cloudfunctions.net/explain';
 const aiCache = new Map();
-async function askAI({ mode, text, context }) {
+async function askAI({ mode, text, context, lang, langName, from, sentence }) {
   const { aiOn } = await chrome.storage.local.get({ aiOn: true });
   if (!AI_URL || !aiOn) return null;
-  const key = JSON.stringify([mode, text, context]);
+  const extra = mode === 'translate' ? { lang, langName, from, sentence: !!sentence } : {};
+  const key = JSON.stringify([mode, text, context, extra]);
   if (aiCache.has(key)) return aiCache.get(key);
   const stop = new AbortController(), t = setTimeout(() => stop.abort(), 30000);
   try {
-    const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, text, context }), signal: stop.signal });
+    const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, text, context, ...extra }), signal: stop.signal });
     const out = r.ok ? await r.json() : null;
     if (!out || out.error) return null;
     aiCache.set(key, out);

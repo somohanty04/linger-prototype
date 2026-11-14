@@ -73,6 +73,41 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
   };
   $('unpair').onclick = async () => { await chrome.storage.local.set({ pairCode: '' }); showPair(''); };
 
+  // Translation: "My language" for the cards, and the whole page on request.
+  const { transLang } = await chrome.storage.local.get({ transLang: '' });
+  $('transLang').insertAdjacentHTML('beforeend', self.LINGER_LANGS.map((l) => `<option value="${l.code}">${esc(l.own === l.name ? l.name : `${l.own} · ${l.name}`)}</option>`).join(''));
+  $('transLang').value = transLang;
+  const pageBtn = () => {
+    const on = status && status.translated;
+    $('translatePage').disabled = !status || (!on && !$('transLang').value);
+    $('translatePage').textContent = on ? 'Show the original page' : 'Translate this page';
+  };
+  pageBtn();
+  $('transLang').onchange = (e) => { chrome.storage.local.set({ transLang: e.target.value }); $('transMsg').textContent = ''; pageBtn(); };
+  $('translatePage').onclick = async () => {
+    const lang = $('transLang').value, msg = (t) => { $('transMsg').textContent = t; };
+    // Chrome downloads a language the first time and only allows that right after a click, so the download starts
+    // here (the click was in this menu, not on the page). After that the page can use it straight away.
+    if (!(status && status.translated) && typeof Translator !== 'undefined') {
+      const p = await chrome.tabs.sendMessage(tab.id, { type: 'page-lang', lang }).catch(() => null);
+      if (p && p.from && p.from.split('-')[0] !== p.to.split('-')[0]) {
+        const pair = { sourceLanguage: p.from, targetLanguage: p.to }, name = (c) => (self.lingerLang(c) || { name: c }).name;
+        try {
+          const a = await Translator.availability(pair);
+          if (a === 'unavailable') return msg(`Chrome can’t translate ${name(p.from)} into ${name(p.to)} on this laptop. You can still highlight text to translate it.`);
+          if (a !== 'available') {
+            msg(`Getting ${name(p.to)} ready (first time only)…`);
+            await Translator.create({ ...pair, monitor: (m) => m.addEventListener('downloadprogress', (e) => msg(`Getting ${name(p.to)} ready (first time only)… ${Math.round(e.loaded * 100)}%`)) });
+          }
+        } catch { return msg('Chrome couldn’t download that language. Check your internet connection and try again.'); }
+      }
+    }
+    msg('Starting…');
+    const r = await chrome.tabs.sendMessage(tab.id, { type: 'translate-page', lang }).catch(() => null);
+    if (r && r.ok) return window.close();
+    $('transMsg').textContent = (r && r.why) || 'Couldn’t translate this page. Reload it and try again.';
+  };
+
   $('savedCount').textContent = st.saved.length;
   $('saved').innerHTML = st.saved.length
     ? st.saved.slice(0, 12).map((w) => `<li><b>${esc(w.w)}</b> <span>· ${esc(w.m || '')}</span></li>`).join('')

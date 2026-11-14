@@ -35,9 +35,10 @@
   }
 
   // ---------- settings ----------
-  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true };
+  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '' };
   const host = location.hostname || 'file';
-  const active = () => S.highlight && !S.paused.includes(host);
+  let pageTr = null; // set while the whole page is translated (see translatePage)
+  const active = () => S.highlight && !S.paused.includes(host) && !pageTr;
 
   // ---------- styles on the page ----------
   const style = document.createElement('style');
@@ -193,6 +194,13 @@
     .wc-def { color: #252A39; font-size: 16px; font-weight: 600; line-height: 22px; overflow-wrap: anywhere; }
     .wc-def b { color: #2B39B2; font-weight: 800; }
     .wc-easy { color: #5B6070; }
+    .wc-trbox { background: #F0FFFA; }
+    .wc-tr { color: #115940; font-size: 20px; font-weight: 700; line-height: 26px; overflow-wrap: anywhere; }
+    /* Whole-page translation bar */
+    .tbar { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 24px); padding: 8px 8px 8px 16px; border-radius: 99px; background: linear-gradient(90deg, #1F2DA8, #5464D9); color: #FFFFFF; font-size: 14px; font-weight: 700; box-shadow: 0 8px 24px rgba(16, 20, 80, 0.3); font-family: 'Linger Figtree', 'Figtree', system-ui, sans-serif; }
+    .tbar span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tbar button { flex: none; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: #FFFFFF; color: #1F2AA8; font: inherit; cursor: pointer; }
+    .tbar button:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
     .wc-easy b { color: #6D79FF; }
     .selchip { position: fixed; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); white-space: nowrap; }
     .selchip:focus-visible { outline: 2px solid #1F2AA8; outline-offset: 2px; }
@@ -255,18 +263,72 @@
   }
   // Linger AI (Claude): meaning in context. In the extension the background worker calls the Linger server; on the
   // test page, window.LINGER_AI_URL can point at it. Returns null when AI is off or unreachable (cards still work).
-  async function askAI(mode, text, context) {
+  async function askAI(mode, text, context, extra = {}) {
     if (!S.aiOn) return null;
-    if (api) return send({ type: 'ai', mode, text, context });
+    if (api) return send({ type: 'ai', mode, text, context, ...extra });
     if (!window.LINGER_AI_URL) return null;
     try {
-      const r = await fetch(window.LINGER_AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, text, context }) });
+      const r = await fetch(window.LINGER_AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, text, context, ...extra }) });
       const out = r.ok ? await r.json() : null;
       return out && !out.error ? out : null;
     } catch { return null; }
   }
   const AI_WAIT = '✦ Checking what it means here…';
   const speakIt = (t) => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; u.rate = 0.9; speechSynthesis.speak(u); } catch {} };
+
+  // ---------- translation ----------
+  // Chrome's built-in translator first: it runs on this laptop, is free, and nothing leaves the computer. When Chrome
+  // doesn't know the language pair (or is too old to have a translator), Claude translates through the Linger server,
+  // but only when AI explanations are on.
+  const LANG = (c) => (self.lingerLang && self.lingerLang(c)) || { code: c, name: c, own: c };
+  const rtl = (c) => !!(self.lingerRTL && self.lingerRTL(c));
+  const translators = new Map();
+  async function chromeTranslator(from, to, onProgress) {
+    if (typeof Translator === 'undefined') return null;
+    const key = from + '>' + to;
+    if (translators.has(key)) return translators.get(key);
+    try {
+      const a = await Translator.availability({ sourceLanguage: from, targetLanguage: to });
+      if (a === 'unavailable') return null;
+      // The first time, Chrome downloads the language, and only allows that right after a click or key press
+      // (create() then throws, and the caller falls back to Claude). The toolbar menu starts the download itself.
+      const t = await Translator.create({ sourceLanguage: from, targetLanguage: to, monitor: (m) => m.addEventListener('downloadprogress', (e) => onProgress && onProgress(e.loaded)) });
+      translators.set(key, t);
+      return t;
+    } catch { return null; }
+  }
+  // { text, sentence, note, by } or null. With withSentence, context (the sentence around a word) is translated too.
+  async function translate(text, { to = S.transLang, from = 'en', context = '', withSentence = false, onProgress } = {}) {
+    if (!to || to === from || !text) return null;
+    const t = await chromeTranslator(from, to, onProgress);
+    if (t) {
+      try {
+        const [tt, ss] = await Promise.all([t.translate(text), withSentence && context && context !== text ? t.translate(context) : '']);
+        if (tt) return { text: tt, sentence: ss, note: '', by: 'chrome' };
+      } catch {}
+    }
+    const a = await askAI('translate', text, context, { lang: to, langName: LANG(to).name, from, sentence: withSentence });
+    return a && a.translation ? { text: a.translation, sentence: withSentence ? a.sentence || '' : '', note: a.note || '', by: 'claude' } : null;
+  }
+  // The "In <your language>" box on a word or phrase card. isCurrent: is this card still the open one.
+  function addTranslation(isCurrent, rect, text, context, withSentence) {
+    const to = S.transLang;
+    if (!to || !card) return;
+    const L = LANG(to), el = card.querySelector('#tr'), dir = rtl(to) ? 'rtl' : 'auto';
+    const tl = (t, cls, quote) => `<p class="${cls}" dir="${dir}" lang="${esc(to)}">${quote ? '“' : ''}${esc(t)}${quote ? '”' : ''}</p>`;
+    el.hidden = false;
+    el.innerHTML = `<p class="wc-lbl">In ${esc(L.own)}:</p><div class="wc-box wc-trbox"><p class="wc-note">Translating…</p></div>`;
+    const box = el.querySelector('.wc-trbox');
+    const onProgress = (p) => { if (isCurrent()) box.innerHTML = `<p class="wc-note">Getting ${esc(L.name)} ready on this laptop (first time only)… ${Math.round(p * 100)}%</p>`; };
+    translate(text, { to, context, withSentence, onProgress }).then((r) => {
+      if (!isCurrent()) return;
+      box.innerHTML = r
+        ? tl(r.text, 'wc-tr') + (r.sentence ? tl(r.sentence, 'wc-s', true) : '') + (r.note ? tl(r.note, 'wc-def') : '') +
+          `<p class="wc-note">${r.by === 'chrome' ? 'Translated by Chrome on this laptop' : 'Translated by Claude'}</p>`
+        : `<p class="wc-note">${S.aiOn ? 'Couldn’t translate this right now. Check your internet connection.' : `Chrome can’t translate into ${esc(L.name)} on this laptop. Turn on AI explanations in the Linger menu to translate with Claude.`}</p>`;
+      place(card, rect());
+    });
+  }
 
   let card = null, cardSpan = null, cardRange = null;
   // Highlighted phrases stay marked while their card is open (CSS Custom Highlight: no changes to the page's HTML).
@@ -353,11 +415,13 @@
       <div class="wc-body">
         <p class="wc-meaning" id="m">${meaning ? esc(meaning) : 'Looking up…'}</p>
         <div class="wc-ctx" id="ctx"></div>
+        <div class="wc-ctx" id="tr" hidden></div>
         <p class="wc-note" id="ai">${S.aiOn ? AI_WAIT : ''}</p>
         <p class="wc-note" id="note"></p>
       </div>`;
     layer.appendChild(card);
     redraw();
+    addTranslation(() => card && cardSpan === sp, () => sp.getBoundingClientRect(), raw, usable(sentence) ? sentence : '', true);
     card.querySelector('#hear').onclick = () => speakIt(raw);
     // Claude's answer: the meaning in this sentence, and easier words that fit here.
     const useAI = (a) => {
@@ -575,11 +639,13 @@
       <div class="wc-body">
         <div class="wc-ctx" id="main"></div>
         <div class="wc-ctx" id="ctx"></div>
+        <div class="wc-ctx" id="tr" hidden></div>
         <p class="wc-note" id="ai">${S.aiOn ? AI_WAIT : ''}</p>
         <p class="wc-note" id="note"></p>
       </div>`;
     layer.appendChild(card);
     redraw();
+    addTranslation(() => card && cardRange === range, () => range.getBoundingClientRect(), text, fromText || para.slice(0, 1500), false);
     card.querySelector('#hear').onclick = () => speakIt(text);
     if (aiP) aiP.then((a) => {
       if (!card || cardRange !== range) return;
@@ -639,6 +705,91 @@
     hideChip();
     if (card && (cardSpan || cardRange)) place(card, (cardSpan || cardRange).getBoundingClientRect());
   }, { passive: true });
+
+  // ---------- translate the whole page ----------
+  // Swaps each piece of text on the page for its translation (layout, links and buttons keep working) and can swap it
+  // back. Uses Chrome's on-device translator only: a whole page is too much to send to Claude.
+  // If the page is already in the reader's language, it translates into English instead (reading a page from home).
+  const TR_SKIP = new Set([...SKIP].filter((t) => !['A', 'LABEL', 'BUTTON'].includes(t)));
+  const trOk = (n) => {
+    for (let el = n.parentElement; el; el = el.parentElement) {
+      if (TR_SKIP.has(el.tagName) || el.isContentEditable || el.id === 'linger-ui' || el.id === 'linger-gaze' || el.hasAttribute('data-linger-skip') || el.getAttribute('translate') === 'no') return false;
+    }
+    return true;
+  };
+  async function pageLang() {
+    const sample = ((document.body && document.body.innerText) || '').slice(0, 3000);
+    try {
+      if (typeof LanguageDetector !== 'undefined' && (await LanguageDetector.availability()) === 'available') {
+        const [best] = await (await LanguageDetector.create()).detect(sample);
+        if (best && best.confidence > 0.5 && best.detectedLanguage !== 'und') return best.detectedLanguage;
+      }
+    } catch {}
+    const tag = (document.documentElement.lang || '').trim().toLowerCase();
+    return tag ? (tag.startsWith('zh-hant') || tag === 'zh-tw' || tag === 'zh-hk' ? 'zh-Hant' : tag.split('-')[0]) : 'en';
+  }
+  const base = (c) => String(c || '').split('-')[0].toLowerCase();
+  // The language to translate into: the reader's, or English when the page is already in theirs.
+  const pageTarget = (from, mine) => (base(from) === base(mine) && !(mine === 'zh-Hant' && from !== 'zh-Hant') ? 'en' : mine);
+
+  function trBar(text) {
+    if (!pageTr) return;
+    attach();
+    if (!pageTr.bar) {
+      pageTr.bar = document.createElement('div');
+      pageTr.bar.className = 'tbar'; pageTr.bar.setAttribute('role', 'status');
+      pageTr.bar.innerHTML = '<span></span><button type="button">Show original</button>';
+      pageTr.bar.querySelector('button').onclick = restorePage;
+      layer.appendChild(pageTr.bar);
+    }
+    pageTr.bar.querySelector('span').textContent = text;
+  }
+  function restorePage() {
+    if (!pageTr) return;
+    const { orig, bar } = pageTr;
+    pageTr = null; // also stops a translation still in progress
+    orig.forEach((src, n) => { if (n.isConnected) n.nodeValue = src; });
+    if (bar) bar.remove();
+    apply(); // underline hard words again
+  }
+  async function translatePage(lang) {
+    if (pageTr) { restorePage(); return { ok: true, off: true }; }
+    if (!lang) return { ok: false, why: 'Pick your language first.' };
+    const from = await pageLang(), to = pageTarget(from, lang);
+    if (base(from) === base(to)) return { ok: false, why: `This page is already in ${LANG(to).name}.` };
+    if (typeof Translator === 'undefined') return { ok: false, why: 'This Chrome can’t translate whole pages. Update Chrome to version 138 or newer. You can still highlight text to translate it.' };
+    const t = await chromeTranslator(from, to);
+    if (!t) return { ok: false, why: `Chrome can’t translate ${LANG(from).name} into ${LANG(to).name} on this laptop. You can still highlight text to translate it.` };
+    // Underlines split sentences into pieces, so they come off while the page is translated (and back after).
+    pageTr = { from, to, orig: new Map(), bar: null };
+    mo.disconnect(); unwrapAll(); closeCard(); hideChip();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (/\p{L}/u.test(n.nodeValue) && trOk(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
+    const nodes = []; let n;
+    while ((n = walker.nextNode()) && nodes.length < 4000) nodes.push(n);
+    // What's on screen first, then below it, then above it.
+    const rank = (nd) => { const r = nd.parentElement.getBoundingClientRect(); return r.bottom < 0 ? 2e6 - r.bottom : r.top > innerHeight ? 1e6 + r.top : r.top; };
+    const order = nodes.map((nd) => [rank(nd), nd]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+    const label = `${LANG(from).name} → ${LANG(to).own}`, me = pageTr;
+    trBar(`Translating ${label}…`);
+    (async () => {
+      let done = 0;
+      for (const nd of order) {
+        if (pageTr !== me) return; // "Show original" was pressed
+        const src = nd.nodeValue, core = src.trim();
+        if (core && nd.isConnected) {
+          try {
+            const out = await t.translate(core);
+            if (pageTr !== me) return;
+            me.orig.set(nd, src);
+            nd.nodeValue = src.match(/^\s*/)[0] + out + src.match(/\s*$/)[0];
+          } catch {}
+        }
+        if (++done % 25 === 0) trBar(`Translating ${label}… ${Math.round((done / order.length) * 100)}%`);
+      }
+      trBar(`Translated ${label} by Chrome on this laptop`);
+    })();
+    return { ok: true, from, to };
+  }
 
   // ---------- Explain this page ----------
   let panel = null;
@@ -757,7 +908,7 @@
     showFab();
   }
   if (api) {
-    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '' }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
@@ -766,10 +917,12 @@
     });
     chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (msg.type === 'explain') { explainPage(); reply({ ok: true }); }
-      if (msg.type === 'status') reply({ ok: true, words: count, eye: !!(window.__lingerGaze && window.__lingerGaze.on) });
+      if (msg.type === 'status') reply({ ok: true, words: count, eye: !!(window.__lingerGaze && window.__lingerGaze.on), translated: !!pageTr });
+      if (msg.type === 'page-lang') { pageLang().then((from) => reply({ from, to: pageTarget(from, msg.lang) })); return true; }
+      if (msg.type === 'translate-page') { if (window !== window.top) return; translatePage(msg.lang).then(reply); return true; }
     });
   } else apply();
 
   // Shared with gaze.js (eye tracking), which runs in this same isolated world.
-  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf };
+  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf, translatePage, restorePage };
 })();

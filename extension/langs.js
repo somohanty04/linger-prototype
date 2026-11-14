@@ -1,0 +1,51 @@
+// Languages Linger can translate into, shared by the toolbar menu and the page script.
+// code: the BCP 47 tag Chrome's built-in translator and Claude both understand; name: in English; own: in that language.
+// Chrome's on-device translator covers most of these; the rest go to Claude (when AI explanations are on).
+self.LINGER_LANGS = [
+  ['ar', 'Arabic', 'العربية'],
+  ['am', 'Amharic', 'አማርኛ'],
+  ['bn', 'Bengali', 'বাংলা'],
+  ['my', 'Burmese', 'မြန်မာ'],
+  ['zh', 'Chinese (Simplified)', '简体中文'],
+  ['zh-Hant', 'Chinese (Traditional)', '繁體中文'],
+  ['prs', 'Dari', 'دری'],
+  ['nl', 'Dutch', 'Nederlands'],
+  ['en', 'English', 'English'],
+  ['fil', 'Filipino (Tagalog)', 'Filipino'],
+  ['fr', 'French', 'Français'],
+  ['de', 'German', 'Deutsch'],
+  ['el', 'Greek', 'Ελληνικά'],
+  ['gu', 'Gujarati', 'ગુજરાતી'],
+  ['ht', 'Haitian Creole', 'Kreyòl ayisyen'],
+  ['he', 'Hebrew', 'עברית'],
+  ['hi', 'Hindi', 'हिन्दी'],
+  ['id', 'Indonesian', 'Bahasa Indonesia'],
+  ['it', 'Italian', 'Italiano'],
+  ['ja', 'Japanese', '日本語'],
+  ['kar', 'Karen', 'ကညီ'],
+  ['ko', 'Korean', '한국어'],
+  ['mr', 'Marathi', 'मराठी'],
+  ['ne', 'Nepali', 'नेपाली'],
+  ['ps', 'Pashto', 'پښتو'],
+  ['fa', 'Persian (Farsi)', 'فارسی'],
+  ['pl', 'Polish', 'Polski'],
+  ['pt', 'Portuguese', 'Português'],
+  ['pa', 'Punjabi', 'ਪੰਜਾਬੀ'],
+  ['ro', 'Romanian', 'Română'],
+  ['ru', 'Russian', 'Русский'],
+  ['so', 'Somali', 'Soomaali'],
+  ['es', 'Spanish', 'Español'],
+  ['sw', 'Swahili', 'Kiswahili'],
+  ['ta', 'Tamil', 'தமிழ்'],
+  ['te', 'Telugu', 'తెలుగు'],
+  ['th', 'Thai', 'ไทย'],
+  ['ti', 'Tigrinya', 'ትግርኛ'],
+  ['tr', 'Turkish', 'Türkçe'],
+  ['uk', 'Ukrainian', 'Українська'],
+  ['ur', 'Urdu', 'اردو'],
+  ['uz', 'Uzbek', 'Oʻzbekcha'],
+  ['vi', 'Vietnamese', 'Tiếng Việt']
+].map(([code, name, own]) => ({ code, name, own }));
+self.lingerLang = (code) => self.LINGER_LANGS.find((l) => l.code === code) || null;
+// Right-to-left scripts, so translated text lines up the right way.
+self.lingerRTL = (code) => /^(ar|he|fa|prs|ps|ur)\b/.test(code || '');

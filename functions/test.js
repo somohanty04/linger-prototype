@@ -39,3 +39,14 @@ assert.equal(first.messages.length, 1);
 assert.ok(first.messages[0].content[1].text.includes('<highlight>remit payment</highlight>'));
 assert.deepEqual(readResult({ stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: 'Pay by Dec 1.' }] }, true), { answer: 'Pay by Dec 1.' });
 console.log('ok');
+// Translation (fallback when Chrome's translator doesn't have the language)
+assert.ok(readInput({ mode: 'translate', text: 'turnout' }).error); // no language
+assert.ok(readInput({ mode: 'translate', text: 'x', lang: 'es; drop' }).error);
+const tr = readInput({ mode: 'translate', text: ' turnout ', context: 'The turnout was huge.', lang: 'so', langName: 'Somali<script>', sentence: 1 });
+assert.deepEqual(tr, { mode: 'translate', text: 'turnout', context: 'The turnout was huge.', lang: 'so', langName: 'Somaliscript', from: 'en', sentence: true });
+assert.equal(readInput({ mode: 'translate', text: 'renta', lang: 'en', from: 'es' }).from, 'es'); // other way round
+const trq = buildRequest(tr);
+assert.equal(trq.output_config.format.schema.required.join(), 'translation,sentence,note');
+assert.ok(trq.messages[0].content.includes('into Somaliscript (so)') && trq.messages[0].content.includes('Also translate the <context> sentence.'));
+assert.deepEqual(readResult(text({ translation: 'tirada dadka', sentence: 'Tirada dadka way badnayd.', note: '' })), { translation: 'tirada dadka', sentence: 'Tirada dadka way badnayd.', note: '' });
+console.log('translate ok');

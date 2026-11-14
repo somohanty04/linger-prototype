@@ -28,6 +28,16 @@
   </section>
 
   <section>
+    <h2>Translation</h2>
+    <div class="rows">
+      <label class="pick"><span><b>My language</b><small class="w207">Word and highlight cards also show the meaning in this language</small></span>
+        <select id="transLang"><option value="">Off</option></select></label>
+    </div>
+    <button type="button" class="btn wide" id="translatePage" disabled>Translate this page</button>
+    <p class="hint tmsg" id="transMsg" role="status"></p>
+  </section>
+
+  <section>
     <h2>Eye tracking</h2>
     <div class="rows">
       <label class="sw"><span><b>Notice when I’m stuck</b><small class="w207">On every tab. Uses your webcam; video stays on this laptop.</small></span><input type="checkbox" id="eye"><i></i></label>
@@ -59,6 +69,7 @@
     <a class="btn wide white" href="https://somohanty04.github.io/linger-prototype/" target="_blank" rel="noopener">Open the Linger app</a>
   </section>
 </main>
+<script src="langs.js"></script>
 <script src="popup.js"></script>
 </body>
 </html>
