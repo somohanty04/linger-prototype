@@ -2,11 +2,27 @@
 // saves words to the phone app, and explains the page in plain English.
 (() => {
   'use strict';
-  if (window.__lingerAPI) return;
+  // After Linger is updated or reloaded, tabs that were already open keep running the old copy of this script, which
+  // can't reach the extension any more (Chrome throws "Extension context invalidated"): cards got stuck on
+  // "Looking up…" and Ask Linger stopped answering. Now the background worker puts a fresh copy into open tabs, and
+  // the old copy steps aside (retire). A copy that's still working stays, so nothing runs twice.
+  const prev = window.__lingerAPI;
+  if (prev && prev.alive && prev.alive()) return;
+  document.dispatchEvent(new CustomEvent('linger-retire')); // tell an old copy (in its own script world) to step aside
+  document.querySelectorAll('#linger-ui').forEach((n) => n.remove()); // what versions before 0.7 left behind
   const { PLAIN, D, PHRASES, COMMON } = self.LINGER_WORDS;
   const CITIES = window.LINGER_CITIES || {};
   const api = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id ? chrome : null;
-  const send = (msg) => (api ? chrome.runtime.sendMessage(msg).catch(() => null) : Promise.resolve(null));
+  const alive = () => !api || !!(chrome.runtime && chrome.runtime.id);
+  let dead = false;
+  function send(msg) {
+    if (!api) return Promise.resolve(null);
+    if (!alive()) { retire(true); return Promise.resolve(null); }
+    try { return chrome.runtime.sendMessage(msg).catch(() => { if (!alive()) retire(true); return null; }); }
+    catch { retire(true); return Promise.resolve(null); }
+  }
+  // Settings reads that can't throw on an old copy.
+  const store = (defs, cb) => { if (!api || !alive()) return; try { chrome.storage.local.get(defs, cb); } catch {} };
 
   // ---------- words ----------
   const RANK = new Map([...COMMON].map((w, i) => [w, i]));
@@ -348,6 +364,7 @@
   }
   // Open the card for an underlined word (or any word picked with a double-click).
   async function openCard(sp, why) {
+    if (dead) return;
     attach(); closeCard();
     cardSpan = sp; sp.classList.add('linger-on');
     const raw = sp.textContent, k = keyOf(raw);
@@ -366,6 +383,7 @@
     const ctx = { s: '', loc: null, syn: PLAIN[k] || '', more: '', ai: false, fromPage: false };
     // Ask Claude right away (in parallel with the dictionary) what the word means in this sentence.
     const aiP = askAI('word', raw, sentence);
+    if (dead) return closeCard(); // this copy just found out the extension was updated
     const useSentence = (t, fromPage) => { ctx.s = t; ctx.loc = locate(t); ctx.fromPage = fromPage; };
     if (usable(sentence)) useSentence(sentence, true);
     else if (d && usable(d.sentence)) useSentence(d.sentence, false);
@@ -426,7 +444,7 @@
     // Claude's answer: the meaning in this sentence, and easier words that fit here.
     const useAI = (a) => {
       if (!card || cardSpan !== sp) return;
-      card.querySelector('#ai').textContent = '';
+      card.querySelector('#ai').textContent = !a && S.aiOn ? 'Linger AI didn’t answer this time, so this is the dictionary meaning. Click the word again to retry.' : '';
       if (!a || !a.meaning) return;
       meaning = a.meaning; ctx.ai = true;
       card.querySelector('#m').textContent = meaning;
@@ -446,7 +464,7 @@
       place(card, sp.getBoundingClientRect());
     }
     const showSaved = () => { card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true'); card.querySelector('#save').title = 'Saved to Linger'; };
-    if (api) chrome.storage.local.get({ saved: [] }, (v) => { if (card && cardSpan === sp && v.saved.some((x) => x.key === k)) showSaved(); });
+    store({ saved: [] }, (v) => { if (card && cardSpan === sp && v.saved.some((x) => x.key === k)) showSaved(); });
     card.querySelector('#save').onclick = async () => {
       const r = await send({ type: 'save', key: k, word: { w: raw.toLowerCase(), m: meaning, s: sentence, p: plain !== sentence ? plain : '', place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
       if (!card || cardSpan !== sp) return;
@@ -569,6 +587,7 @@
   }
   const localMeaning = (k) => (SLANG[k] && SLANG[k].meaning) || (D[k] && D[k].meaning) || '';
   async function openPhrase(range, text) {
+    if (dead) return;
     attach(); closeCard();
     cardRange = range;
     if (HL) HL.set('linger-sel', new Highlight(range));
@@ -600,6 +619,7 @@
     const para = (block ? block.innerText || block.textContent || '' : '').replace(/\s+/g, ' ').trim();
     let ai = null;
     const aiP = askAI('phrase', text, para.length <= 1500 ? para : fromText || text);
+    if (dead) return closeCard();
     const defHtml = (x) => `<p class="wc-def"><b>${esc(x.raw)}</b>: ${x.meaning ? esc(x.meaning) : x.done ? 'Not in the dictionary yet.' : 'Looking up…'}${x.easy ? ` <span class="wc-easy">Easier word: <b>${esc(x.easy)}</b></span>` : ''}</p>`;
     function ctxHtml() {
       const words = ai ? ai.hardWords.map((h) => ({ raw: h.word, meaning: h.meaning, easy: h.easier, done: true })) : hard;
@@ -649,12 +669,12 @@
     card.querySelector('#hear').onclick = () => speakIt(text);
     if (aiP) aiP.then((a) => {
       if (!card || cardRange !== range) return;
-      card.querySelector('#ai').textContent = '';
+      card.querySelector('#ai').textContent = !a && S.aiOn ? 'Linger AI didn’t answer this time. Highlight it again to retry.' : '';
       if (a && a.meaning) { ai = { meaning: a.meaning, plain: a.plain || '', hardWords: a.hardWords || [] }; redraw(); }
     });
     const key = 'phrase-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
     const showSaved = () => { card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true'); card.querySelector('#save').title = 'Saved to Linger'; };
-    if (api) chrome.storage.local.get({ saved: [] }, (v) => { if (card && cardRange === range && v.saved.some((x) => x.key === key)) showSaved(); });
+    store({ saved: [] }, (v) => { if (card && cardRange === range && v.saved.some((x) => x.key === key)) showSaved(); });
     card.querySelector('#save').onclick = async () => {
       const m = ai ? ai.meaning : changed ? plain : hard.filter((x) => x.meaning).map((x) => `${x.raw}: ${x.meaning}`).join(' ');
       const p = ai ? ai.plain : changed ? plain : '';
@@ -678,21 +698,21 @@
     }));
   }
   document.addEventListener('mouseup', (e) => {
-    if (e.button !== 0 || (e.composedPath && e.composedPath().includes(host$))) return;
+    if (dead || e.button !== 0 || (e.composedPath && e.composedPath().includes(host$))) return;
     clearTimeout(chipT);
     chipT = setTimeout(showChip, 220); // after a double-click has had its turn
   });
-  document.addEventListener('selectionchange', () => { if (chip) { const s = getSelection(); if (!s || s.isCollapsed) hideChip(); } });
+  document.addEventListener('selectionchange', () => { if (!dead && chip) { const s = getSelection(); if (!s || s.isCollapsed) hideChip(); } });
 
   document.addEventListener('click', (e) => {
-    if (e.composedPath && e.composedPath().includes(host$)) return;
+    if (dead || (e.composedPath && e.composedPath().includes(host$))) return;
     const sp = e.target.closest && e.target.closest('.linger-w');
     if (sp) { e.preventDefault(); e.stopPropagation(); openCard(sp); return; }
     if (card) closeCard();
   }, true);
   // Double-click any word (even one that isn't underlined) to look it up.
   document.addEventListener('dblclick', (e) => {
-    if (!active() || (e.composedPath && e.composedPath().includes(host$))) return;
+    if (dead || !active() || (e.composedPath && e.composedPath().includes(host$))) return;
     const sel = getSelection(); const w = (sel && sel.toString().trim()) || '';
     if (!/^[A-Za-z][A-Za-z'’-]{1,30}$/.test(w) || !sel.rangeCount) return;
     const r = sel.getRangeAt(0);
@@ -700,8 +720,9 @@
     const sp = document.createElement('span'); sp.className = 'linger-w'; sp.dataset.kind = classify(w, true) || 'common'; sp.dataset.k = keyOf(w);
     try { r.surroundContents(sp); sel.removeAllRanges(); openCard(sp); } catch {}
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideChip(); closeCard(); closePanel(); closeAsk(); } });
+  document.addEventListener('keydown', (e) => { if (!dead && e.key === 'Escape') { hideChip(); closeCard(); closePanel(); closeAsk(); } });
   window.addEventListener('scroll', () => {
+    if (dead) return;
     hideChip();
     if (card && (cardSpan || cardRange)) place(card, (cardSpan || cardRange).getBoundingClientRect());
   }, { passive: true });
@@ -822,7 +843,7 @@
     // Follows "On this site" (and its own switch), not "Underline hard words": you can ask about a page without underlines.
     const want = S.assistant && S.aiOn && !S.paused.includes(host) && window === window.top;
     if (!want) { if (fab) fab.remove(); fab = null; closeAsk(); return; }
-    if (fab) return;
+    if (fab) { attach(); return; }
     attach(); addFonts();
     fab = document.createElement('button');
     fab.type = 'button'; fab.className = 'ask-fab'; fab.textContent = '✦';
@@ -892,12 +913,31 @@
     asking = true;
     const box = askBox.querySelector('#q'); box.value = ''; box.style.height = '';
     drawLog(q);
-    const r = await askServer(q);
-    asking = false;
+    let r = null;
+    try { r = await askServer(q); } catch {} finally { asking = false; } // a failed request must not lock the chat
     if (r && r.answer) { askHist.push({ q, a: r.answer.replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#+\s*/gm, '') }); drawLog(); }
     else drawLog('', r && r.error === 'busy' ? 'Lots of questions right now. Please wait a minute and try again.' : r && r.error === 'off' ? 'AI is turned off in the Linger menu.' : 'Linger couldn’t answer right now. Check your internet connection and try again.');
     if (askBox) askBox.querySelector('#q').focus();
   }
+
+  // ---------- staying on the page ----------
+  // Step aside for a newer copy (or, when the extension can't be reached and no newer copy came, say so once).
+  function retire(stale) {
+    if (dead) return;
+    dead = true;
+    try { mo.disconnect(); } catch {}
+    hideChip(); closeCard(); closePanel(); closeAsk();
+    if (fab) fab.remove(); fab = null;
+    if (pageTr && pageTr.bar) pageTr.bar.remove();
+    if (!stale) { host$.remove(); return; }
+    attach();
+    layer.innerHTML = '<div class="tbar" role="status"><span>Linger was updated. Reload this page to use it here.</span><button type="button">Reload</button></div>';
+    layer.querySelector('button').onclick = () => location.reload();
+    setTimeout(() => host$.remove(), 15000);
+  }
+  if (api) document.addEventListener('linger-retire', () => retire(false));
+  // Some sites rebuild the page and drop elements they didn't make (the Ask Linger button vanished): put it back.
+  new MutationObserver(() => { if (!dead && !host$.isConnected && layer.childElementCount) attach(); }).observe(document.documentElement, { childList: true });
 
   // ---------- settings and messages ----------
   function apply() {
@@ -910,12 +950,14 @@
   if (api) {
     chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '' }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
+      if (dead) return;
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
       if (active() !== was || ch.bigger || ch.spread) apply();
       if (ch.assistant || ch.aiOn || ch.paused || ch.highlight) showFab();
     });
     chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+      if (dead) return;
       if (msg.type === 'explain') { explainPage(); reply({ ok: true }); }
       if (msg.type === 'status') reply({ ok: true, words: count, eye: !!(window.__lingerGaze && window.__lingerGaze.on), translated: !!pageTr });
       if (msg.type === 'page-lang') { pageLang().then((from) => reply({ from, to: pageTarget(from, msg.lang) })); return true; }
@@ -924,5 +966,5 @@
   } else apply();
 
   // Shared with gaze.js (eye tracking), which runs in this same isolated world.
-  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf, translatePage, restorePage };
+  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf, translatePage, restorePage, alive: () => !dead && alive(), retire };
 })();

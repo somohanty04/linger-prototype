@@ -21,33 +21,54 @@ async function lookup(word) {
 // After deploying, put the URL the deploy prints here. Empty = AI off (cards use the dictionary only).
 const AI_URL = 'https://us-central1-linger-f41a7.cloudfunctions.net/explain';
 const aiCache = new Map();
+// A random ID for this browser, sent with AI requests so the server's "too many requests" limit counts each person
+// separately. Before, it counted per internet address, and a whole class on campus Wi-Fi shares one address, so AI
+// answers stopped for everyone after 30 a minute.
+let installId = null;
+async function getInstallId() {
+  if (installId) return installId;
+  const { lingerId } = await chrome.storage.local.get({ lingerId: '' });
+  installId = lingerId || crypto.randomUUID();
+  if (!lingerId) await chrome.storage.local.set({ lingerId: installId });
+  return installId;
+}
+// POST to the Linger AI server. A busy server, a cold start or a network blip gets one more try after a short pause.
+async function postAI(body, ms) {
+  const headers = { 'Content-Type': 'application/json', 'X-Linger-Id': await getInstallId() };
+  for (let attempt = 0; ; attempt++) {
+    const stop = new AbortController(), t = setTimeout(() => stop.abort(), ms);
+    let r = null;
+    try { r = await fetch(AI_URL, { method: 'POST', headers, body: JSON.stringify(body), signal: stop.signal }); } catch {} finally { clearTimeout(t); }
+    const retry = !r || r.status === 429 || r.status >= 500;
+    if (!retry || attempt >= 1) return r;
+    await new Promise((res) => setTimeout(res, r && r.status === 429 ? 2500 : 1200));
+  }
+}
 async function askAI({ mode, text, context, lang, langName, from, sentence }) {
   const { aiOn } = await chrome.storage.local.get({ aiOn: true });
   if (!AI_URL || !aiOn) return null;
   const extra = mode === 'translate' ? { lang, langName, from, sentence: !!sentence } : {};
   const key = JSON.stringify([mode, text, context, extra]);
   if (aiCache.has(key)) return aiCache.get(key);
-  const stop = new AbortController(), t = setTimeout(() => stop.abort(), 30000);
   try {
-    const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, text, context, ...extra }), signal: stop.signal });
-    const out = r.ok ? await r.json() : null;
+    const r = await postAI({ mode, text, context, ...extra }, 25000);
+    const out = r && r.ok ? await r.json() : null;
     if (!out || out.error) return null;
     aiCache.set(key, out);
     if (aiCache.size > 300) aiCache.delete(aiCache.keys().next().value);
     return out;
-  } catch { return null; } finally { clearTimeout(t); }
+  } catch { return null; }
 }
 
 // Ask Linger: a question about the whole page (no caching: every question is different).
 async function askPage(body) {
   const { aiOn } = await chrome.storage.local.get({ aiOn: true });
   if (!AI_URL || !aiOn) return { error: 'off' };
-  const stop = new AbortController(), t = setTimeout(() => stop.abort(), 60000);
   try {
-    const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, mode: 'ask' }), signal: stop.signal });
-    if (r.status === 429) return { error: 'busy' };
-    return r.ok ? await r.json() : { error: 'failed' };
-  } catch { return { error: 'failed' }; } finally { clearTimeout(t); }
+    const r = await postAI({ ...body, mode: 'ask' }, 50000);
+    if (r && r.status === 429) return { error: 'busy' };
+    return r && r.ok ? await r.json() : { error: 'failed' };
+  } catch { return { error: 'failed' }; }
 }
 
 // Synonyms with how common each word is (Datamuse, which uses WordNet and word counts from books and the web).
@@ -111,7 +132,16 @@ async function openPractice(fromTab) {
 // Keep eye tracking on after Chrome restarts.
 const resume = async () => { const { eyeOn } = await chrome.storage.local.get({ eyeOn: false }); if (eyeOn) ensureTracker(); };
 chrome.runtime.onStartup.addListener(resume);
-chrome.runtime.onInstalled.addListener(resume);
+// Chrome only adds content scripts to pages loaded after Linger is installed or updated. Tabs that were already open
+// either had no Linger at all ("works on some tabs, not others") or kept an old copy that can't reach the extension.
+// Put a fresh copy into every open web page; content.js and gaze.js make the old copy step aside.
+async function injectOpenTabs() {
+  const files = chrome.runtime.getManifest().content_scripts[0].js;
+  const tabs = await chrome.tabs.query({});
+  await Promise.all(tabs.filter((t) => /^(https?|file):/.test(t.url || '') && !/chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(t.url))
+    .map((t) => chrome.scripting.executeScript({ target: { tabId: t.id }, files }).catch(() => {})));
+}
+chrome.runtime.onInstalled.addListener((d) => { resume(); if (d.reason === 'install' || d.reason === 'update') injectOpenTabs(); });
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   (async () => {

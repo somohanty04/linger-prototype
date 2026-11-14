@@ -4,9 +4,12 @@
 // Then Linger opens the card for the hard word on that line closest to where you're looking.
 (() => {
   'use strict';
-  if (window.__lingerGaze) return;
+  // A working copy is already here: stop. An old copy left over from before an update steps aside (see content.js).
+  if (window.__lingerGaze && window.__lingerGaze.alive && window.__lingerGaze.alive()) return;
+  document.querySelectorAll('#linger-gaze').forEach((n) => n.remove());
   const L = window.__lingerAPI;
   if (!L) return;
+  let dead = false;
   const G = { on: false, status: 'off', msg: '', secs: L.settings.pauseSecs || 3, last: 0, port: null, dpr: null };
   const BAND = 30; // px: one "line" of text for the webcam's accuracy
 
@@ -77,7 +80,7 @@
   const LABEL = { loading: 'Starting eye tracking…', ok: 'Linger eye tracking', noface: 'Can’t see your eyes. Face the camera.', moved: 'Sit like you did when you set it up', nomodel: 'Eye tracking needs setting up', error: 'Eye tracking stopped' };
   function setStatus(st) { G.status = st.s; G.msg = st.msg || ''; chip(); }
   function connect() {
-    if (!api) return;
+    if (!api || dead) return;
     const want = G.on && !document.hidden;
     if (!want) { if (G.port) { try { G.port.disconnect(); } catch {} G.port = null; } return; }
     if (G.port) return;
@@ -100,7 +103,7 @@
     });
   }
   function setOn(on) {
-    if (on === G.on) return;
+    if (dead || on === G.on) return;
     G.on = on; G.status = on ? 'loading' : 'off';
     if (on) attach(); else { ui.querySelectorAll('.ask').forEach((n) => n.remove()); L.askOpen = false; clearLine(); showCursor(null); }
     hist.length = 0; trail.length = 0;
@@ -110,11 +113,18 @@
   if (api) {
     chrome.storage.local.get({ eyeOn: false, gazeModel: null, pauseSecs: 3 }, (v) => { G.dpr = v.gazeModel && v.gazeModel.dpr; G.acc = v.gazeModel && v.gazeModel.acc; G.secs = v.pauseSecs; setOn(!!v.eyeOn); });
     chrome.storage.onChanged.addListener((ch) => {
+      if (dead) return;
       if (ch.pauseSecs) G.secs = ch.pauseSecs.newValue;
       if (ch.gazeModel) G.dpr = ch.gazeModel.newValue && ch.gazeModel.newValue.dpr;
       if (ch.eyeOn) setOn(!!ch.eyeOn.newValue);
     });
     document.addEventListener('visibilitychange', connect);
+    // A newer copy of Linger was put into this tab after an update: stop using the camera feed and remove the chip.
+    document.addEventListener('linger-retire', () => {
+      dead = true; G.on = false;
+      if (G.port) { try { G.port.disconnect(); } catch {} G.port = null; }
+      host.remove();
+    });
   }
 
   // ---------- pause detection ----------
@@ -257,5 +267,5 @@
   // People look where they click, so every click on the page teaches the tracker a little more.
   document.addEventListener('click', (e) => { if (G.on && e.isTrusted) send({ type: 'learn', s: toScreen(e.clientX, e.clientY) }); }, true);
   // feed/simOn are for the noisy-gaze simulation on the test page (no extension there).
-  window.__lingerGaze = { get on() { return G.on; }, setSecs: (s) => { G.secs = s; }, simOn: () => { attach(); G.on = true; G.status = 'ok'; chip(); }, feed: (x, y) => onGaze({ x, y }), swipe: (dir) => onSwipe(dir) };
+  window.__lingerGaze = { alive: () => !dead && (!api || !!(chrome.runtime && chrome.runtime.id)), get on() { return G.on; }, setSecs: (s) => { G.secs = s; }, simOn: () => { attach(); G.on = true; G.status = 'ok'; chip(); }, feed: (x, y) => onGaze({ x, y }), swipe: (dir) => onSwipe(dir) };
 })();

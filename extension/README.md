@@ -31,6 +31,12 @@ Underlines hard English words on any website, explains them in plain words, and 
 - **"Sit like you did when you set it up"**: you've moved a lot closer, farther or to the side. Move back, or press Recalibrate.
 The menu shows the last problem under Eye tracking.
 
+## If Linger stops working on a page
+
+- **After installing or updating Linger**, it now adds itself to tabs that were already open, so you don't have to reload them. If a page still shows **"Linger was updated. Reload this page"**, press Reload.
+- **"Linger AI didn't answer this time"** on a card: the AI server was busy or the connection dropped (Linger already retried once). The card shows the dictionary meaning instead. Click the word again to retry.
+- **No ✦ Ask Linger button**: it only shows when **AI explanations**, **Ask Linger button** and **On this site** are all on in the Linger menu.
+
 ## Pair with the phone
 
 In the Linger phone app, open **Words → Turn on live sync** and type the 12-character code into the extension's **Your phone** box.
