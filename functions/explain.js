@@ -66,10 +66,12 @@ SCHEMAS.translate = {
   properties: {
     translation: str('The text in <text> translated into the target language, with the meaning it has in <context>.'),
     sentence: str('The <context> sentence translated into the target language, if asked for. Otherwise an empty string.'),
-    note: str('If the text is an idiom, slang, a legal or official term, or something that does not translate word for word: one short sentence in the target language explaining what it really means. Otherwise an empty string.')
+    note: str('Written in the target language. If the text is an idiom, slang, a legal or official term, or something that does not translate word for word: one short sentence in the target language explaining what it really means. Otherwise an empty string.')
   }
 };
 const TRANSLATE_SYSTEM = `You are Linger, a reading helper for adults who are new to a country and read in a second language. Translate the text the reader picked into their own language so they understand it.
+
+Write every field (translation, sentence and note) in the target language only, never in English, unless the target language is English.
 
 Translate the meaning it has where it appears, not every dictionary sense. Use natural, everyday wording that a native speaker would use, not word-for-word translation. Keep names, numbers, dates and amounts exactly as they are. Never add facts the text doesn't contain.
 
@@ -150,7 +152,7 @@ export function buildRequest(input) {
       ...(FALLBACK ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : {}),
       output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMAS.translate } },
       system: TRANSLATE_SYSTEM,
-      messages: [{ role: 'user', content: `<text>${text}</text>\n<context>${context || '(none)'}</context>\n\nTranslate <text> from ${from} into ${langName} (${lang}).${sentence && context ? ' Also translate the <context> sentence.' : ' Leave "sentence" empty.'}` }]
+      messages: [{ role: 'user', content: `<text>${text}</text>\n<context>${context || '(none)'}</context>\n\nTranslate <text> from ${from} into ${langName} (${lang}).${sentence && context ? ' Also translate the <context> sentence.' : ' Leave "sentence" empty.'} Write the translation and any note in ${langName}.` }]
     };
   }
   const { mode, text, context } = input;
