@@ -7,8 +7,13 @@ importScripts('dict.js');
 
 // Meaning and an example sentence from Wiktionary.
 const dictCache = new Map();
-async function lookup(word) {
-  if (dictCache.has(word)) return dictCache.get(word);
+const dictWait = new Map();
+function lookup(word) {
+  if (dictCache.has(word)) return Promise.resolve(dictCache.get(word));
+  if (!dictWait.has(word)) dictWait.set(word, lookupNow(word).finally(() => dictWait.delete(word)));
+  return dictWait.get(word);
+}
+async function lookupNow(word) {
   try {
     const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(word));
     const e = r.ok ? self.lingerDictEntry(await r.json(), word) : { meaning: null, example: null };
@@ -44,20 +49,43 @@ async function postAI(body, ms) {
     await new Promise((res) => setTimeout(res, r && r.status === 429 ? 2500 : 1200));
   }
 }
-async function askAI({ mode, text, context, lang, langName, from, sentence, texts }) {
+async function askAI({ mode, text, context, lang, langName, from, sentence, texts, items }) {
   const { aiOn } = await chrome.storage.local.get({ aiOn: true });
   if (!AI_URL || !aiOn) return null;
-  const extra = mode === 'translate' ? { lang, langName, from, sentence: !!sentence } : mode === 'translate-many' ? { lang, langName, from, texts } : {};
+  const extra = mode === 'translate' ? { lang, langName, from, sentence: !!sentence } : mode === 'translate-many' ? { lang, langName, from, texts } : mode === 'swap-many' ? { lang, langName, items } : {};
   const key = JSON.stringify([mode, text, context, extra]);
   if (aiCache.has(key)) return aiCache.get(key);
-  try {
-    const r = await postAI({ mode, text, context, ...extra }, mode === 'translate-many' ? 55000 : 25000);
-    const out = r && r.ok ? await r.json() : null;
-    if (!out || out.error) return null;
-    aiCache.set(key, out);
-    if (aiCache.size > 300) aiCache.delete(aiCache.keys().next().value);
-    return out;
-  } catch { return null; }
+  const keep = mode !== 'translate-many'; // page batches are big and rarely repeat
+  if (keep) { const saved = await diskGet(key); if (saved) { aiCache.set(key, saved); return saved; } }
+  // The same question already on its way (hovering started it, then the click asked again): wait for that one.
+  if (inFlight.has(key)) return inFlight.get(key);
+  const p = (async () => {
+    try {
+      const r = await postAI({ mode, text, context, ...extra }, mode === 'translate-many' ? 55000 : 25000);
+      const out = r && r.ok ? await r.json() : null;
+      if (!out || out.error) return null;
+      aiCache.set(key, out);
+      if (aiCache.size > 300) aiCache.delete(aiCache.keys().next().value);
+      if (keep) diskPut(key, out);
+      return out;
+    } catch { return null; }
+  })();
+  inFlight.set(key, p);
+  p.finally(() => inFlight.delete(key));
+  return p;
+}
+// AI answers are also kept on disk (the newest 500), because Chrome stops this background worker after about 30
+// seconds idle and its memory goes with it. A word you met yesterday, or on another page, now opens instantly.
+const inFlight = new Map();
+let disk = null, diskT = null;
+async function diskLoad() { if (!disk) disk = (await chrome.storage.local.get({ aiDisk: {} })).aiDisk || {}; return disk; }
+async function diskGet(key) { const d = await diskLoad(); const e = d[key]; if (e) e.t = Date.now(); return e ? e.v : null; }
+async function diskPut(key, v) {
+  const d = await diskLoad();
+  d[key] = { v, t: Date.now() };
+  const keys = Object.keys(d);
+  if (keys.length > 500) keys.sort((a, b) => d[a].t - d[b].t).slice(0, keys.length - 500).forEach((k) => delete d[k]);
+  clearTimeout(diskT); diskT = setTimeout(() => chrome.storage.local.set({ aiDisk: d }), 500);
 }
 
 // Ask Linger: a question about the whole page (no caching: every question is different).
@@ -73,8 +101,13 @@ async function askPage(body) {
 
 // Synonyms with how common each word is (Datamuse, which uses WordNet and word counts from books and the web).
 const synCache = new Map();
-async function synonyms(word) {
-  if (synCache.has(word)) return synCache.get(word);
+const synWait = new Map();
+function synonyms(word) {
+  if (synCache.has(word)) return Promise.resolve(synCache.get(word));
+  if (!synWait.has(word)) synWait.set(word, synonymsNow(word).finally(() => synWait.delete(word)));
+  return synWait.get(word);
+}
+async function synonymsNow(word) {
   const D = 'https://api.datamuse.com/words';
   const f = (x) => Number(((x.tags || []).find((t) => t.startsWith('f:')) || 'f:0').slice(2));
   try {
@@ -141,7 +174,16 @@ async function injectOpenTabs() {
   await Promise.all(tabs.filter((t) => /^(https?|file):/.test(t.url || '') && !/chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(t.url))
     .map((t) => chrome.scripting.executeScript({ target: { tabId: t.id }, files }).catch(() => {})));
 }
-chrome.runtime.onInstalled.addListener((d) => { resume(); if (d.reason === 'install' || d.reason === 'update') injectOpenTabs(); });
+// Underline hard words starts off for new installs (people turn it on in the menu). People updating from a version
+// where it was on by default keep it on, unless they had turned it off themselves.
+async function underlineDefault(reason) {
+  const { highlight } = await chrome.storage.local.get('highlight');
+  if (highlight === undefined) await chrome.storage.local.set({ highlight: reason === 'update' });
+}
+chrome.runtime.onInstalled.addListener(async (d) => {
+  resume();
+  if (d.reason === 'install' || d.reason === 'update') { await underlineDefault(d.reason); injectOpenTabs(); }
+});
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   (async () => {

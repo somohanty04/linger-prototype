@@ -30,7 +30,9 @@ export function tooMany(ip, id) {
 let client = null;
 
 export const explain = onRequest(
-  { secrets: [ANTHROPIC_API_KEY], cors: true, region: 'us-central1', maxInstances: 5, timeoutSeconds: 60, memory: '256MiB' },
+  // minInstances: 1 keeps one server warm, so the first card after a quiet spell doesn't wait ~2 s for it to start up.
+  // (One idle instance costs a little each month; set it back to 0 to save that.)
+  { secrets: [ANTHROPIC_API_KEY], cors: true, region: 'us-central1', minInstances: 1, maxInstances: 5, timeoutSeconds: 60, memory: '256MiB' },
   async (req, res) => {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
     if (tooMany(req.ip || 'unknown', req.get('X-Linger-Id'))) return res.status(429).json({ error: 'Too many requests. Try again in a minute.' });

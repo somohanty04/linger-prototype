@@ -91,3 +91,5 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 .pick select:focus-visible { outline: 3px solid #B1B7FF; outline-offset: 2px; }
 .tmsg { align-self: stretch; margin: -8px 0 0; text-align: center; }
 .tmsg:empty { display: none; }
+
+.askwhy { align-self: stretch; margin: -8px 0 0; padding: 8px 12px; border-radius: 10px; background: #FFF6E0; color: #5B4A1F; }

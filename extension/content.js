@@ -6,8 +6,12 @@
   // can't reach the extension any more (Chrome throws "Extension context invalidated"): cards got stuck on
   // "Looking up…" and Ask Linger stopped answering. Now the background worker puts a fresh copy into open tabs, and
   // the old copy steps aside (retire). A copy that's still working stays, so nothing runs twice.
+  const VERSION = (() => { try { return chrome.runtime.getManifest().version; } catch { return 'test'; } })();
   const prev = window.__lingerAPI;
-  if (prev && prev.alive && prev.alive()) return;
+  // Same version already working here: stop. A different version (Chrome can keep the old one in this tab after an
+  // update) is told to step aside, so the new code is what runs.
+  if (prev && prev.alive && prev.alive() && prev.version === VERSION) return;
+  try { if (prev && prev.retire) prev.retire(false); } catch {}
   document.dispatchEvent(new CustomEvent('linger-retire')); // tell an old copy (in its own script world) to step aside
   document.querySelectorAll('#linger-ui').forEach((n) => n.remove()); // what versions before 0.7 left behind
   const { PLAIN, D, PHRASES, COMMON } = self.LINGER_WORDS;
@@ -51,16 +55,20 @@
   }
 
   // ---------- settings ----------
-  const S = { highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '' };
+  const S = { highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '', swap: '' };
   const host = location.hostname || 'file';
   let pageTr = null; // set while the whole page is translated (see translatePage)
-  const active = () => S.highlight && !S.paused.includes(host) && !pageTr;
+  if (!api) S.highlight = true; // the test page (no extension features) is there to check the underlines
+  // Words are found (and underlined) when underlining is on, or when hard words are being swapped.
+  const active = () => (S.highlight || !!S.swap) && !S.paused.includes(host) && !pageTr;
 
   // ---------- styles on the page ----------
   const style = document.createElement('style');
   style.textContent = `
     .linger-w { text-decoration: underline dotted #F2A33A 2px !important; text-underline-offset: 3px !important; cursor: help !important; border-radius: 3px; transition: background .12s; }
     .linger-w:hover, .linger-w.linger-on { background: rgba(255, 217, 138, 0.45) !important; }
+    .linger-w.linger-swapped { text-decoration: underline solid #2BA36B 2px !important; text-underline-offset: 3px !important; background: rgba(189, 232, 215, 0.35) !important; }
+    .linger-nounder .linger-w:not(.linger-swapped) { text-decoration: none !important; cursor: inherit !important; background: none !important; }
     .linger-big .linger-w { font-size: 1.25em !important; padding: 0 2px !important; }
     .linger-spread p, .linger-spread li, .linger-spread dd, .linger-spread td, .linger-spread blockquote { line-height: 2.1 !important; }
     .linger-line { background: rgba(255, 217, 138, 0.28) !important; box-shadow: 0 0 0 3px rgba(255, 190, 70, 0.25) !important; border-radius: 4px; }
@@ -103,6 +111,7 @@
     }
     if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
     node.parentNode.replaceChild(frag, node);
+    if (S.swap) scheduleSwap();
   }
   function scan(root) {
     if (!active() || !root || count >= MAX) return;
@@ -120,7 +129,7 @@
   }
   const schedule = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 500 }) : setTimeout(fn, 16));
   function unwrapAll() {
-    document.querySelectorAll('.linger-w').forEach((sp) => { const p = sp.parentNode; p.replaceChild(document.createTextNode(sp.textContent), sp); p.normalize(); });
+    document.querySelectorAll('.linger-w').forEach((sp) => { const p = sp.parentNode; p.replaceChild(document.createTextNode(sp.dataset.orig || sp.textContent), sp); p.normalize(); });
     count = 0;
   }
   // Pages like Gmail keep adding content; underline new parts as they appear.
@@ -155,8 +164,12 @@
   }
   function sentenceAround(sp) {
     const block = sp.closest('p, li, td, th, dd, dt, blockquote, h1, h2, h3, h4, h5, h6, figcaption, article, section, div') || sp.parentElement;
-    const text = (block.innerText || block.textContent || '').replace(/\s+/g, ' ');
-    const w = sp.textContent;
+    // Swapped words read as their originals here, so the sentence matches what the page really says.
+    let text;
+    if (block.querySelector('.linger-w[data-orig]')) { const c = block.cloneNode(true); c.querySelectorAll('.linger-w[data-orig]').forEach((x) => { x.textContent = x.dataset.orig; }); text = c.textContent || ''; }
+    else text = block.innerText || block.textContent || '';
+    text = text.replace(/\s+/g, ' ');
+    const w = sp.dataset.orig || sp.textContent;
     const s = sentencesOf(text).find((x) => x.includes(w)) || text;
     return s.length > 260 ? s.slice(Math.max(0, s.indexOf(w) - 120), s.indexOf(w) + 140).trim() + '…' : s;
   }
@@ -211,6 +224,10 @@
     .wc-def b { color: #2B39B2; font-weight: 800; }
     .wc-easy { color: #5B6070; }
     .wc-trbox { background: #F0FFFA; }
+    .wc-trhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .wc-lang { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 0 4px 0 10px; height: 32px; border: 1px solid #B1B7FF; border-radius: 99px; background: #FFFFFF; color: #1F2AA8; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .wc-lang select { max-width: 170px; height: 30px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+    .wc-lang:focus-within { outline: 2px solid #6D79FF; outline-offset: 2px; }
     .wc-tr { color: #115940; font-size: 20px; font-weight: 700; line-height: 26px; overflow-wrap: anywhere; }
     /* Whole-page translation bar */
     .tbar { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 24px); padding: 8px 8px 8px 16px; border-radius: 99px; background: linear-gradient(90deg, #1F2DA8, #5464D9); color: #FFFFFF; font-size: 14px; font-weight: 700; box-shadow: 0 8px 24px rgba(16, 20, 80, 0.3); font-family: 'Linger Figtree', 'Figtree', system-ui, sans-serif; }
@@ -290,7 +307,7 @@
     } catch { return null; }
   }
   const AI_WAIT = '✦ Checking what it means here…';
-  const speakIt = (t) => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; u.rate = 0.9; speechSynthesis.speak(u); } catch {} };
+  const speakIt = (t, lang = 'en-US') => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = lang; u.rate = 0.9; speechSynthesis.speak(u); } catch {} };
 
   // ---------- translation ----------
   // Chrome's built-in translator first: it runs on this laptop, is free, and nothing leaves the computer. When Chrome
@@ -327,17 +344,35 @@
     return a && a.translation ? { text: a.translation, sentence: withSentence ? a.sentence || '' : '', note: a.note || '', by: 'claude' } : null;
   }
   // The "In <your language>" box on a word or phrase card. isCurrent: is this card still the open one.
+  // A language menu on the card itself: pick or switch the language right there (it also becomes "My language").
+  function langMenu(to) {
+    const opts = (self.LINGER_LANGS || []).filter((l) => l.code !== 'en')
+      .map((l) => `<option value="${l.code}"${l.code === to ? ' selected' : ''}>${esc(l.own === l.name ? l.name : `${l.own} · ${l.name}`)}</option>`).join('');
+    return `<label class="wc-lang"><span aria-hidden="true">🌐</span><select id="trLang" aria-label="${to ? 'Change the translation language' : 'Translate into your language'}">
+      <option value="">${to ? 'No translation' : 'Translate to…'}</option>${opts}</select></label>`;
+  }
   function addTranslation(isCurrent, rect, text, context, withSentence) {
     const to = S.transLang;
-    if (!to || !card) return;
-    const L = LANG(to), el = card.querySelector('#tr'), dir = rtl(to) ? 'rtl' : 'auto';
-    const tl = (t, cls, quote) => `<p class="${cls}" dir="${dir}" lang="${esc(to)}">${quote ? '“' : ''}${esc(t)}${quote ? '”' : ''}</p>`;
+    if (!card) return;
+    const el = card.querySelector('#tr');
+    const again = () => addTranslation(isCurrent, rect, text, context, withSentence);
+    const wire = () => {
+      el.querySelector('#trLang').onchange = (e) => {
+        S.transLang = e.target.value;
+        try { if (api && alive()) chrome.storage.local.set({ transLang: S.transLang }); } catch {}
+        again(); place(card, rect());
+      };
+    };
     el.hidden = false;
-    el.innerHTML = `<p class="wc-lbl">In ${esc(L.own)}:</p><div class="wc-box wc-trbox"><p class="wc-note">Translating…</p></div>`;
+    if (!to) { el.innerHTML = `<div class="wc-trhead">${langMenu('')}</div>`; wire(); return; }
+    const L = LANG(to), dir = rtl(to) ? 'rtl' : 'auto';
+    const tl = (t, cls, quote) => `<p class="${cls}" dir="${dir}" lang="${esc(to)}">${quote ? '“' : ''}${esc(t)}${quote ? '”' : ''}</p>`;
+    el.innerHTML = `<div class="wc-trhead"><p class="wc-lbl">In ${esc(L.own)}:</p>${langMenu(to)}</div><div class="wc-box wc-trbox"><p class="wc-note">Translating…</p></div>`;
+    wire();
     const box = el.querySelector('.wc-trbox');
     const onProgress = (p) => { if (isCurrent()) box.innerHTML = `<p class="wc-note">Getting ${esc(L.name)} ready on this laptop (first time only)… ${Math.round(p * 100)}%</p>`; };
     translate(text, { to, context, withSentence, onProgress }).then((r) => {
-      if (!isCurrent()) return;
+      if (!isCurrent() || S.transLang !== to) return; // closed, or switched to another language meanwhile
       box.innerHTML = r
         ? tl(r.text, 'wc-tr') + (r.sentence ? tl(r.sentence, 'wc-s', true) : '') + (r.note ? tl(r.note, 'wc-def') : '') +
           `<p class="wc-note">${r.by === 'chrome' ? 'Translated by Chrome on this laptop' : 'Translated by Claude'}</p>`
@@ -367,7 +402,7 @@
     if (dead) return;
     attach(); closeCard();
     cardSpan = sp; sp.classList.add('linger-on');
-    const raw = sp.textContent, k = keyOf(raw);
+    const raw = sp.dataset.orig || sp.textContent, k = keyOf(raw); // a swapped word opens the original word's card
     const sl = SLANG[k], d = D[k];
     const kind = sl ? 'slang' : sp.dataset.kind || (PLAIN[k] !== undefined ? 'hard' : 'common');
     let meaning = (sl && sl.meaning) || (d && d.meaning) || (PLAIN[k] ? cap(PLAIN[k]) + '.' : '');
@@ -541,7 +576,7 @@
   };
   function showChip() {
     hideChip();
-    if (!S.highlight || S.paused.includes(host) || card) return; // also while the page is translated
+    if (S.paused.includes(host) || card) return; // works with underlines off, and while the page is translated
     const sel = getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const text = sel.toString().replace(/\s+/g, ' ').trim();
@@ -699,35 +734,171 @@
       }
     }));
   }
-  document.addEventListener('mouseup', (e) => {
+  // Faster cards: start the AI explanation, the dictionary meaning and the synonyms while the pointer rests on an
+  // underlined word (people hover for a moment before they click). The card then finds them ready, or already on the
+  // way, instead of starting from zero on click. Same requests the card makes, so nothing is fetched twice.
+  const prefetched = new Set();
+  function prefetch(sp) {
+    if (dead || !sp || !sp.isConnected) return;
+    const raw = sp.dataset.orig || sp.textContent, k = keyOf(raw), sentence = sentenceAround(sp), id = raw + '\n' + sentence;
+    if (prefetched.has(id)) return;
+    prefetched.add(id);
+    askAI('word', raw, sentence);
+    const sl = SLANG[k], d = D[k];
+    if (!((sl && sl.meaning) || (d && d.meaning) || PLAIN[k])) send({ type: 'lookup', word: k });
+    if (!PLAIN[k] && !sl) send({ type: 'synonyms', word: k });
+  }
+  let hoverT = null;
+  window.addEventListener('mouseover', (e) => {
+    if (dead) return;
+    const sp = e.target.closest && e.target.closest('.linger-w');
+    clearTimeout(hoverT);
+    if (sp) hoverT = setTimeout(() => prefetch(sp), 120);
+  }, { passive: true, capture: true });
+
+  window.addEventListener('mouseup', (e) => {
     if (dead || e.button !== 0 || (e.composedPath && e.composedPath().includes(host$))) return;
     clearTimeout(chipT);
     chipT = setTimeout(showChip, 220); // after a double-click has had its turn
-  });
+  }, true); // capture: runs before a site's own scripts can stop the event
   document.addEventListener('selectionchange', () => { if (!dead && chip) { const s = getSelection(); if (!s || s.isCollapsed) hideChip(); } });
 
-  document.addEventListener('click', (e) => {
+  window.addEventListener('click', (e) => {
     if (dead || (e.composedPath && e.composedPath().includes(host$))) return;
-    const sp = e.target.closest && e.target.closest('.linger-w');
+    let sp = e.target.closest && e.target.closest('.linger-w');
+    if (sp && !S.highlight && !sp.classList.contains('linger-swapped')) sp = null; // underlines off: plain text stays plain
     if (sp) { e.preventDefault(); e.stopPropagation(); openCard(sp); return; }
     if (card) closeCard();
   }, true);
   // Double-click any word (even one that isn't underlined) to look it up.
-  document.addEventListener('dblclick', (e) => {
-    if (dead || !active() || (e.composedPath && e.composedPath().includes(host$))) return;
+  window.addEventListener('dblclick', (e) => {
+    if (dead || S.paused.includes(host) || pageTr || (e.composedPath && e.composedPath().includes(host$))) return; // underlines can be off
     const sel = getSelection(); const w = (sel && sel.toString().trim()) || '';
     if (!/^[A-Za-z][A-Za-z'’-]{1,30}$/.test(w) || !sel.rangeCount) return;
     const r = sel.getRangeAt(0);
     if (!okParent(r.startContainer)) return;
     const sp = document.createElement('span'); sp.className = 'linger-w'; sp.dataset.kind = classify(w, true) || 'common'; sp.dataset.k = keyOf(w);
     try { r.surroundContents(sp); sel.removeAllRanges(); openCard(sp); } catch {}
-  });
-  document.addEventListener('keydown', (e) => { if (!dead && e.key === 'Escape') { hideChip(); closeCard(); closePanel(); closeAsk(); } });
+  }, true); // capture: runs before a site's own scripts can stop the event
+  window.addEventListener('keydown', (e) => { if (!dead && e.key === 'Escape') { hideChip(); closeCard(); closePanel(); closeAsk(); } }, true);
   window.addEventListener('scroll', () => {
     if (dead) return;
     hideChip();
     if (card && (cardSpan || cardRange)) place(card, (cardSpan || cardRange).getBoundingClientRect());
   }, { passive: true });
+
+  // ---------- hard words in easier English or the reader's language ----------
+  // "Hard words show as" (Linger menu, or Alt+Shift+L on the page): the original word, an easier English word, or the
+  // word in the reader's language, swapped right in the text. Fast because: Linger's own plain-word list answers many
+  // words instantly, Chrome's on-device translator does the reader's language without the internet, everything else
+  // goes to Claude in batches of 60 words (what's on screen first), and every answer is remembered.
+  const SWAPS = new Map(); // `${lang}|${word}` → replacement ('' = no easier word)
+  let swapT = null, swapping = false, swapAgain = false;
+  const swapLang = () => (S.swap === 'easy' ? 'en' : S.swap === 'mine' && S.transLang && S.transLang !== 'en' ? S.transLang : '');
+  const origOf = (sp) => sp.dataset.orig || sp.textContent;
+  function unshow(sp) {
+    if (sp.dataset.orig) { sp.textContent = sp.dataset.orig; delete sp.dataset.orig; }
+    delete sp.dataset.swapLang;
+    sp.classList.remove('linger-swapped'); sp.removeAttribute('title'); sp.removeAttribute('lang'); sp.removeAttribute('dir');
+  }
+  function showWord(sp, rep, lang) {
+    const orig = origOf(sp);
+    if (rep) rep = rep.split(/\s*[,;/、，]\s*/)[0].trim(); // one word only: "कद, प्रतिष्ठा" → "कद" (it sits inside the sentence)
+    if (!rep || rep.toLowerCase() === orig.toLowerCase()) { unshow(sp); return; }
+    sp.dataset.orig = orig; sp.dataset.swapLang = lang;
+    sp.textContent = /^[A-Z]/.test(orig) && lang === 'en' ? cap(rep) : rep;
+    sp.classList.add('linger-swapped'); sp.title = orig;
+    if (lang !== 'en') { sp.lang = lang; sp.dir = 'auto'; }
+  }
+  function scheduleSwap() { clearTimeout(swapT); swapT = setTimeout(runSwap, 60); }
+  async function runSwap() {
+    if (dead) return;
+    const lang = swapLang(), spans = [...document.querySelectorAll('.linger-w')];
+    if (!lang) { spans.forEach(unshow); return; }
+    const need = new Map();
+    for (const sp of spans) {
+      if (sp.dataset.swapLang && sp.dataset.swapLang !== lang) unshow(sp);
+      const orig = origOf(sp), k = keyOf(orig), key = lang + '|' + k;
+      if (SWAPS.has(key)) { showWord(sp, SWAPS.get(key), lang); continue; }
+      // Linger's own list of plain words: instant, no internet (short ones only, so the sentence still reads well).
+      if (lang === 'en' && PLAIN[k] && PLAIN[k].split(' ').length <= 3) { SWAPS.set(key, PLAIN[k]); showWord(sp, PLAIN[k], lang); continue; }
+      if (!need.has(k)) need.set(k, { w: orig, spans: [] });
+      need.get(k).spans.push(sp);
+    }
+    if (!need.size) return;
+    if (swapping) { swapAgain = true; return; }
+    swapping = true;
+    try {
+      const list = [...need.values()];
+      list.forEach((x) => { const r = x.spans[0].getBoundingClientRect(); x.rank = r.bottom < 0 ? 2e6 - r.bottom : r.top > innerHeight ? 1e6 + r.top : r.top; });
+      list.sort((a, b) => a.rank - b.rank);
+      const done = (x, rep) => { SWAPS.set(lang + '|' + keyOf(x.w), rep || ''); x.spans.forEach((sp) => { if (sp.isConnected) showWord(sp, rep, lang); }); };
+      const t = lang !== 'en' ? await chromeTranslator('en', lang) : null;
+      if (t) {
+        for (const x of list) { if (swapLang() !== lang) return; try { done(x, await t.translate(x.w)); } catch {} }
+      } else {
+        for (let i = 0; i < list.length && i < 300; i += 60) {
+          const chunk = list.slice(i, i + 60);
+          const items = chunk.map((x) => ({ w: x.w, s: sentenceAround(x.spans[0]).slice(0, 300) }));
+          const r = await askAI('swap-many', '', '', { lang, langName: LANG(lang).name, items });
+          if (swapLang() !== lang) return;
+          if (!r || !Array.isArray(r.swaps) || r.swaps.length !== chunk.length) {
+            // Claude can't be reached (AI off, offline, or the server not updated yet). Easier English still works:
+            // the thesaurus Linger uses for synonyms suggests a clearly more common word (fast, free, no AI).
+            if (lang === 'en') {
+              const got = await thesaurusSwaps(list.slice(i, i + 150), done); // a page's worth, not hundreds of lookups
+              swapNote(got ? 'Linger AI isn’t reachable, so easier words come from a thesaurus and may not always fit.' : 'Linger couldn’t get easier words right now. Only words from its own list switched.');
+            } else swapNote(!S.aiOn ? 'Turn on AI explanations in the Linger menu to switch more words.' : 'Linger couldn’t translate the hard words right now. Check your internet connection.');
+            break;
+          }
+          chunk.forEach((x, j) => done(x, r.swaps[j]));
+        }
+      }
+    } finally { swapping = false; if (swapAgain) { swapAgain = false; scheduleSwap(); } }
+  }
+  // Easier words from the thesaurus (Datamuse: synonyms with how common each one is), 8 lookups at a time.
+  // Picks a single, clearly more common word, the same rule word cards use for "Easier word".
+  async function thesaurusSwaps(list, done) {
+    let got = 0, next = 0;
+    const one = async () => {
+      while (next < list.length) {
+        const x = list[next++], k = keyOf(x.w);
+        if (swapLang() !== 'en') return;
+        if (SLANG[k]) continue; // local slang has a local meaning the thesaurus gets wrong (jumbo isn't "large" here)
+        const r = await send({ type: 'synonyms', word: k });
+        const c = r && r.list && r.list.find((c) => /^[a-z]+$/.test(c.w) && c.w.slice(0, 4) !== k.slice(0, 4) && c.f >= Math.max(3 * (r.self || 0), 5) && (isCommon(c.w) || c.f >= 20));
+        if (c && swapLang() === 'en') { done(x, c.w); got++; }
+      }
+    };
+    await Promise.all(Array.from({ length: 8 }, one));
+    return got;
+  }
+  // A short message at the top of the page (for the Alt+Shift+L shortcut).
+  let toastEl = null, toastT = null;
+  function toast(text) {
+    if (dead) return;
+    attach();
+    if (!toastEl) { toastEl = document.createElement('div'); toastEl.className = 'tbar'; toastEl.setAttribute('role', 'status'); toastEl.innerHTML = '<span></span>'; }
+    if (!toastEl.isConnected) layer.appendChild(toastEl);
+    toastEl.querySelector('span').textContent = text;
+    clearTimeout(toastT); toastT = setTimeout(() => toastEl.remove(), 2500);
+  }
+  const SWAP_UI = ['Hard words: easier English', 'Hard words: original', 'Turn on AI explanations in the Linger menu to switch more words.', 'Linger AI isn’t reachable, so easier words come from a thesaurus and may not always fit.',
+    'Linger couldn’t get easier words right now. Only words from its own list switched.', 'Linger couldn’t translate the hard words right now. Check your internet connection.'];
+  let noted = '';
+  function swapNote(msg) { if (noted === msg) return; noted = msg; const L = myLang(); (L ? loadUI(L, SWAP_UI) : Promise.resolve()).then(() => toast(T(msg))); }
+  const swapLabel = () => (S.swap === 'easy' ? 'Hard words: easier English' : S.swap === 'mine' && swapLang() ? `Hard words: ${LANG(S.transLang).own}` : 'Hard words: original');
+  // Alt+Shift+L: original → easier English → my language → original.
+  window.addEventListener('keydown', (e) => {
+    if (dead || !(e.altKey && e.shiftKey && e.code === 'KeyL') || S.paused.includes(host)) return;
+    e.preventDefault();
+    const order = ['', 'easy', ...(S.transLang && S.transLang !== 'en' ? ['mine'] : [])];
+    S.swap = order[(order.indexOf(S.swap) + 1) % order.length];
+    try { if (api && alive()) chrome.storage.local.set({ swap: S.swap }); } catch {}
+    apply(); noted = '';
+    const L = myLang();
+    (L ? loadUI(L, SWAP_UI) : Promise.resolve()).then(() => toast(T(swapLabel()) + ' · Alt+Shift+L')); // in the reader's language
+  }, true);
 
   // ---------- highlighted text in another language ----------
   // On a page Linger translated (or one written in another language), highlighting text used to do nothing: the
@@ -934,21 +1105,49 @@
     panel.querySelector('#read').onclick = () => speakIt(points.map((p) => p[1]).join(' '));
   }
 
+  // ---------- Linger's own words in the reader's language ----------
+  // Ask Linger's buttons and messages (and the toolbar menu) follow "My language". Each language is translated once
+  // (Chrome's translator, or Claude) and kept in chrome.storage, shared with the menu.
+  const UI = new Map(); let uiLang = '';
+  const T = (x) => (uiLang && UI.get(x)) || x;
+  async function loadUI(lang, strings) {
+    if (!lang || lang === 'en') { uiLang = ''; return false; }
+    const key = 'uiTr.' + lang;
+    if (uiLang !== lang) { UI.clear(); uiLang = lang; }
+    try { if (api && alive()) Object.entries((await chrome.storage.local.get({ [key]: {} }))[key] || {}).forEach(([k, v]) => UI.set(k, v)); } catch {}
+    const missing = strings.filter((x) => !UI.has(x));
+    if (!missing.length) return false;
+    const t = await chromeTranslator('en', lang);
+    if (t) { for (const m of missing) { try { UI.set(m, await t.translate(m)); } catch {} } }
+    else {
+      const r = await askAI('translate-many', '', '', { lang, langName: LANG(lang).name, from: 'en', texts: missing });
+      if (r && Array.isArray(r.translations) && r.translations.length === missing.length) missing.forEach((m, i) => { if (r.translations[i]) UI.set(m, r.translations[i]); });
+    }
+    try { if (api && alive()) { const out = {}; UI.forEach((v, k) => { out[k] = v; }); await chrome.storage.local.set({ [key]: out }); } } catch {}
+    return missing.some((m) => UI.has(m));
+  }
+
   // ---------- Ask Linger: the page assistant ----------
   // A small button in the bottom-right corner opens a chat about the page: questions, or help with a decision.
   // Claude gets the page's text (and the reader's highlight, if any). Turn the button off in the Linger menu.
   let fab = null, askBox = null, askFocus = '', asking = false;
   const askHist = [];
   const SUGGEST = ['What is this page about?', 'What do I need to do, and by when?', 'Help me decide what to do'];
+  const INTRO = 'Hi! Ask me anything about this page, or ask for help deciding what to do. I only use what’s on the page.';
+  const ERR = { busy: 'Lots of questions right now. Please wait a minute and try again.', off: 'AI is turned off in the Linger menu.', failed: 'Linger couldn’t answer right now. Check your internet connection and try again.' };
+  const ASK_UI = ['Ask Linger', 'About this page', 'Start a new chat', 'Close', 'Ask anything about this page…', 'Your question', 'Send', INTRO, ...SUGGEST,
+    'You can hide this button in the Linger menu.', 'Reading the page…', 'Read aloud', 'About your highlight:', 'Ask about the whole page instead', 'Ask Linger about this page', ...Object.values(ERR)];
+  const myLang = () => (S.transLang && S.transLang !== 'en' ? S.transLang : '');
   function showFab() {
     // Follows "On this site" (and its own switch), not "Underline hard words": you can ask about a page without underlines.
     const want = S.assistant && S.aiOn && !S.paused.includes(host) && window === window.top;
     if (!want) { if (fab) fab.remove(); fab = null; closeAsk(); return; }
-    if (fab) { attach(); return; }
+    if (fab && fab.isConnected && host$.isConnected) return;
+    if (fab) fab.remove();
     attach(); addFonts();
     fab = document.createElement('button');
     fab.type = 'button'; fab.className = 'ask-fab'; fab.textContent = '✦';
-    fab.title = 'Ask Linger about this page'; fab.setAttribute('aria-label', 'Ask Linger about this page');
+    fab.title = T('Ask Linger about this page'); fab.setAttribute('aria-label', T('Ask Linger about this page'));
     fab.onmousedown = (e) => e.preventDefault(); // keep the reader's highlight, so it can be the topic
     fab.onclick = () => (askBox ? closeAsk() : openAsk());
     layer.appendChild(fab);
@@ -961,7 +1160,8 @@
     return ((src && src.innerText) || '').slice(0, 40000);
   }
   async function askServer(question) {
-    const body = { mode: 'ask', question, history: askHist.slice(-8), page: pageText(), title: document.title, site: host, focus: askFocus };
+    const body = { mode: 'ask', question, history: askHist.slice(-8).map(({ q, a }) => ({ q, a })), page: pageText(), title: document.title, site: host, focus: askFocus,
+      ...(myLang() ? { lang: myLang(), langName: LANG(myLang()).name } : {}) }; // answers come back in the reader's language
     if (api) return send({ type: 'ai-ask', body });
     if (!window.LINGER_AI_URL) return { error: 'off' };
     try { const r = await fetch(window.LINGER_AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.ok ? await r.json() : { error: 'failed' }; }
@@ -972,12 +1172,13 @@
     const sel = String(getSelection() || '').replace(/\s+/g, ' ').trim();
     if (sel && /[A-Za-z]/.test(sel)) askFocus = sel.slice(0, 700);
     askBox = document.createElement('div');
-    askBox.className = 'ask-panel'; askBox.setAttribute('role', 'dialog'); askBox.setAttribute('aria-label', 'Ask Linger about this page');
-    askBox.innerHTML = `<div class="ask-head"><div><strong>✦ Ask Linger</strong><small>About this page</small></div>
-        <div class="ask-tools"><button type="button" class="ask-x" id="new" title="Start over" aria-label="Start a new chat">↺</button><button type="button" class="ask-x" id="close" aria-label="Close">✕</button></div></div>
-      <div class="ask-log" id="log" aria-live="polite"></div>
-      <div class="ask-focus" id="focus" hidden></div>
-      <form class="ask-form" id="form"><textarea id="q" rows="1" placeholder="Ask anything about this page…" aria-label="Your question"></textarea><button type="submit" class="ask-send" aria-label="Send">↑</button></form>`;
+    askBox.className = 'ask-panel'; askBox.setAttribute('role', 'dialog'); askBox.setAttribute('aria-label', T('Ask Linger about this page'));
+    const L = myLang(), ld = L ? ` lang="${esc(L)}" dir="${rtl(L) ? 'rtl' : 'auto'}"` : '';
+    askBox.innerHTML = `<div class="ask-head"${ld}><div><strong>✦ ${esc(T('Ask Linger'))}</strong><small>${esc(T('About this page'))}</small></div>
+        <div class="ask-tools"><button type="button" class="ask-x" id="new" title="${esc(T('Start a new chat'))}" aria-label="${esc(T('Start a new chat'))}">↺</button><button type="button" class="ask-x" id="close" aria-label="${esc(T('Close'))}">✕</button></div></div>
+      <div class="ask-log" id="log" aria-live="polite"${ld}></div>
+      <div class="ask-focus" id="focus" hidden${ld}></div>
+      <form class="ask-form" id="form"><textarea id="q" rows="1" placeholder="${esc(T('Ask anything about this page…'))}" aria-label="${esc(T('Your question'))}"${ld}></textarea><button type="submit" class="ask-send" aria-label="${esc(T('Send'))}">↑</button></form>`;
     layer.appendChild(askBox);
     fab.setAttribute('aria-expanded', 'true');
     const $ = (id) => askBox.querySelector('#' + id);
@@ -988,24 +1189,26 @@
     $('q').oninput = () => { const t = $('q'); t.style.height = 'auto'; t.style.height = Math.min(96, t.scrollHeight) + 'px'; };
     drawLog(); drawFocus();
     $('q').focus();
+    // First time in this language: translate the panel's words, then redraw it (unless the reader started typing).
+    if (L) loadUI(L, ASK_UI).then((changed) => { if (changed && askBox && !askBox.querySelector('#q').value && !asking) { closeAsk(); openAsk(); } });
   }
   function drawFocus() {
     if (!askBox) return;
     const f = askBox.querySelector('#focus');
     f.hidden = !askFocus;
-    f.innerHTML = askFocus ? `<span>About your highlight: “${esc(askFocus.length > 90 ? askFocus.slice(0, 90) + '…' : askFocus)}”</span><button type="button" class="ask-x small" aria-label="Ask about the whole page instead">✕</button>` : '';
+    f.innerHTML = askFocus ? `<span>${esc(T('About your highlight:'))} “${esc(askFocus.length > 90 ? askFocus.slice(0, 90) + '…' : askFocus)}”</span><button type="button" class="ask-x small" aria-label="${esc(T('Ask about the whole page instead'))}">✕</button>` : '';
     if (askFocus) f.querySelector('button').onclick = () => { askFocus = ''; drawFocus(); };
   }
   function drawLog(pending, err) {
     if (!askBox) return;
     const log = askBox.querySelector('#log');
-    const msgs = askHist.map((t, i) => `<div class="msg-me">${esc(t.q)}</div><div class="msg-ai">${esc(t.a)}<button type="button" class="ask-hear" data-i="${i}">🔊 Read aloud</button></div>`).join('');
-    const intro = askHist.length || pending ? '' : `<div class="msg-ai">Hi! Ask me anything about this page, or ask for help deciding what to do. I only use what’s on the page.</div>
-      <div class="ask-sugg">${SUGGEST.map((s) => `<button type="button">${esc(s)}</button>`).join('')}</div>
-      <p class="ask-note">You can hide this button in the Linger menu.</p>`;
-    log.innerHTML = intro + msgs + (pending ? `<div class="msg-me">${esc(pending)}</div><div class="msg-ai wait">Reading the page…</div>` : '') + (err ? `<div class="msg-ai err">${esc(err)}</div>` : '');
+    const msgs = askHist.map((t, i) => `<div class="msg-me">${esc(t.q)}</div><div class="msg-ai"${t.lang ? ` lang="${esc(t.lang)}"` : ''}>${esc(t.a)}<button type="button" class="ask-hear" data-i="${i}">🔊 ${esc(T('Read aloud'))}</button></div>`).join('');
+    const intro = askHist.length || pending ? '' : `<div class="msg-ai">${esc(T(INTRO))}</div>
+      <div class="ask-sugg">${SUGGEST.map((s) => `<button type="button">${esc(T(s))}</button>`).join('')}</div>
+      <p class="ask-note">${esc(T('You can hide this button in the Linger menu.'))}</p>`;
+    log.innerHTML = intro + msgs + (pending ? `<div class="msg-me">${esc(pending)}</div><div class="msg-ai wait">${esc(T('Reading the page…'))}</div>` : '') + (err ? `<div class="msg-ai err">${esc(err)}</div>` : '');
     log.querySelectorAll('.ask-sugg button').forEach((b) => { b.onclick = () => ask(b.textContent); });
-    log.querySelectorAll('.ask-hear').forEach((b) => { b.onclick = () => speakIt(askHist[+b.dataset.i].a); });
+    log.querySelectorAll('.ask-hear').forEach((b) => { b.onclick = () => { const t = askHist[+b.dataset.i]; speakIt(t.a, t.lang || 'en-US'); }; });
     log.scrollTop = log.scrollHeight;
   }
   async function ask(raw) {
@@ -1016,8 +1219,8 @@
     drawLog(q);
     let r = null;
     try { r = await askServer(q); } catch {} finally { asking = false; } // a failed request must not lock the chat
-    if (r && r.answer) { askHist.push({ q, a: r.answer.replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#+\s*/gm, '') }); drawLog(); }
-    else drawLog('', r && r.error === 'busy' ? 'Lots of questions right now. Please wait a minute and try again.' : r && r.error === 'off' ? 'AI is turned off in the Linger menu.' : 'Linger couldn’t answer right now. Check your internet connection and try again.');
+    if (r && r.answer) { askHist.push({ q, a: r.answer.replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#+\s*/gm, ''), lang: myLang() }); drawLog(); }
+    else drawLog('', T(ERR[r && (r.error === 'busy' || r.error === 'off') ? r.error : 'failed']));
     if (askBox) askBox.querySelector('#q').focus();
   }
 
@@ -1037,6 +1240,11 @@
     setTimeout(() => host$.remove(), 15000);
   }
   if (api) document.addEventListener('linger-retire', () => retire(false));
+  // The ✦ Ask Linger button sometimes went missing (a page redrew itself, or an old copy took the layer with it).
+  // Check every couple of seconds and put it back if it should be there.
+  setInterval(() => { if (!dead && fab !== undefined) showFab(); }, 2000);
+  // Why the button isn't showing, for the toolbar menu.
+  const askWhy = () => (!S.aiOn ? 'ai-off' : !S.assistant ? 'button-off' : S.paused.includes(host) ? 'site-off' : window !== window.top ? 'frame' : fab && fab.isConnected && host$.isConnected ? 'shown' : 'missing');
   // Some sites rebuild the page and drop elements they didn't make (the Ask Linger button vanished): put it back.
   new MutationObserver(() => { if (!dead && !host$.isConnected && layer.childElementCount) attach(); }).observe(document.documentElement, { childList: true });
 
@@ -1044,28 +1252,31 @@
   function apply() {
     document.documentElement.classList.toggle('linger-big', !!S.bigger);
     document.documentElement.classList.toggle('linger-spread', !!S.spread);
+    document.documentElement.classList.toggle('linger-nounder', !S.highlight);
     if (active()) { scan(document.body); mo.observe(document.body, { childList: true, subtree: true }); }
     else { mo.disconnect(); unwrapAll(); closeCard(); }
+    scheduleSwap();
     showFab();
   }
   if (api) {
-    chrome.storage.local.get({ highlight: true, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '' }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '', swap: '' }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       if (dead) return;
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
-      if (active() !== was || ch.bigger || ch.spread) apply();
+      if (active() !== was || ch.bigger || ch.spread || ch.highlight) apply();
+      else if (ch.swap || ch.transLang) scheduleSwap();
       if (ch.assistant || ch.aiOn || ch.paused || ch.highlight) showFab();
     });
     chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (dead) return;
       if (msg.type === 'explain') { explainPage(); reply({ ok: true }); }
-      if (msg.type === 'status') reply({ ok: true, words: count, eye: !!(window.__lingerGaze && window.__lingerGaze.on), translated: !!pageTr });
+      if (msg.type === 'status') reply({ ok: true, words: count, eye: !!(window.__lingerGaze && window.__lingerGaze.on), translated: !!pageTr, ask: askWhy(), version: VERSION });
       if (msg.type === 'page-lang') { pageLang().then((from) => reply({ from, to: pageTarget(from, msg.lang) })); return true; }
       if (msg.type === 'translate-page') { if (window !== window.top) return; translatePage(msg.lang).then(reply); return true; }
     });
   } else apply();
 
   // Shared with gaze.js (eye tracking), which runs in this same isolated world.
-  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf, translatePage, restorePage, alive: () => !dead && alive(), retire };
+  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf, translatePage, restorePage, alive: () => !dead && alive(), retire, version: VERSION, prefetch };
 })();

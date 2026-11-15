@@ -18,8 +18,8 @@ assert.ok(buildRequest(readInput({ mode: 'word', text: 'turnout', context: '' })
 const text = (o) => ({ stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: JSON.stringify(o) }] });
 assert.deepEqual(readResult(text({ meaning: 'You have to pay.', plain: 'must pay', hardWords: [{ word: 'remit', meaning: 'send money', easier: 'pay' }] })),
   { meaning: 'You have to pay.', plain: 'must pay', hardWords: [{ word: 'remit', meaning: 'send money', easier: 'pay' }] });
-assert.deepEqual(readResult(text({ meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people', 'extra'], plainSentence: 'x' })),
-  { meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people'], plainSentence: 'x' });
+assert.deepEqual(readResult(text({ meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people', 'extra'] })),
+  { meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people'] });
 assert.deepEqual(readResult({ stop_reason: 'refusal', content: [] }), { error: 'refused' });
 assert.deepEqual(readResult({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'not json' }] }), { error: 'bad answer' });
 // Page assistant
@@ -57,3 +57,17 @@ assert.ok(readInput({ mode: 'translate-many', lang: 'hi', texts: [] }).error);
 assert.ok(buildRequest(many).messages[0].content.includes('Return exactly 40 translations'));
 assert.deepEqual(readResult(text({ translations: ['किराया देय है'] })), { translations: ['किराया देय है'] });
 console.log('translate-many ok');
+// Ask Linger in the reader's language
+const askHi = readInput({ mode: 'ask', question: 'When is rent due?', page: 'Rent is due Dec 1.', lang: 'hi', langName: 'Hindi' });
+assert.equal(askHi.lang, 'hi'); assert.ok(buildRequest(askHi).system.includes('Answer in Hindi (hi)'));
+assert.equal(readInput({ mode: 'ask', question: 'x?', page: 'y', lang: 'en' }).lang, undefined);
+assert.equal(buildRequest(readInput({ mode: 'ask', question: 'x?', page: 'y' })).system.includes('Answer in'), false);
+console.log('ask lang ok');
+// Swapping hard words in place
+const sw = readInput({ mode: 'swap-many', lang: 'en', items: [{ w: 'unprecedented', s: 'The turnout was unprecedented.' }, { w: '', s: 'x' }, ...Array(80).fill({ w: 'remit', s: 'Remit payment.' })] });
+assert.equal(sw.items.length, 60); assert.equal(sw.items[0].w, 'unprecedented');
+assert.ok(readInput({ mode: 'swap-many', lang: 'en', items: [] }).error);
+assert.ok(buildRequest(sw).messages[0].content.includes('easier, more common English word'));
+assert.ok(buildRequest(readInput({ mode: 'swap-many', lang: 'hi', langName: 'Hindi', items: [{ w: 'remit', s: 'Remit payment.' }] })).messages[0].content.includes('translated into Hindi'));
+assert.deepEqual(readResult(text({ swaps: ['never seen before'] })), { swaps: ['never seen before'] });
+console.log('swap-many ok');

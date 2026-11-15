@@ -239,9 +239,10 @@
   // Ask first (like the phone app); answers are logged so the team can see how often it was right.
   function ask(word, why) {
     closeAsk(); L.askOpen = true;
+    if (L.prefetch) L.prefetch(word); // start looking it up while the reader decides, so "Yes" opens a ready card
     const r = word.getBoundingClientRect();
     const a = document.createElement('div'); a.className = 'ask'; a.dataset.why = why;
-    const w = word.textContent.replace(/[<>&"]/g, '');
+    const w = (word.dataset.orig || word.textContent).replace(/[<>&"]/g, '');
     // No on the left and Yes on the right, matching the hand swipes (swipe right = yes, left = no).
     const swipes = !!L.settings.handSwipe;
     a.innerHTML = `<span>👁 Stuck on <b>${w}</b>?</span><button class="no">No</button><button class="yes">Yes, explain</button>` + (swipes ? '<span class="hint">👋 swipe ← no · yes →</span>' : '');
