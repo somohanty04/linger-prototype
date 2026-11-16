@@ -18,8 +18,13 @@ assert.ok(buildRequest(readInput({ mode: 'word', text: 'turnout', context: '' })
 const text = (o) => ({ stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: JSON.stringify(o) }] });
 assert.deepEqual(readResult(text({ meaning: 'You have to pay.', plain: 'must pay', hardWords: [{ word: 'remit', meaning: 'send money', easier: 'pay' }] })),
   { meaning: 'You have to pay.', plain: 'must pay', hardWords: [{ word: 'remit', meaning: 'send money', easier: 'pay' }] });
-assert.deepEqual(readResult(text({ meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people', 'extra'], plainSentence: 'x' })),
-  { meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people'], plainSentence: 'x' });
+assert.deepEqual(readResult(text({ meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people', 'extra'], plainSentence: 'x',
+  example: 'The turnout at the park party was big.', exampleEasy: 'The attendance at the park party was big.' })),
+  { meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people'], plainSentence: 'x',
+    example: 'The turnout at the park party was big.', exampleEasy: 'The attendance at the park party was big.' });
+// An answer without the new fields (older prompt) still reads.
+assert.equal(readResult(text({ meaning: 'm', synonyms: [], plainSentence: '' })).example, '');
+assert.deepEqual(buildRequest(readInput({ mode: 'word', text: 'turnout', context: 'x' })).output_config.format.schema.required, ['meaning', 'synonyms', 'plainSentence', 'example', 'exampleEasy']);
 assert.deepEqual(readResult({ stop_reason: 'refusal', content: [] }), { error: 'refused' });
 assert.deepEqual(readResult({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'not json' }] }), { error: 'bad answer' });
 // Page assistant
