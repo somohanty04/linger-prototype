@@ -575,7 +575,7 @@
     </header>
     <div class="body wb">
       <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" aria-label="Search your words"></label>
-      <div class="chips">${filters.map(([id, l]) => `<button type="button" class="chip ${S.wordFilter === id ? 'on' : ''}" data-action="filter" data-v="${id}">${esc(l)}</button>`).join('')}</div>
+      <div class="lh-switch" role="group" aria-label="Show which words">${filters.map(([id, l]) => `<button type="button" class="lh-seg ${S.wordFilter === id ? 'on' : ''}" data-action="filter" data-v="${id}" aria-pressed="${S.wordFilter === id}">${esc(l)}</button>`).join('')}</div>
       <div class="wlist">${list.length ? list.map((k) => { const e = D[k]; return `<button type="button" class="item" data-action="open" data-k="${k}">
         <span class="item-head"><span class="word">${esc(cap(e.word))}</span>${badge(e.kind)}</span>
         <span class="mean">${esc(e.meaning)}</span>
