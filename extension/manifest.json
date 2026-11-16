@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Linger",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Underlines hard English words on any page, explains them in plain words, and saves them to your Linger phone app.",
   "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
   "action": { "default_title": "Linger", "default_popup": "popup.html", "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png" } },
@@ -14,5 +14,5 @@
     "run_at": "document_idle"
   }],
   "content_security_policy": { "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'" },
-  "web_accessible_resources": [{ "resources": ["icons/icon-32.png", "icons/card/*.svg", "fonts/*.woff2"], "matches": ["<all_urls>"] }]
+  "web_accessible_resources": [{ "resources": ["icons/icon-32.png", "icons/card/*.svg", "icons/ask/*.svg", "fonts/*.woff2"], "matches": ["<all_urls>"] }]
 }
