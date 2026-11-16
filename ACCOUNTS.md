@@ -22,7 +22,8 @@ one). Built on the same Firebase project (`linger-f41a7`) and the same Firestore
 
 ```
 users/{uid}                 { createdAt, schema: 1, prefs, photo }         profile
-                            prefs: { reads: [...], level, lang, at }       the onboarding answers (newest 'at' wins)
+                            prefs: { reads, other, langs, lang, level, test, at }   onboarding answers (newest 'at' wins);
+                                   test = the English check's result { cefr, level, right, total, agreed }
                             photo: 'data:image/jpeg;base64,…'              160×160 profile picture, a few KB
                             learn: { word: { n, r, x, s, c, w, k, h, lr, ll, u } }   learning progress (learn.js), newest 'u' wins per word
 users/{uid}/words/{key}     { w, m, s, p, place, date, createdAt, updatedAt }
