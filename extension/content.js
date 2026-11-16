@@ -179,6 +179,10 @@
     .wc-body { display: flex; flex-direction: column; gap: 16px; padding: 14px 14px 18px; border: 1px solid #E8E8E8; border-radius: 0 0 12px 12px; background: linear-gradient(to right, #FFFFFF, #FCFDFF); }
     .wc-meaning { color: #252A39; font-size: 20px; font-weight: 600; line-height: 22px; }
     .wc-ctx { display: flex; flex-direction: column; gap: 8px; }
+    .wc-syn { display: flex; flex-direction: column; gap: 16px; }
+    .wc-syn[hidden], .wc-ctx[hidden] { display: none; }
+    .wc-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .wc-chip { display: inline-flex; align-items: center; height: 36px; padding: 0 18px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px; background: #EAEFFF; color: #6D79FF; font-size: 14px; font-weight: 700; line-height: 20px; white-space: nowrap; }
     .wc-lbl { color: #5B6070; font-size: 16px; font-weight: 600; line-height: 22px; }
     .wc-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: #F6F7FF; }
     .wc-s { color: #252A39; font-size: 16px; font-weight: 600; font-style: italic; line-height: 22px; overflow-wrap: anywhere; }
@@ -303,49 +307,56 @@
     const sentence = sentenceAround(sp);
     const plain = plainify(sentence);
     addFonts();
-    // "In context": a sentence with the word in it (from the page; if the page only has a heading or label, Linger's
-    // own example, or the dictionary's), and under it the same sentence with an easier synonym, when there is one.
+    // Synonyms (chips) and "In context": a NEW, much simpler sentence that uses the word, and the same sentence with
+    // the easiest synonym. Never the sentence the word is already in on the page; the reader has just read that one.
     const wordRe = new RegExp('\\b' + raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-    const locate = (t) => { const m = t ? wordRe.exec(t) || new RegExp('\\b' + k.slice(0, Math.max(4, k.length - 3)) + '\\w*', 'i').exec(t) : null; return m ? { at: m.index, len: m[0].length, word: m[0] } : null; };
+    const locIn = (t, w, re) => { const m = t ? (re || new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i')).exec(t) : null; return m ? { at: m.index, len: m[0].length, word: m[0] } : null; };
+    const locate = (t) => locIn(t, raw, wordRe) || locIn(t, '', new RegExp('\\b' + k.slice(0, Math.max(4, k.length - 3)) + '\\w*', 'i'));
     // A real sentence: 4+ words that end like a sentence, or 8+ words (not a heading, menu item or label).
     const usable = (t) => { const n = t ? t.trim().split(/\s+/).length : 0; return !!(t && locate(t) && n >= 4 && (/[.!?…"”’)]\s*$/.test(t.trim()) || n >= 8)); };
-    const ctx = { s: '', loc: null, syn: PLAIN[k] || '', more: '', ai: false, fromPage: false };
-    // Ask Claude right away (in parallel with the dictionary) what the word means in this sentence.
+    // The same sentence as the one on the page (most of its words shared)?
+    const words = (t) => new Set(String(t || '').toLowerCase().match(/[a-z']+/g) || []);
+    const samePage = (t) => { const A = words(t), B = words(sentence); if (!A.size || !B.size) return false; let n = 0; A.forEach((x) => { if (B.has(x)) n++; }); return n / Math.min(A.size, B.size) > 0.6; };
+    const simple = (t) => usable(t) && t.trim().split(/\s+/).length <= 16 && !samePage(t);
+    const ctx = { ex: '', loc: null, easy: '', syns: [], ai: false };
+    const useExample = (t, easy) => { ctx.ex = t; ctx.loc = locate(t); ctx.easy = easy || ''; };
+    const addSyns = (list) => { list.forEach((w) => { w = String(w || '').trim(); if (w && w.toLowerCase() !== k && w.split(/\s+/).length <= 3 && !ctx.syns.some((x) => x.toLowerCase() === w.toLowerCase())) ctx.syns.push(w); }); ctx.syns = ctx.syns.slice(0, 3); };
+    // Ask Claude right away (in parallel with the dictionary) what the word means here, easier words, and a simple example.
     const aiP = askAI('word', raw, sentence);
-    const useSentence = (t, fromPage) => { ctx.s = t; ctx.loc = locate(t); ctx.fromPage = fromPage; };
-    if (usable(sentence)) useSentence(sentence, true);
-    else if (d && usable(d.sentence)) useSentence(d.sentence, false);
-    else if (sl && usable(sl.sentence)) useSentence(sl.sentence, false);
-    const mark = (w) => { const { at, len } = ctx.loc; return `${esc(ctx.s.slice(0, at))}<b>${esc(w)}</b>${esc(ctx.s.slice(at + len))}`; };
-    const asCase = (w) => (/^[A-Z]/.test(ctx.loc.word) ? cap(w) : w);
+    if (d && simple(d.sentence)) useExample(d.sentence);
+    else if (sl && simple(sl.sentence)) useExample(sl.sentence);
+    if (PLAIN[k] && PLAIN[k].split(/\s+/).length <= 2) addSyns([PLAIN[k]]);
+    const hl = (t, loc) => `${esc(t.slice(0, loc.at))}<b>${esc(t.slice(loc.at, loc.at + loc.len))}</b>${esc(t.slice(loc.at + loc.len))}`;
+    // The example with the easiest synonym: Claude's version if it wrote one, else the synonym put in the word's place.
+    function easyHtml() {
+      const w = ctx.syns[0];
+      if (!ctx.loc || !w) return '';
+      if (ctx.easy) { const l = locIn(ctx.easy, w); return l ? hl(ctx.easy, l) : esc(ctx.easy); }
+      // Without Claude, only swap when it's safe: the word in exactly this form, and a one-word synonym
+      // (otherwise "prohibits" → "not allowed" breaks the grammar).
+      const { at, len, word } = ctx.loc, sw = /^[A-Z]/.test(word) ? cap(w) : w;
+      if (word.toLowerCase() !== raw.toLowerCase() || /\s/.test(w)) return '';
+      return `${esc(ctx.ex.slice(0, at))}<b>${esc(sw)}</b>${esc(ctx.ex.slice(at + len))}`;
+    }
     function synHtml() {
-      if (!ctx.loc || !ctx.syn) return '';
-      // Linger's phrase rules first ("remit payment" → "pay"), highlighting what changed; otherwise just the easier
-      // word in place of this one.
-      const src = ctx.s, { at, len } = ctx.loc;
-      let t = src; PHRASES.forEach(([re, r]) => { t = t.replace(re, r); });
-      if (/^[A-Z]/.test(src)) t = cap(t);
-      let a = 0, b = 0;
-      while (a < t.length && a < src.length && t[a] === src[a]) a++;
-      while (b < t.length - a && b < src.length - a && t[t.length - 1 - b] === src[src.length - 1 - b]) b++;
-      while (a > 0 && /\w/.test(t[a - 1])) a--; // widen to whole words
-      while (b > 0 && /\w/.test(t[t.length - b])) b--;
-      const mid = t.slice(a, t.length - b), [, lead, changed, trail] = mid.match(/^(\s*)([\s\S]*?)(\s*)$/);
-      return t !== src && a <= at && src.length - b >= at + len && changed
-        ? `${esc(t.slice(0, a))}${lead}<b>${esc(changed)}</b>${trail}${esc(t.slice(t.length - b))}`
-        : mark(asCase(ctx.syn));
+      return ctx.syns.length ? `<p class="wc-lbl">Synonyms:</p><div class="wc-chips">${ctx.syns.map((w) => `<span class="wc-chip">${esc(cap(w))}</span>`).join('')}</div>` : '';
     }
     function ctxHtml() {
       const local = sl && sl.local ? `<p class="wc-lbl">Local note (${esc(sl.city)}):</p><p class="wc-local">${esc(sl.local)}</p>` : '';
-      const syn = synHtml();
+      const easy = easyHtml();
       if (!ctx.loc && !local) return '';
       return `<p class="wc-lbl">In context:</p><div class="wc-box">
-          ${ctx.loc ? `<p class="wc-lbl">${ctx.fromPage ? 'This word:' : 'Example:'}</p><p class="wc-s">“${mark(ctx.loc.word)}”</p>` : ''}
-          ${syn ? `<p class="wc-lbl">Synonym:</p><p class="wc-s">“${syn}”</p>` : ''}
-          ${ctx.more ? `<p class="wc-def wc-easy">Other easier words: <b>${esc(ctx.more)}</b></p>` : ''}
+          ${ctx.loc ? `<p class="wc-lbl">This word:</p><p class="wc-s">“${hl(ctx.ex, ctx.loc)}”</p>` : ''}
+          ${easy ? `<p class="wc-lbl">Synonym:</p><p class="wc-s">“${easy}”</p>` : ''}
           ${local}</div>`;
     }
-    const redraw = () => { if (!card || cardSpan !== sp) return; const el = card.querySelector('#ctx'); el.innerHTML = ctxHtml(); el.hidden = !el.innerHTML.trim(); place(card, sp.getBoundingClientRect()); };
+    const redraw = () => {
+      if (!card || cardSpan !== sp) return;
+      const sy = card.querySelector('#syn'), el = card.querySelector('#ctx');
+      sy.innerHTML = synHtml(); sy.hidden = !sy.innerHTML.trim();
+      el.innerHTML = ctxHtml(); el.hidden = !el.innerHTML.trim();
+      place(card, sp.getBoundingClientRect());
+    };
     const badge = kind === 'slang' ? 'Local Slang' : kind === 'hard' ? 'Hard Word' : 'Word';
     card = document.createElement('div');
     card.className = 'wc'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'Meaning of ' + raw);
@@ -356,10 +367,11 @@
             <div class="wc-icons"><span class="wc-saved" id="saved" hidden>Saved</span>
               <button class="wc-icon" id="hear" aria-label="Say ${esc(raw)} out loud" title="Hear it"><img src="${asset('icons/card/volume.svg')}" width="24" height="24" alt=""></button>
               <button class="wc-icon" id="save" aria-label="Save ${esc(raw)} to Linger" aria-pressed="false" title="Save to Linger"><img src="${asset('icons/card/bookmark.svg')}" width="24" height="24" alt=""></button></div></div>
-          <div class="wc-words"><p class="wc-word">${esc(raw)}</p></div>
+          <div class="wc-words"><p class="wc-word">${esc(cap(raw))}</p></div>
         </div></div>
       <div class="wc-body">
         <p class="wc-meaning" id="m">${meaning ? esc(meaning) : 'Looking up…'}</p>
+        <div class="wc-syn" id="syn"></div>
         <div class="wc-ctx" id="ctx"></div>
         <p class="wc-note" id="ai">${S.aiOn ? AI_WAIT : ''}</p>
         <p class="wc-note" id="note"></p>
@@ -374,8 +386,9 @@
       if (!a || !a.meaning) return;
       meaning = a.meaning; ctx.ai = true;
       card.querySelector('#m').textContent = meaning;
-      const syns = (a.synonyms || []).filter((w) => w.toLowerCase() !== k);
-      if (syns.length && kind !== 'slang') { ctx.syn = syns[0]; ctx.more = syns.slice(1).join(', '); }
+      if ((a.synonyms || []).length) { ctx.syns = []; addSyns(a.synonyms); }
+      // Claude's own simple sentence (needs the updated AI server; older servers don't send one).
+      if (a.example && locate(a.example) && !samePage(a.example)) useExample(a.example, a.exampleEasy);
       redraw();
     };
     if (aiP) aiP.then(useAI);
@@ -397,10 +410,10 @@
       showSaved();
       card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Connect your phone in the Linger menu to send words there.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
     };
-    const wantSyn = !ctx.syn && kind !== 'slang';
+    const wantSyn = !ctx.syns.length && kind !== 'slang';
     const synP = wantSyn ? (api ? send({ type: 'synonyms', word: k }) : directSynonyms(k)) : null;
     let dict = null;
-    if (!meaning || !ctx.loc) {
+    if (!meaning || !ctx.ex) {
       dict = api ? await send({ type: 'lookup', word: k }) : await directLookup(k);
       if (!meaning && !(dict && dict.meaning)) {
         // Not in the dictionary: Claude may still know it (new words, slang, names of things).
@@ -409,20 +422,20 @@
       }
       if (!meaning) meaning = ctx.ai ? meaning : dict.meaning;
       if (card && cardSpan === sp) card.querySelector('#m').textContent = meaning;
-      if (!ctx.loc && dict && usable(dict.example)) { useSentence(dict.example, false); redraw(); }
+      if (!ctx.ex && dict && simple(dict.example)) { useExample(dict.example); redraw(); }
     }
-    // Still no sentence: try the dictionary's example for the base word (tenants → tenant), then fall back to the
-    // text on the page around the word, even if it's only a heading.
-    if (!ctx.loc) {
+    // Still no simple sentence: try the dictionary's example for the base word (tenants → tenant). If there's none,
+    // "In context" waits for Claude's sentence (or stays hidden); it never repeats the page's sentence.
+    if (!ctx.ex) {
       for (const base of [...new Set([k.replace(/ies$/, 'y'), k.replace(/es$/, ''), k.replace(/s$/, ''), k.replace(/ed$/, ''), k.replace(/ed$/, 'e'), k.replace(/ing$/, ''), k.replace(/ing$/, 'e')])].filter((b) => b !== k && b.length > 3)) {
         const e = api ? await send({ type: 'lookup', word: base }) : await directLookup(base);
-        if (e && usable(e.example)) { useSentence(e.example, false); break; }
+        if (ctx.ex) break; // Claude's sentence arrived meanwhile
+        if (e && simple(e.example)) { useExample(e.example); break; }
       }
-      if (!ctx.loc && locate(sentence)) useSentence(sentence, true);
       redraw();
     }
     // An easier synonym from the thesaurus, checked against the meaning so it's the right sense of the word.
-    if (synP) { const w = easier(k, await synP, meaning); if (w && !ctx.ai) { ctx.syn = w; redraw(); } }
+    if (synP) { const w = easier(k, await synP, meaning); if (w && !ctx.syns.length) { addSyns([w]); redraw(); } }
   }
   // An easier synonym: a single, clearly more common word from the thesaurus that the dictionary meaning also uses.
   // The thesaurus mixes every sense of a word (turnout → "output", replicate → "double"); the meaning shown on the
