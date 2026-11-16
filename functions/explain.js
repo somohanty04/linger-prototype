@@ -26,11 +26,13 @@ const SCHEMAS = {
   word: {
     type: 'object',
     additionalProperties: false,
-    required: ['meaning', 'synonyms'],
+    required: ['meaning', 'synonyms', 'example', 'exampleEasy'],
     properties: {
       meaning: str('What the word means in this sentence, in one short plain sentence. No dictionary-style labels.'),
       // (plainSentence used to be here: no app used it, and writing it made every answer slower.)
-      synonyms: { type: 'array', items: { type: 'string' }, description: '1 to 3 easier words or short phrases that could replace the word in this sentence, easiest first. Empty if there are none.' }
+      synonyms: { type: 'array', items: { type: 'string' }, description: '1 to 3 easier, common words or short phrases (1 to 3 words each) that mean the same as the word here, easiest first. Empty if there are none.' },
+      example: str('A new, very simple example sentence of 6 to 12 common words that uses the word with the same meaning, about a different, everyday situation. Never copy, shorten or reword the context sentence. Keep the word exactly as written in <word> if the grammar allows.'),
+      exampleEasy: str('The example sentence with the word replaced by the first synonym (fix grammar if needed). Empty string if there are no synonyms.')
     }
   },
   phrase: {
@@ -268,5 +270,6 @@ export function readResult(response, asked = false) {
   if (out.hardWords) {
     return { meaning: s(out.meaning), plain: s(out.plain, 900), hardWords: out.hardWords.slice(0, 5).map((h) => ({ word: s(h.word, 60), meaning: s(h.meaning, 200), easier: s(h.easier, 60) })) };
   }
-  return { meaning: s(out.meaning), synonyms: (out.synonyms || []).slice(0, 3).map((x) => s(x, 40)).filter(Boolean) };
+  return { meaning: s(out.meaning), synonyms: (out.synonyms || []).slice(0, 3).map((x) => s(x, 40)).filter(Boolean),
+    example: s(out.example, 300), exampleEasy: s(out.exampleEasy, 300) };
 }

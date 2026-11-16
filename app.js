@@ -45,7 +45,7 @@
   };
   const PHRASES = [[/remit (the )?payment/gi, 'pay'], [/failure to (\w+) (may|will|could) result in/gi, 'if you don’t $1, it could lead to'], [/failure to/gi, 'if you don’t'], [/may result in/gi, 'could lead to'], [/termination of (your )?service/gi, 'your service being cut off'], [/for your records/gi, 'so you have it later'], [/prior written consent/gi, 'written permission first'], [/in full/gi, 'completely'], [/no later than/gi, 'by'], [/in accordance with/gi, 'following'], [/you are hereby notified that/gi, 'this letter tells you that'], [/is hereby/gi, 'is'], [/are hereby/gi, 'are']];
   const SCAN_PLACE = 'Camera scan';
-  const ORIGIN_LABEL = { camera: 'Your scan', share: 'Shared from another app', paste: 'Pasted text' };
+  const ORIGIN_LABEL = { camera: 'Your scan', upload: 'Your photo', share: 'Shared from another app', paste: 'Pasted text' };
   const SHARE_URL = 'https://somohanty04.github.io/linger-prototype/';
   const SHARE_SAMPLE = 'Your water bill has a past due balance of $86.40. Payment must be received no later than November 18 to avoid a late fee. Failure to pay may result in termination of service.';
   TEXTS.camera = '';
@@ -97,6 +97,7 @@
   const S = {
     tab: 'lens', source: 'camera', askFirst: true, autoHard: true,
     pending: null, pendingRaw: '', sheet: null, sheetRaw: '', explain: false,
+    lensMode: 'scan', pasteDraft: '', // Lens switch: scan | upload | paste, and the text being pasted
     saved: ['arrears', 'jitney', 'nebby'], savedDates: { arrears: 'Oct 24', jitney: 'Oct 23', nebby: 'Oct 22' },
     wordFilter: 'all', query: '', localSeg: 'slang', city: (() => { try { return localStorage.getItem('linger.city') || 'pgh'; } catch { return 'pgh'; } })(), cityPick: false,
     activity: null, // 'story' | 'cards'
@@ -426,11 +427,12 @@
     }
     return s;
   }
-  async function scanImage(src) {
+  async function scanImage(src, origin = 'camera') {
     closeCamera(); stopSpeaking();
     S.tab = 'lens'; S.source = 'camera';
     S.pending = null; S.sheet = null; S.explain = false;
-    S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0, origin: 'camera' }; render();
+    S.lensMode = origin === 'upload' ? 'upload' : 'scan';
+    S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0, origin }; render();
     try {
       const { text, conf } = await readImage(src, (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; });
       if (text.split(' ').length < 3) throw new Error('empty');
@@ -550,70 +552,73 @@
         <div class="hsub">Point at a letter, sign or bill</div></div>
     </header>`;
   const lensSwitch = (mode) => `<div class="lh-switch" role="group" aria-label="How to read something">
-        <button type="button" class="lh-seg ${mode === 'scan' ? 'on' : ''}" data-action="shutter-home" aria-pressed="${mode === 'scan'}">Scan</button>
-        <label class="lh-seg ${mode === 'upload' ? 'on' : ''}">Upload a photo<input type="file" accept="image/*" id="photo" hidden></label>
-        <button type="button" class="lh-seg ${mode === 'paste' ? 'on' : ''}" data-action="paste-open">Paste text</button>
+        ${[['scan', 'Scan'], ['upload', 'Upload a photo'], ['paste', 'Paste text']].map(([m, l]) => `<button type="button" class="lh-seg ${mode === m ? 'on' : ''}" data-action="lens-mode" data-v="${m}" aria-pressed="${mode === m}">${l}</button>`).join('')}
       </div>`;
   const camIcon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
 
+  // Lens: one screen. The switch changes what's in the card (camera, a photo picker or a text box), and whatever
+  // Linger reads shows up in that same card, so there are no extra pages or pop-ups to find your way back from.
+  const imgIcon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L6 21"/></svg>';
+  const sparkIcon = '<img src="icons/figma/sparkle.svg" width="19.534" height="20.078" alt="">';
   function viewLens() {
-    const sc = S.scan;
-    if (sc.status === 'reading' || (sc.status === 'done' && TEXTS.camera)) return viewResults();
-    const live = sc.status === 'live';
-    const corners = '<i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i>';
-    const hint = live ? 'Fit the whole page inside the frame' : sc.status === 'error' ? 'Camera is off' : 'Tap Turn on camera to start';
-    const cta = live ? 'Take photo' : sc.status === 'error' ? 'Try again' : 'Turn on camera';
-    return `<div class="lens-home lh2-home">${lensHero()}
-      <div class="body wb lb">
-        ${lensSwitch('scan')}
-        <div class="lh-card">
-          ${live ? '<video id="cam" playsinline muted autoplay></video>' : `<div class="lh-empty">${sc.status === 'error' ? `<p>${esc(sc.msg)}</p>` : '<p>Linger reads it and explains the hard words.</p>'}</div>`}
-          <div class="lh-frame" id="camFrame">${corners}</div>
-          <p class="lh-hint">${hint}</p>
-          ${camCount !== 1 ? `<button type="button" class="lh-flip" data-action="cam-flip" aria-label="Switch to the ${facing === 'environment' ? 'front' : 'back'} camera">${flipIcon}</button>` : ''}
-        </div>
-        <button type="button" class="btn primary lh-cta" data-action="shutter">${camIcon}${cta}</button>
-      </div></div>`;
-  }
-
-  function viewResults() {
-    const active = S.pending || S.sheet;
-    const sc = S.scan;
-    let inner, hasText = true;
-    if (sc.status === 'reading') { hasText = false; inner = `<div class="lens-label">Reading your photo…</div><img class="cam" src="${sc.img}" alt="Your photo"><div class="scan-pct">Reading text <span id="scanPct">${sc.progress}%</span></div>`; }
-    else {
+    const sc = S.scan, mode = S.lensMode;
+    const reading = sc.status === 'reading', done = sc.status === 'done' && !!TEXTS.camera;
+    let card, cta;
+    if (reading) {
+      card = `<div class="lh-card lh-reading"><img class="lh-photo" src="${sc.img}" alt="Your photo"><p class="lh-hint">Reading text <span id="scanPct">${sc.progress}%</span></p></div>`;
+      cta = `<button type="button" class="btn primary lh-cta" disabled>Reading…</button>`;
+    } else if (done) {
+      const active = S.pending || S.sheet, speaking = S.speaking === 'lens';
       const toks = tokens().map((raw, i) => {
         if (!raw) return '';
         const k = keyOf(raw);
-        let cls = 'tok';
-        if (k && isHard(k)) cls += ' hard';
-        if (active && k === active) cls += ' on';
-        return `<button type="button" class="${cls}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
+        return `<button type="button" class="tok${k && isHard(k) ? ' hard' : ''}${active && k === active ? ' on' : ''}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
       }).join('');
-      inner = `<div class="lens-label">${ORIGIN_LABEL[sc.origin]}</div><div class="paper">${toks}</div>
-        ${sc.conf && sc.conf < 60 ? '<p class="cam-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}`;
+      let autos = [];
+      if (S.autoHard) { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
+      card = `<div class="lh-card lh-result">
+          <div class="lh-rhead"><span>${ORIGIN_LABEL[sc.origin] || 'Your text'} · tap a word</span><button type="button" class="lh-clear" data-action="lens-clear">Clear</button></div>
+          <div class="lh-text">${toks}</div>
+          ${sc.conf && sc.conf < 60 ? '<p class="lh-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}
+          ${autos.length ? `<p class="lh-sub">Hard words here</p><div class="lh-chips">${autos.map((k) => `<button type="button" class="lh-chip" data-action="open" data-k="${k}">${esc(cap(D[k].word))}</button>`).join('')}</div>` : ''}
+        </div>`;
+      cta = `<div class="lh-ctarow"><button type="button" class="btn primary lh-cta" data-action="explain">${sparkIcon}Explain this text</button>
+          <button type="button" class="lh-round ${speaking ? 'on' : ''}" data-action="read" ${canSpeak ? '' : 'disabled'} aria-label="${speaking ? 'Stop reading' : 'Read aloud'}">${speaker}</button></div>`;
+    } else if (mode === 'upload') {
+      card = `<label class="lh-card lh-drop" for="photo">
+          <span class="lh-dropic">${imgIcon}</span>
+          <strong>Choose a photo</strong>
+          <span>A letter, sign or bill from your photos</span>
+          ${sc.status === 'error' && sc.origin === 'upload' ? `<span class="lh-err">${esc(sc.msg)}</span>` : ''}
+        </label>`;
+      cta = `<label class="btn primary lh-cta" for="photo">${imgIcon}Choose photo</label>`;
+    } else if (mode === 'paste') {
+      const clip = !!(navigator.clipboard && navigator.clipboard.readText);
+      card = `<div class="lh-card lh-pastecard">
+          <textarea id="pasteText" class="lh-paste" placeholder="Paste a letter, email or message here" aria-label="Text to explain">${esc(S.pasteDraft)}</textarea>
+          ${clip ? `<button type="button" class="lh-pastebtn" data-action="paste-clip" ${S.pasteDraft ? 'hidden' : ''}>Paste</button>` : ''}
+        </div>`;
+      cta = `<button type="button" class="btn primary lh-cta" id="pasteGo" data-action="paste-go" ${S.pasteDraft.trim() ? '' : 'disabled'}>${sparkIcon}Explain this text</button>`;
+    } else {
+      const live = sc.status === 'live', corners = '<i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i>';
+      const err = sc.status === 'error' && sc.origin !== 'upload';
+      const hint = live ? 'Fit the whole page inside the frame' : err ? 'Camera is off' : 'Tap Turn on camera to start';
+      card = `<div class="lh-card">
+          ${live ? '<video id="cam" playsinline muted autoplay></video>' : `<div class="lh-empty">${err ? `<p>${esc(sc.msg)}</p>` : '<p>Linger reads it and explains the hard words.</p>'}</div>`}
+          <div class="lh-frame" id="camFrame">${corners}</div>
+          <p class="lh-hint">${hint}</p>
+          ${camCount !== 1 ? `<button type="button" class="lh-flip" data-action="cam-flip" aria-label="Switch to the ${facing === 'environment' ? 'front' : 'back'} camera">${flipIcon}</button>` : ''}
+        </div>`;
+      cta = `<button type="button" class="btn primary lh-cta" data-action="shutter">${camIcon}${live ? 'Take photo' : err ? 'Try again' : 'Turn on camera'}</button>`;
     }
-    let autos = [];
-    if (S.autoHard && sc.status === 'done') { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
-    const reading = S.speaking === 'lens';
-    return `${lensHero()}
-    <div class="body wb lens-results">
-      ${lensSwitch('')}
-      <div class="lens">
-        <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
-        ${inner}
-      </div>
-      ${hasText ? `<div class="lens-actions">
-        <button type="button" class="btn primary" data-action="explain">✦ Explain this text</button>
-        <button type="button" class="btn ${reading ? 'deep' : 'ghost'}" data-action="read" ${canSpeak ? '' : 'disabled'}>${speaker}${reading ? 'Stop' : 'Read aloud'}</button>
-      </div>
-      <p class="small" style="margin: -2px 4px 0">Tap a word you would pause on. On the glasses, your eyes do this part. <span class="dotted-key">Dotted</span> words are ones Linger thinks are hard.</p>` : ''}
-      <button type="button" class="btn ghost" data-action="rescan">📷 Scan something else</button>
-      ${autos.length ? `<div style="display: flex; flex-direction: column; gap: 8px">
-        <div class="label" style="color: var(--indigo-500)">Auto-defined on this page</div>
-        ${autos.map((k) => `<button type="button" class="auto" data-action="open" data-k="${k}"><strong>${esc(D[k].word)}</strong> · ${esc(D[k].meaning)}</button>`).join('')}
-      </div>` : ''}
-    </div>`;
+    const shown = done || reading ? (sc.origin === 'upload' ? 'upload' : sc.origin === 'paste' || sc.origin === 'share' ? 'paste' : 'scan') : mode;
+    return `<div class="lens-home lh2-home">${lensHero()}
+      <div class="body wb lb">
+        ${lensSwitch(shown)}
+        ${card}
+        ${cta}
+        <input type="file" accept="image/*" id="photo" hidden>
+      </div></div>`;
   }
 
   // Settings (opened from the gear on Lens): the reading switches, sharing from other apps, and the glasses demo.
@@ -654,7 +659,7 @@
     </header>
     <div class="body wb">
       <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" aria-label="Search your words"></label>
-      <div class="chips">${filters.map(([id, l]) => `<button type="button" class="chip ${S.wordFilter === id ? 'on' : ''}" data-action="filter" data-v="${id}">${esc(l)}</button>`).join('')}</div>
+      <div class="lh-switch" role="group" aria-label="Show which words">${filters.map(([id, l]) => `<button type="button" class="lh-seg ${S.wordFilter === id ? 'on' : ''}" data-action="filter" data-v="${id}" aria-pressed="${S.wordFilter === id}">${esc(l)}</button>`).join('')}</div>
       <div class="wlist">${list.length ? list.map((k) => { const e = D[k]; return `<button type="button" class="item" data-action="open" data-k="${k}">
         <span class="item-head"><span class="word">${esc(cap(e.word))}</span>${badge(e.kind)}</span>
         <span class="mean">${esc(e.meaning)}</span>
@@ -697,61 +702,75 @@
   }
   function setCity(id) { if (!CITIES[id]) return; S.city = id; S.cityPick = false; try { localStorage.setItem('linger.city', id); } catch {} }
 
+  // Local: the same layout as Lens and Words (gradient header, white sheet, a switch, plain cards), in teal.
+  const bookmarkIcon = (on) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
+  const locateIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="#FFFFFF"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
   function viewLocal() {
     const c = city(), id = CITIES[S.city] ? S.city : 'pgh';
-    const segs = [['slang', '💬', 'Slang'], ['customs', '🤝', 'Customs'], ['around', '🚌', 'Getting around'], ['hotspots', '📍', 'Pause map']];
-    let body = '';
+    const segs = [['slang', 'Slang'], ['customs', 'Customs'], ['around', 'Transit'], ['hotspots', 'Pause map']];
+    let note = '', items = '';
     if (S.localSeg === 'slang') {
-      body = `<p class="sec-note">Words you’ll hear around ${esc(c.name)}. Tap 🔊 to hear how they sound.</p>` + citySlang(id).map((k) => { const e = D[k], sv = isSaved(k); return `<article class="phrase">
-        <div class="ph-top"><div class="ph-name"><span class="ph-word">${esc(e.word)}</span>${e.say ? `<span class="ph-say">/${esc(e.say)}/</span>` : ''}</div>
-          <div class="ph-acts"><button type="button" class="hear" data-action="hear" data-k="${k}" aria-label="Hear ${esc(e.word)}">${speaker}</button>
-          <button type="button" class="save ${sv ? 'saved' : ''}" data-action="save" data-k="${k}">${sv ? 'Saved ✓' : 'Save'}</button></div></div>
-        <div class="ph-mean">${esc(e.meaning)}</div>
-        <div class="ph-ex">“${esc(e.sentence)}”</div>
-        ${e.local ? `<div class="ph-local">${pin}<span>${esc(e.local)}</span></div>` : ''}</article>`; }).join('');
+      note = `Words you’ll hear around ${esc(c.name)}.`;
+      items = citySlang(id).map((k) => { const e = D[k], sv = isSaved(k); return `<article class="loc-item">
+        <div class="item-head"><div class="loc-wl"><span class="word loc-word">${esc(e.word)}</span>${e.say ? `<span class="loc-say">/${esc(e.say)}/</span>` : ''}</div>
+          <div class="loc-acts"><button type="button" class="loc-ic" data-action="hear" data-k="${k}" aria-label="Hear ${esc(e.word)}">${speaker}</button>
+          <button type="button" class="loc-ic ${sv ? 'on' : ''}" data-action="save" data-k="${k}" aria-pressed="${sv}" aria-label="${sv ? 'Saved to Words' : 'Save to Words'}">${bookmarkIcon(sv)}</button></div></div>
+        <span class="mean">${esc(e.meaning)}</span>
+        <span class="quote">“${esc(e.sentence)}”</span>
+        ${e.local ? `<span class="meta loc-meta">${pin}${esc(e.local)}</span>` : ''}</article>`; }).join('');
     } else if (S.localSeg === 'customs') {
-      body = `<p class="sec-note">Unwritten rules that help you fit in.</p>` + cityCustoms(id).map((t) => `<article class="tip"><span class="tip-ic" aria-hidden="true">${t.ic}</span><div><span class="tip-tag">${esc(t.tag)}</span><div class="tip-title">${esc(t.title)}</div><div class="tip-body">${esc(t.body)}</div></div></article>`).join('');
+      note = 'Unwritten rules that help you fit in.';
+      items = cityCustoms(id).map((t) => `<article class="loc-item"><div class="item-head"><span class="loc-title">${esc(t.title)}</span><span class="badge b-loc">${esc(t.tag)}</span></div><span class="mean">${esc(t.body)}</span></article>`).join('');
     } else if (S.localSeg === 'around') {
-      body = `<p class="sec-note">How people move around ${esc(c.name)}, and the words on the signs.</p><div class="routes">` + (c.around || []).map((r) => `<div class="route"><span class="route-ic" aria-hidden="true">${r.ic}</span><div><div class="tip-title">${esc(r.title)}</div><div class="tip-body">${esc(r.body)}</div></div></div>`).join('') + '</div>';
+      note = `How people get around ${esc(c.name)}, and the words on the signs.`;
+      items = `<article class="loc-item loc-list">${(c.around || []).map((r) => `<div class="loc-row"><span class="loc-title">${esc(r.title)}</span><span class="mean">${esc(r.body)}</span></div>`).join('')}</article>`;
     } else {
       const hs = cityHotspots(id), max = Math.max(...hs.map((h) => h.n));
-      body = `<div class="dark local-dark"><div style="font-weight: 800; font-size: 16px; margin-bottom: 4px">Where newcomers pause in ${esc(c.name)}</div>When lots of people new to the area linger on the same word, Linger adds it here. Only the word and the area are shared, never your eye data.</div>`
-        + hs.map((h) => `<div class="tip hot"><div style="flex: 1"><div class="item-head" style="align-items: baseline"><span class="tip-title">${esc(h.label)}</span><span class="count local-count">${h.n} paused</span></div>
-          <div class="small" style="font-size: 12px">${esc(h.where)}</div><div class="bar local-bar"><span style="width: ${Math.round(h.n / max * 100)}%"></span></div>
-          <div class="tip-body">${esc(h.note)}</div></div></div>`).join('')
-        + '<div class="small" style="font-size: 12px; text-align: center">Sample data for the prototype</div>';
+      note = `Words that newcomers in ${esc(c.name)} pause on most. Only the word and the area are shared, never your eye data. Sample data.`;
+      items = hs.map((h) => `<article class="loc-item"><div class="item-head"><span class="loc-title">${esc(h.label)}</span><span class="loc-count">${h.n} paused</span></div>
+          <span class="loc-where">${esc(h.where)}</span><div class="loc-bar"><span style="width: ${Math.round(h.n / max * 100)}%"></span></div>
+          <span class="mean">${esc(h.note)}</span></article>`).join('');
     }
     const ess = [['🚨', '911', 'Emergencies: police, fire, ambulance'], ['☎️', '311', 'City help: trash, noise, potholes'], ['🚌', 'Transit', c.transit], ['💵', 'Tipping', '18–20% at sit-down restaurants']];
-    return `<header class="hero local-hero">${rings([['ring', 'width:200px;height:200px;right:-60px;top:-60px;border-color:rgba(155,227,196,0.45)'], ['dot', 'width:80px;height:80px;right:22px;top:-16px;background:rgba(155,227,196,0.5)']])}
-      <div class="hero-top">${logo}${pairPill}</div>
-      <div class="over">${pin}Your city guide</div>
-      <button type="button" class="city-btn" data-action="city-pick" aria-haspopup="dialog"><span class="city-emoji" aria-hidden="true">${c.emoji}</span>
-        <span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span><span class="chev" aria-hidden="true">▾</span></button>
-      <button type="button" class="locate" data-action="city-locate">◎ Use my location</button>
+    return `<header class="hero wh lh2 loc-hero">
+      <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
+      ${logo}
+      <div class="wh-title"><div class="wh-row"><button type="button" class="loc-city" data-action="city-pick" aria-haspopup="dialog" aria-label="City: ${esc(cityName(c))}. Change city"><h1>${esc(c.name)}</h1><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button type="button" class="lh-gear" data-action="city-locate" aria-label="Use my location">${locateIcon}</button></div>
+        <div class="hsub">${esc(c.state)} · ${esc(c.nick)}</div></div>
     </header>
-    <div class="body local-body">
-      <div class="ess" role="list">${ess.map(([ic, t, d]) => `<div class="ess-card" role="listitem"><span class="ess-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</div>
-      <nav class="ltabs" aria-label="City guide sections">${segs.map(([v, ic, l]) => `<button type="button" class="ltab ${S.localSeg === v ? 'on' : ''}" data-action="seg" data-v="${v}" aria-pressed="${S.localSeg === v}"><span aria-hidden="true">${ic}</span>${l}</button>`).join('')}</nav>
-      <div class="lcontent">${body}</div>
-      <div class="talk"><span class="talk-ic" aria-hidden="true">🗨️</span><div><strong>Easy small talk</strong><div class="tip-body">${esc(c.talk)}</div></div></div>
+    <div class="body wb loc-body">
+      <article class="loc-item loc-gk"><span class="loc-title">Good to know</span>
+        ${ess.map(([ic, t, d]) => `<div class="gk-row"><span class="gk-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</article>
+      <div class="lh-switch loc-switch" role="group" aria-label="City guide sections">${segs.map(([v, l]) => `<button type="button" class="lh-seg ${S.localSeg === v ? 'on' : ''}" data-action="seg" data-v="${v}" aria-pressed="${S.localSeg === v}">${l}</button>`).join('')}</div>
+      <p class="loc-note">${note}</p>
+      <div class="wlist">${items}</div>
+      <article class="loc-item"><span class="badge b-loc">Small talk</span><span class="mean">${esc(c.talk)}</span></article>
     </div>`;
   }
 
+  // Review: the Lens/Words layout. Two activities you can do now; what's coming is one quiet card.
+  const storyIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 11h7M4 16h5"/><rect x="13" y="13" width="7" height="5" rx="1.5" stroke-dasharray="2 2"/></svg>';
   function viewReview() {
-    const n = S.saved.filter((k) => D[k]).length;
-    const act = (id, ic, title, sub) => `<button type="button" class="act" data-action="play" data-v="${id}"><span class="ic">${ic}</span><span><strong>${title}</strong><span class="small">${sub}</span></span><span class="go">›</span></button>`;
-    const soon = (ic, title, sub) => `<div class="act soon"><span class="ic">${ic}</span><span><strong>${title}</strong><span class="small">${sub}</span></span><span class="go">Soon</span></div>`;
-    return `${hero('Review', 'Practice the words you met')}
-    <div class="body">
-      <div class="label" style="color: var(--indigo-500)">Activities</div>
-      ${act('story', '✍️', 'Fill in the story', 'Put your words back into a short story')}
-      ${act('cards', '🃏', 'Flashcards', `${n} ${n === 1 ? 'word' : 'words'}, with the sentence where you met each one`)}
-      <div class="label" style="color: var(--muted); margin-top: 6px">Coming soon</div>
-      ${soon('📬', 'Read the notice', 'A short text using your words, then a question')}
-      ${soon('⚖️', 'Landlord or friend?', 'Sort words by how formal they are')}
-      ${soon('📖', 'Dictionary or local?', 'Pick the meaning that fits here')}
+    const n = S.saved.filter((k) => D[k]).length, words = `${n} ${n === 1 ? 'word' : 'words'}`;
+    const act = (id, icon, title, sub) => `<button type="button" class="rv-act" data-action="play" data-v="${id}">
+        <span class="rv-ic" aria-hidden="true">${icon}</span>
+        <span class="rv-txt"><span class="rv-title">${title}</span><span class="mean">${sub}</span></span>
+        <span class="rv-go">Start</span></button>`;
+    return `<header class="hero wh lh2">
+      <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
+      ${logo}
+      <div class="wh-title"><div class="wh-row"><h1>Review</h1></div>
+        <div class="hsub">${n ? `${words} ready to practice` : 'Save words to practice them here'}</div></div>
+    </header>
+    <div class="body wb rv-body">
+      ${act('story', storyIcon, 'Fill in the story', 'Put your words back into a short story.')}
+      ${act('cards', '<i class="ti" style="--ic: url(icons/figma/tab-cards.svg)"></i>', 'Flashcards', `Go through your ${words}, with the sentence where you met each one.`)}
+      <article class="loc-item rv-soon"><span class="badge b-common">Coming soon</span>
+        <ul><li>Read the notice <span>a short text with your words</span></li><li>Landlord or friend? <span>sort words by how formal they are</span></li><li>Dictionary or local? <span>pick the meaning that fits here</span></li></ul></article>
     </div>`;
   }
+
 
   // ---------- full-screen activities ----------
   function viewCards() {
@@ -854,14 +873,6 @@
           <div class="small">More cities coming. Each guide has slang, customs, getting around and a pause map.</div></div></div>`;
     }
     if (S.langPick) html += langSheet();
-    if (S.paste) {
-      html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
-        <div class="panel" role="dialog" aria-label="Paste text"><div class="grab"></div>
-          <div class="sum-title">Paste text to explain</div>
-          <div class="small">Copy a confusing email, text message or web page, paste it here, and Linger explains it.</div>
-          <textarea id="pasteBox" class="paste-box" rows="7" placeholder="Paste text here…"></textarea>
-          <div class="grid2"><button type="button" class="btn" data-action="close">Cancel</button><button type="button" class="btn primary" data-action="paste-go">✦ Explain</button></div></div></div>`;
-    }
     if (S.shareHelp) {
       html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
         <div class="panel" role="dialog" aria-label="Use Linger in any app"><div class="grab"></div>
@@ -939,7 +950,7 @@
     lastTab = S.tab;
     over.innerHTML = overlay();
     screenEl.classList.toggle('full', !!S.activity);
-    screenEl.classList.toggle('on-lens', S.tab === 'lens' && !(S.scan.status === 'reading' || (S.scan.status === 'done' && TEXTS.camera)));
+    screenEl.classList.toggle('on-lens', S.tab === 'lens');
     const camEl = document.getElementById('cam');
     if (camEl && camStream && camEl.srcObject !== camStream) { camEl.srcObject = camStream; camEl.play().catch(() => {}); }
     document.querySelectorAll('.tabbar button').forEach((b) => {
@@ -1067,11 +1078,20 @@
     'cam-flip': () => { flipCamera(); },
     // The capture button: turns the camera on the first time, then takes the photo.
     shutter: () => { if (S.scan.status === 'live') capture(); else startCamera(); },
-    'shutter-home': () => { if (S.scan.status !== 'live') { stopSpeaking(); S.scan.status = 'idle'; S.pending = null; S.sheet = null; S.explain = false; } },
+    // The Lens switch: picking a mode clears what was read and shows that mode's card.
+    'lens-mode': (d) => {
+      stopSpeaking(); S.pending = null; S.sheet = null; S.explain = false;
+      if (d.v !== 'scan') closeCamera();
+      const busy = S.scan.status === 'reading';
+      if (!busy) S.scan = { status: S.scan.status === 'live' && d.v === 'scan' ? 'live' : 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' };
+      S.lensMode = d.v;
+    },
+    'lens-clear': () => { stopSpeaking(); S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pasteDraft = ''; S.pending = null; S.sheet = null; S.explain = false; },
+    'paste-clip': async () => { try { const t = await navigator.clipboard.readText(); if (t) { S.pasteDraft = t; render(); } } catch { const b = document.getElementById('pasteText'); if (b) b.focus(); } },
     rescan: () => { stopSpeaking(); S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pending = null; S.sheet = null; S.explain = false; },
     settings: () => { stopSpeaking(); closeCamera(); S.tab = 'settings'; S.pending = null; S.sheet = null; S.explain = false; },
-    'paste-open': () => { stopSpeaking(); S.paste = true; S.pending = null; S.sheet = null; S.explain = false; },
-    'paste-go': () => { const t = (document.getElementById('pasteBox') || {}).value || ''; S.paste = false; if (t.trim()) handleText(t, 'paste'); },
+    'paste-open': () => { stopSpeaking(); closeCamera(); S.tab = 'lens'; S.lensMode = 'paste'; S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pending = null; S.sheet = null; S.explain = false; },
+    'paste-go': () => { const t = S.pasteDraft; if (t.trim()) handleText(t, 'paste'); },
     'share-help': () => { S.shareHelp = true; },
     'sync-on': () => { startSync(S.sync.code || LingerSync.newCode()); },
     'sync-off': () => { stopSync(); },
@@ -1109,7 +1129,7 @@
     const f = ev.target.files && ev.target.files[0];
     if (!f || ev.target.id !== 'photo') return;
     ev.target.value = '';
-    scanImage(await fileToDataURL(f));
+    scanImage(await fileToDataURL(f), 'upload');
   });
   document.addEventListener('input', (ev) => {
     if (ev.target.id === 'q') { S.query = ev.target.value; render(); }
@@ -1117,6 +1137,11 @@
       S.langQuery = ev.target.value; const pos = ev.target.selectionStart;
       over.innerHTML = overlay();
       const q = document.getElementById('langQ'); if (q) { q.focus(); q.setSelectionRange(pos, pos); }
+    }
+    if (ev.target.id === 'pasteText') {
+      S.pasteDraft = ev.target.value;
+      const go = document.getElementById('pasteGo'); if (go) go.disabled = !S.pasteDraft.trim();
+      const pb = document.querySelector('.lh-pastebtn'); if (pb) pb.hidden = !!S.pasteDraft;
     }
   });
   document.addEventListener('keydown', (ev) => {
