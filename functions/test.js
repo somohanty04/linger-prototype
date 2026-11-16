@@ -18,13 +18,13 @@ assert.ok(buildRequest(readInput({ mode: 'word', text: 'turnout', context: '' })
 const text = (o) => ({ stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: JSON.stringify(o) }] });
 assert.deepEqual(readResult(text({ meaning: 'You have to pay.', plain: 'must pay', hardWords: [{ word: 'remit', meaning: 'send money', easier: 'pay' }] })),
   { meaning: 'You have to pay.', plain: 'must pay', hardWords: [{ word: 'remit', meaning: 'send money', easier: 'pay' }] });
-assert.deepEqual(readResult(text({ meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people', 'extra'], plainSentence: 'x',
+assert.deepEqual(readResult(text({ meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people', 'extra'],
   example: 'The turnout at the park party was big.', exampleEasy: 'The attendance at the park party was big.' })),
-  { meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people'], plainSentence: 'x',
+  { meaning: 'How many people came.', synonyms: ['attendance', 'crowd', 'number of people'],
     example: 'The turnout at the park party was big.', exampleEasy: 'The attendance at the park party was big.' });
 // An answer without the new fields (older prompt) still reads.
-assert.equal(readResult(text({ meaning: 'm', synonyms: [], plainSentence: '' })).example, '');
-assert.deepEqual(buildRequest(readInput({ mode: 'word', text: 'turnout', context: 'x' })).output_config.format.schema.required, ['meaning', 'synonyms', 'plainSentence', 'example', 'exampleEasy']);
+assert.equal(readResult(text({ meaning: 'm', synonyms: [] })).example, '');
+assert.deepEqual(buildRequest(readInput({ mode: 'word', text: 'turnout', context: 'x' })).output_config.format.schema.required, ['meaning', 'synonyms', 'example', 'exampleEasy']);
 assert.deepEqual(readResult({ stop_reason: 'refusal', content: [] }), { error: 'refused' });
 assert.deepEqual(readResult({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'not json' }] }), { error: 'bad answer' });
 // Page assistant
@@ -44,3 +44,35 @@ assert.equal(first.messages.length, 1);
 assert.ok(first.messages[0].content[1].text.includes('<highlight>remit payment</highlight>'));
 assert.deepEqual(readResult({ stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: 'Pay by Dec 1.' }] }, true), { answer: 'Pay by Dec 1.' });
 console.log('ok');
+// Translation (fallback when Chrome's translator doesn't have the language)
+assert.ok(readInput({ mode: 'translate', text: 'turnout' }).error); // no language
+assert.ok(readInput({ mode: 'translate', text: 'x', lang: 'es; drop' }).error);
+const tr = readInput({ mode: 'translate', text: ' turnout ', context: 'The turnout was huge.', lang: 'so', langName: 'Somali<script>', sentence: 1 });
+assert.deepEqual(tr, { mode: 'translate', text: 'turnout', context: 'The turnout was huge.', lang: 'so', langName: 'Somaliscript', from: 'en', sentence: true });
+assert.equal(readInput({ mode: 'translate', text: 'renta', lang: 'en', from: 'es' }).from, 'es'); // other way round
+const trq = buildRequest(tr);
+assert.equal(trq.output_config.format.schema.required.join(), 'translation,sentence,note');
+assert.ok(trq.messages[0].content.includes('into Somaliscript (so)') && trq.messages[0].content.includes('Also translate the <context> sentence.'));
+assert.deepEqual(readResult(text({ translation: 'tirada dadka', sentence: 'Tirada dadka way badnayd.', note: '' })), { translation: 'tirada dadka', sentence: 'Tirada dadka way badnayd.', note: '' });
+console.log('translate ok');
+// Whole-page batches
+const many = readInput({ mode: 'translate-many', lang: 'hi', langName: 'Hindi', texts: ['Rent is due', 'x'.repeat(700), ...Array(60).fill('Pay now')] });
+assert.equal(many.texts.length, 40); assert.equal(many.texts[1].length, 600);
+assert.ok(readInput({ mode: 'translate-many', lang: 'hi', texts: [] }).error);
+assert.ok(buildRequest(many).messages[0].content.includes('Return exactly 40 translations'));
+assert.deepEqual(readResult(text({ translations: ['किराया देय है'] })), { translations: ['किराया देय है'] });
+console.log('translate-many ok');
+// Ask Linger in the reader's language
+const askHi = readInput({ mode: 'ask', question: 'When is rent due?', page: 'Rent is due Dec 1.', lang: 'hi', langName: 'Hindi' });
+assert.equal(askHi.lang, 'hi'); assert.ok(buildRequest(askHi).system.includes('Answer in Hindi (hi)'));
+assert.equal(readInput({ mode: 'ask', question: 'x?', page: 'y', lang: 'en' }).lang, undefined);
+assert.equal(buildRequest(readInput({ mode: 'ask', question: 'x?', page: 'y' })).system.includes('Answer in'), false);
+console.log('ask lang ok');
+// Swapping hard words in place
+const sw = readInput({ mode: 'swap-many', lang: 'en', items: [{ w: 'unprecedented', s: 'The turnout was unprecedented.' }, { w: '', s: 'x' }, ...Array(80).fill({ w: 'remit', s: 'Remit payment.' })] });
+assert.equal(sw.items.length, 60); assert.equal(sw.items[0].w, 'unprecedented');
+assert.ok(readInput({ mode: 'swap-many', lang: 'en', items: [] }).error);
+assert.ok(buildRequest(sw).messages[0].content.includes('easier, more common English word'));
+assert.ok(buildRequest(readInput({ mode: 'swap-many', lang: 'hi', langName: 'Hindi', items: [{ w: 'remit', s: 'Remit payment.' }] })).messages[0].content.includes('translated into Hindi'));
+assert.deepEqual(readResult(text({ swaps: ['never seen before'] })), { swaps: ['never seen before'] });
+console.log('swap-many ok');
