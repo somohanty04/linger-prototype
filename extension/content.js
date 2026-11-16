@@ -205,7 +205,8 @@
     .ask-fab:hover { transform: scale(1.07); }
     .ask-fab:focus-visible, .ask-panel button:focus-visible, .ask-panel textarea:focus-visible { outline: 2px solid #1F2AA8; outline-offset: 2px; }
     /* Chat panel: Figma "Frame 48" (node 272:2933) */
-    .ask-panel { position: fixed; right: 16px; bottom: 72px; width: 385px; max-width: calc(100vw - 32px); height: min(555px, calc(100vh - 96px)); display: flex; flex-direction: column; background: #FFFFFF; border-radius: 12px; box-shadow: 0 14px 40px rgba(16, 20, 80, 0.28); overflow: hidden; font-family: 'Linger Figtree', 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #252A39; }
+    /* zoom: the Figma frame shrunk evenly to 85% (327 x 472) so the chat covers less of the page. */
+    .ask-panel { zoom: 0.85; position: fixed; right: calc(16px / 0.85); bottom: calc(72px / 0.85); width: 385px; max-width: calc(100vw - 32px); height: min(555px, calc(100vh - 96px)); display: flex; flex-direction: column; background: #FFFFFF; border-radius: 12px; box-shadow: 0 14px 40px rgba(16, 20, 80, 0.28); overflow: hidden; font-family: 'Linger Figtree', 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #252A39; }
     .ask-panel * { font-family: inherit; box-sizing: border-box; }
     .ask-head { position: relative; overflow: hidden; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 14px 18px; border: 1px solid #E8E8E8; border-bottom: 0; border-radius: 12px 12px 0 0; background: linear-gradient(178.77deg, #1F2DA8 1.41%, #5464D9 105.55%); color: #FFFFFF; }
     .ask-rings { position: absolute; left: 219.53px; top: -90.26px; width: 252.51px; height: 252.51px; transform: rotate(-30deg); pointer-events: none; }
@@ -233,7 +234,7 @@
     .ask-form textarea { flex: 1; min-width: 0; height: 49px; min-height: 49px; max-height: 110px; resize: none; padding: 13.5px 16px; border: 2px solid #E8E8E8; border-radius: 16px; background: #FFFFFF; color: #252A39; font-size: 16px; font-weight: 600; line-height: 18px; }
     .ask-form textarea::placeholder { color: #5B6070; }
     .ask-form textarea:focus { outline: none; border-color: #B1B7FF; }
-    .ask-send { width: 49px; height: 49px; flex: none; padding: 0; display: grid; place-items: center; border: 2px solid #2533AD; border-radius: 9999px; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; box-shadow: 0 0 4px 0 #7A67E9; cursor: pointer; }
+    .ask-send { width: 49px; height: 49px; flex: none; padding: 0; display: grid; place-items: center; border: 2px solid #2533AD; border-radius: 9999px; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; cursor: pointer; }
     .ask-send svg { width: 24px; height: 24px; display: block; }
     /* Not in the dictionary (Figma node 140:496): red, header only, 20px icons */
     .wc.wc-missing { width: 372px; }
