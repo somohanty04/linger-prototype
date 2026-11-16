@@ -2,7 +2,8 @@
 // and keep saved words under the account, so every device you sign in on has the same list.
 //
 // Data (see firestore.rules):
-//   users/{uid}               profile: { createdAt, schema }
+//   users/{uid}               profile: { createdAt, schema, prefs, photo } (prefs: the onboarding answers, photo: a
+//                             small JPEG data URL for the profile picture; both set by app.js through saveProfile)
 //   users/{uid}/words/{key}   one document per saved word, key = the app's word key (keyOf), with the same fields the
 //                             pairing sync uses: w, m, s, p, place, date (all strings), plus createdAt, updatedAt.
 //                             Later features add their own fields to the same document (status: 'learning' |
@@ -58,6 +59,8 @@
     },
     async reset(email) { const b = await firebase(); await b.A.sendPasswordResetEmail(b.auth, email); },
     async signOut() { const b = await firebase(); await b.A.signOut(b.auth); },
+    async getProfile(uid) { const b = await firebase(); const d = await b.F.getDoc(b.F.doc(b.db, 'users', uid)); return d.exists() ? d.data() : {}; },
+    async saveProfile(uid, fields) { const b = await firebase(); await b.F.setDoc(b.F.doc(b.db, 'users', uid), { ...fields, updatedAt: b.F.serverTimestamp() }, { merge: true }); },
     async listen(uid, cb, onError) {
       const b = await firebase();
       return b.F.onSnapshot(b.F.collection(b.db, 'users', uid, 'words'), (snap) => {
@@ -88,6 +91,8 @@
     },
     async reset() {},
     async signOut() { localStorage.removeItem('acctTest.current'); tellTabs('auth'); this._cb(null); },
+    async getProfile(uid) { return store.get('acctTest.profile.' + uid, {}); },
+    async saveProfile(uid, fields) { store.set('acctTest.profile.' + uid, { ...store.get('acctTest.profile.' + uid, {}), ...fields }); },
     async listen(uid, cb) {
       const h = (e) => { if (e.data === 'words:' + uid) cb(T.words(uid), false); };
       if (bc) bc.addEventListener('message', h);
@@ -210,15 +215,16 @@
   document.addEventListener('submit', (ev) => { if (ev.target.id !== 'acctForm') return; ev.preventDefault(); run(() => backend().signIn(email(), A.pw), () => { A.pw = ''; A.open = false; }); });
   document.addEventListener('input', (ev) => { if (ev.target.id === 'acctEmail') A.email = ev.target.value; if (ev.target.id === 'acctPw') A.pw = ev.target.value; });
 
-  // ---------- the card on the Words screen ----------
+  // ---------- the account card (in the account sheet) ----------
   const paint = () => { if (adapter && adapter.render) adapter.render(); };
   const inputStyle = 'min-height: 0; height: 44px; resize: none';
-  function card() {
+  // opts.inSheet: inside the account sheet, which already shows the email under the profile picture.
+  function card(opts = {}) {
     if (!backend() || A.auth === 'loading') return '';
     if (A.auth === 'in') {
       const n = remote ? Object.keys(remote).length : 0;
       const line = A.sync === 'error' ? esc(A.msg) : A.sync === 'syncing' ? 'Connecting to your account…' : `Your ${n === 1 ? '1 saved word is' : n + ' saved words are'} in your account and on every device you sign in on.`;
-      return `<div class="sync-card ${A.sync === 'error' ? '' : 'on'}" id="acctCard"><div class="sync-h">${A.sync === 'on' ? '<span class="dot-live"></span>' : '👤'}<strong>Signed in as ${esc(A.user.email)}</strong></div>
+      return `<div class="sync-card ${A.sync === 'error' ? '' : 'on'}" id="acctCard"><div class="sync-h">${A.sync === 'on' ? '<span class="dot-live"></span>' : '👤'}<strong>${opts.inSheet ? (A.sync === 'error' ? 'Words not syncing' : 'Words synced') : 'Signed in as ' + esc(A.user.email)}</strong></div>
         <div class="small">${line}</div>
         <div class="sync-acts"><button type="button" class="link-btn" data-acct="signout" ${A.busy ? 'disabled' : ''}>Sign out</button></div></div>`;
     }
@@ -234,11 +240,27 @@
       <div class="sync-acts"><button type="button" class="link-btn" data-acct="reset">Forgot password?</button><button type="button" class="link-btn" data-acct="close">Cancel</button></div></form>`;
   }
 
+  // ---------- profile (the account's settings: onboarding answers, profile picture) ----------
+  async function loadProfile() {
+    const uid = A.user && A.user.uid;
+    let p = {};
+    try { p = (await backend().getProfile(uid)) || {}; } catch {}
+    if (!A.user || A.user.uid !== uid) return; // signed out (or someone else signed in) meanwhile
+    A.profile = p;
+    if (adapter && adapter.profile) adapter.profile(p);
+  }
+  async function saveProfile(fields) {
+    if (A.auth !== 'in') return false;
+    A.profile = { ...(A.profile || {}), ...fields };
+    try { await backend().saveProfile(A.user.uid, fields); return true; } catch (e) { onErr(e); return false; }
+  }
+
   // ---------- start ----------
   window.LingerAccount = {
+    saveProfile,
     available: () => !!backend(),
     mode: () => (testMode ? 'test' : hasFirebase() ? 'firebase' : 'off'),
-    state: () => ({ auth: A.auth, email: A.user && A.user.email, sync: A.sync, words: remote ? Object.keys(remote).length : 0 }),
+    state: () => ({ auth: A.auth, email: A.user && A.user.email, sync: A.sync, words: remote ? Object.keys(remote).length : 0, profile: A.profile || null }),
     card,
     localChanged,
     // adapter: { words(): { key: { w, m, s, p, place, date } }, apply({ add, remove }), render() }
@@ -248,7 +270,7 @@
       b.onAuth((u) => {
         const was = A.user && A.user.uid;
         A.user = u; A.auth = u ? 'in' : 'out';
-        if (u && u.uid !== was) startListening(); else if (!u) { stopListening(); A.sync = ''; }
+        if (u && u.uid !== was) { startListening(); loadProfile(); } else if (!u) { stopListening(); A.sync = ''; A.profile = null; if (adapter.profile) adapter.profile(null); }
         paint();
       }).catch((e) => { A.auth = 'out'; A.err = friendly(e); paint(); });
     }
