@@ -113,12 +113,16 @@
   }
   const send = (m) => { if (G.port) try { G.port.postMessage(m); } catch {} };
   if (api) {
-    chrome.storage.local.get({ eyeOn: false, gazeModel: null, pauseSecs: 3 }, (v) => { G.dpr = v.gazeModel && v.gazeModel.dpr; G.acc = v.gazeModel && v.gazeModel.acc; G.secs = v.pauseSecs; setOn(!!v.eyeOn); });
+    // Eye tracking stays quiet when Linger is off everywhere or on this site.
+    const E = { eyeOn: false, off: false, paused: [] }, site = location.hostname || 'file';
+    const sync = () => setOn(!!E.eyeOn && !E.off && !(E.paused || []).includes(site));
+    chrome.storage.local.get({ eyeOn: false, off: false, paused: [], gazeModel: null, pauseSecs: 3 }, (v) => { G.dpr = v.gazeModel && v.gazeModel.dpr; G.acc = v.gazeModel && v.gazeModel.acc; G.secs = v.pauseSecs; Object.assign(E, { eyeOn: v.eyeOn, off: v.off, paused: v.paused }); sync(); });
     chrome.storage.onChanged.addListener((ch) => {
       if (dead) return;
       if (ch.pauseSecs) G.secs = ch.pauseSecs.newValue;
       if (ch.gazeModel) G.dpr = ch.gazeModel.newValue && ch.gazeModel.newValue.dpr;
-      if (ch.eyeOn) setOn(!!ch.eyeOn.newValue);
+      ['eyeOn', 'off', 'paused'].forEach((k) => { if (ch[k]) E[k] = ch[k].newValue; });
+      if (ch.eyeOn || ch.off || ch.paused) sync();
     });
     document.addEventListener('visibilitychange', connect);
     // A newer copy of Linger was put into this tab after an update: stop using the camera feed and remove the chip.

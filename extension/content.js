@@ -55,12 +55,14 @@
   }
 
   // ---------- settings ----------
-  const S = { highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '', swap: '' };
+  const S = { off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '', swap: '' };
   const host = location.hostname || 'file';
+  // Off everywhere (the main Linger switch) or just on this site ("On this site").
+  const offHere = () => !!S.off || S.paused.includes(host);
   let pageTr = null; // set while the whole page is translated (see translatePage)
   if (!api) S.highlight = true; // the test page (no extension features) is there to check the underlines
   // Words are found (and underlined) when underlining is on, or when hard words are being swapped.
-  const active = () => (S.highlight || !!S.swap) && !S.paused.includes(host) && !pageTr;
+  const active = () => (S.highlight || !!S.swap) && !offHere() && !pageTr;
 
   // ---------- styles on the page ----------
   const style = document.createElement('style');
@@ -578,7 +580,7 @@
   };
   function showChip() {
     hideChip();
-    if (S.paused.includes(host) || card) return; // works with underlines off, and while the page is translated
+    if (offHere() || card) return; // works with underlines off, and while the page is translated
     const sel = getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const text = sel.toString().replace(/\s+/g, ' ').trim();
@@ -774,7 +776,7 @@
   }, true);
   // Double-click any word (even one that isn't underlined) to look it up.
   window.addEventListener('dblclick', (e) => {
-    if (dead || S.paused.includes(host) || pageTr || (e.composedPath && e.composedPath().includes(host$))) return; // underlines can be off
+    if (dead || offHere() || pageTr || (e.composedPath && e.composedPath().includes(host$))) return; // underlines can be off
     const sel = getSelection(); const w = (sel && sel.toString().trim()) || '';
     if (!/^[A-Za-z][A-Za-z'’-]{1,30}$/.test(w) || !sel.rangeCount) return;
     const r = sel.getRangeAt(0);
@@ -892,7 +894,7 @@
   const swapLabel = () => (S.swap === 'easy' ? 'Hard words: easier English' : S.swap === 'mine' && swapLang() ? `Hard words: ${LANG(S.transLang).own}` : 'Hard words: original');
   // Alt+Shift+L: original → easier English → my language → original.
   window.addEventListener('keydown', (e) => {
-    if (dead || !(e.altKey && e.shiftKey && e.code === 'KeyL') || S.paused.includes(host)) return;
+    if (dead || !(e.altKey && e.shiftKey && e.code === 'KeyL') || offHere()) return;
     e.preventDefault();
     const order = ['', 'easy', ...(S.transLang && S.transLang !== 'en' ? ['mine'] : [])];
     S.swap = order[(order.indexOf(S.swap) + 1) % order.length];
@@ -1142,7 +1144,7 @@
   const myLang = () => (S.transLang && S.transLang !== 'en' ? S.transLang : '');
   function showFab() {
     // Follows "On this site" (and its own switch), not "Underline hard words": you can ask about a page without underlines.
-    const want = S.assistant && S.aiOn && !S.paused.includes(host) && window === window.top;
+    const want = S.assistant && S.aiOn && !offHere() && window === window.top;
     if (!want) { if (fab) fab.remove(); fab = null; closeAsk(); return; }
     if (fab && fab.isConnected && host$.isConnected) return;
     if (fab) fab.remove();
@@ -1255,7 +1257,7 @@
     showFab();
   }, 2000);
   // Why the button isn't showing, for the toolbar menu.
-  const askWhy = () => (!S.aiOn ? 'ai-off' : !S.assistant ? 'button-off' : S.paused.includes(host) ? 'site-off' : window !== window.top ? 'frame' : fab && fab.isConnected && host$.isConnected ? 'shown' : 'missing');
+  const askWhy = () => (!S.aiOn ? 'ai-off' : !S.assistant ? 'button-off' : S.off ? 'all-off' : offHere() ? 'site-off' : window !== window.top ? 'frame' : fab && fab.isConnected && host$.isConnected ? 'shown' : 'missing');
   // Some sites rebuild the page and drop elements they didn't make (the Ask Linger button vanished): put it back.
   new MutationObserver(() => { if (!dead && !host$.isConnected && layer.childElementCount) attach(); }).observe(document.documentElement, { childList: true });
 
@@ -1270,14 +1272,14 @@
     showFab();
   }
   if (api) {
-    chrome.storage.local.get({ highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '', swap: '' }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '', swap: '' }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       if (dead) return;
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
       if (active() !== was || ch.bigger || ch.spread || ch.highlight) apply();
       else if (ch.swap || ch.transLang) scheduleSwap();
-      if (ch.assistant || ch.aiOn || ch.paused || ch.highlight) showFab();
+      if (ch.assistant || ch.aiOn || ch.paused || ch.off || ch.highlight) showFab();
     });
     chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (dead) return;

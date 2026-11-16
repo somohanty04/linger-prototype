@@ -163,8 +163,20 @@ async function openPractice(fromTab) {
   await chrome.tabs.create({ url });
 }
 // Keep eye tracking on after Chrome restarts.
-const resume = async () => { const { eyeOn } = await chrome.storage.local.get({ eyeOn: false }); if (eyeOn) ensureTracker(); };
+const resume = async () => { const { eyeOn, off } = await chrome.storage.local.get({ eyeOn: false, off: false }); offBadge(off); if (eyeOn && !off) ensureTracker(); };
 chrome.runtime.onStartup.addListener(resume);
+// The main Linger switch (off on every website): mark the toolbar icon, and turn the camera off while Linger is off.
+function offBadge(off) {
+  chrome.action.setBadgeText({ text: off ? 'OFF' : '' }).catch(() => {});
+  if (off) chrome.action.setBadgeBackgroundColor({ color: '#6B6F80' }).catch(() => {});
+}
+chrome.storage.onChanged.addListener(async (ch, area) => {
+  if (area !== 'local' || !ch.off) return;
+  const off = !!ch.off.newValue;
+  offBadge(off);
+  if (off) closeTracker();
+  else { const { eyeOn } = await chrome.storage.local.get({ eyeOn: false }); if (eyeOn) ensureTracker(); }
+});
 // Chrome only adds content scripts to pages loaded after Linger is installed or updated. Tabs that were already open
 // either had no Linger at all ("works on some tabs, not others") or kept an old copy that can't reach the extension.
 // Put a fresh copy into every open web page; content.js and gaze.js make the old copy step aside.
@@ -183,6 +195,7 @@ async function underlineDefault(reason) {
 chrome.runtime.onInstalled.addListener(async (d) => {
   resume();
   if (d.reason === 'install' || d.reason === 'update') { await underlineDefault(d.reason); injectOpenTabs(); }
+  chrome.storage.local.get({ off: false }).then((v) => offBadge(v.off));
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
@@ -212,7 +225,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg.type === 'eye-off') { await chrome.storage.local.set({ eyeOn: false }); await closeTracker(); return reply({ ok: true }); }
     if (msg.type === 'open-practice') { await openPractice(null); return reply({ ok: true }); }
     if (msg.type === 'eye-recal') { await openSetup(msg.tabId || (sender.tab && sender.tab.id)); return reply({ ok: true }); }
-    if (msg.type === 'eye-ensure') { const { eyeOn } = await chrome.storage.local.get({ eyeOn: false }); if (eyeOn) await ensureTracker(); return reply({ ok: true }); }
+    if (msg.type === 'eye-ensure') { const { eyeOn, off } = await chrome.storage.local.get({ eyeOn: false, off: false }); if (eyeOn && !off) await ensureTracker(); return reply({ ok: true }); }
     if (msg.type === 'eye-start') { if (msg.restart) await closeTracker(); await ensureTracker(); return reply({ ok: true }); }
     if (msg.type === 'get-model') { const { gazeModel } = await chrome.storage.local.get({ gazeModel: null }); return reply({ model: gazeModel }); }
     if (msg.type === 'save-model') { await chrome.storage.local.set({ gazeModel: msg.model }); return reply({ ok: true }); }

@@ -10,7 +10,7 @@ const UI = {};
 const L = (t) => UI[t] || t;
 const EXTRA = ['Not available here', 'Reload this page to start Linger here.', 'Reload this page to use the new version of Linger.', 'The code has 12 letters and numbers.', 'Checking…',
   'Couldn’t reach Linger. Check your internet connection.', 'Show the original page', 'Translate this page', 'Starting…', 'Couldn’t translate this page. Reload it and try again.',
-  'Click on an underlined word, then the bookmark icon.', 'My language (pick one below)', 'Eye tracking finds hard words through the underlines. Turn on Underline hard words.', 'Ask Linger needs AI explanations turned on.', 'Linger is off for this site, so the ✦ button is hidden.', 'The ✦ button should be at the bottom right of this page. If it isn’t, reload the page.'];
+  'Click on an underlined word, then the bookmark icon.', 'My language (pick one below)', 'Eye tracking finds hard words through the underlines. Turn on Underline hard words.', 'Ask Linger needs AI explanations turned on.', 'Linger is off for this site, so the ✦ button is hidden.', 'Linger is off on every website. Turn on the Linger switch to use it.', 'The ✦ button should be at the bottom right of this page. If it isn’t, reload the page.'];
 async function localize(lang) {
   if (!lang || lang === 'en') return;
   const skip = (el) => el.closest('[translate="no"], #transLang, script, style, textarea, input'); // language names stay as written
@@ -62,7 +62,7 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
   // Why the ✦ Ask Linger button isn't on the page.
   const askWhy = () => {
     const why = status && status.ask, el = $('askWhy');
-    const text = why === 'ai-off' ? 'Ask Linger needs AI explanations turned on.' : why === 'site-off' ? 'Linger is off for this site, so the ✦ button is hidden.' : why === 'missing' ? 'The ✦ button should be at the bottom right of this page. If it isn’t, reload the page.' : '';
+    const text = why === 'ai-off' ? 'Ask Linger needs AI explanations turned on.' : why === 'all-off' ? 'Linger is off on every website. Turn on the Linger switch to use it.' : why === 'site-off' ? 'Linger is off for this site, so the ✦ button is hidden.' : why === 'missing' ? 'The ✦ button should be at the bottom right of this page. If it isn’t, reload the page.' : '';
     el.hidden = !text; el.textContent = L(text);
   };
 
@@ -70,6 +70,10 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
   if (st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = 'Last problem: ' + st.gazeProblem.why + '. Open Recalibrate to check the camera.'; }
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
+  // The main switch: Linger off on every website (the "On this site" switch is for this one site only).
+  const { off } = await chrome.storage.local.get({ off: false });
+  $('power').checked = !off; document.body.classList.toggle('all-off', off);
+  $('power').onchange = (e) => { chrome.storage.local.set({ off: !e.target.checked }); document.body.classList.toggle('all-off', !e.target.checked); $('askWhy').hidden = true; };
   $('bigger').checked = st.bigger;
   $('aiOn').checked = st.aiOn;
   $('aiOn').onchange = (e) => chrome.storage.local.set({ aiOn: e.target.checked });
