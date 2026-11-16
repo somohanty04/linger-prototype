@@ -1,0 +1,26 @@
+extension/content.js
+  s_99ec2d8108581c::t_3e6c4bcdb38889 203-218,220-221,223-226,228-233,691-692,713-715,717-718,726,734,742
+  s_99ec2d8108581c::t_4ca867eb1e17cb 743,757
+extension/manifest.json
+  s_99ec2d8108581c::t_3e6c4bcdb38889 4,17
+extension/icons/ask/rings.svg
+  s_99ec2d8108581c::t_9548a21c50b9f8 1-7
+extension/icons/ask/rotate-ccw.svg
+  s_99ec2d8108581c::t_c52500e8a1a71b 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2b5db6c7a1620c57689a347b06d9c3a095e4eb44",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "unknown"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
