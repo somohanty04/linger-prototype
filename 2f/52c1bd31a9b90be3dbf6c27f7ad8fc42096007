@@ -1,0 +1,24 @@
+index.html
+  s_99ec2d8108581c::t_e3d8538e980e8a 17,82
+app.js
+  s_99ec2d8108581c::t_e3d8538e980e8a 668-669,671-686
+  s_99ec2d8108581c::t_a3a2d16ddaa018 690
+styles.css
+  s_99ec2d8108581c::t_e3d8538e980e8a 611-626
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f52c1bd31a9b90be3dbf6c27f7ad8fc42096007",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
