@@ -404,7 +404,7 @@ a.share-card { text-decoration: none; color: inherit; }
 .hero.wh .week .d { width: 36px; height: 36px; font-size: 16px; line-height: 16px; font-weight: 500; background: #6D79FF; border: 1px solid #B1B7FF; }
 .hero.wh .week .d.on { background: #FFFFFF; color: #6D79FF; border-color: #DFFFFF; }
 .hero.wh .arrow { flex: none; opacity: 1; }
-.body.wb { margin-top: -24px; padding: 16px 16px 120px; gap: 20px; }
+.body.wb { margin-top: -24px; padding: 32px 16px 120px; gap: 20px; } /* 32px on top, like Lens: the handle has room to breathe */
 .body.wb::before { position: absolute; left: 50%; top: 10.76px; margin-left: -21.58px; width: 43.161px; height: 4px; border-radius: 0; background: url('icons/figma/handle.svg') no-repeat center / 43.161px 4px; }
 .body.wb .search { height: 38px; gap: 8px; padding: 0 16px; border-color: #E8E8E8; color: #6B7080; }
 .body.wb .search input { font-size: 14px; font-weight: 500; line-height: 16px; }
@@ -520,7 +520,6 @@ a.share-card { text-decoration: none; color: inherit; }
 .sheet-grab { position: absolute; left: 0; right: 0; top: 0; height: 26px; z-index: 3; padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; border-radius: 24px 24px 0 0; }
 .sheet-grab:active { cursor: grabbing; }
 .sheet-grab:focus-visible { outline: 3px solid #B1B7FF; outline-offset: -3px; }
-.body.wb:not(.lb):not(.lens-results) .sheet-grab { height: 18px; } /* Words: keep clear of the search field 16px down */
 .hero { transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .hero > :not(.wh-rings):not(.ring):not(.dot) { opacity: var(--fade, 1); transition: opacity 0.2s; }
 .screen.sheet-drag .hero, .screen.sheet-drag .hero > * { transition: none; }
