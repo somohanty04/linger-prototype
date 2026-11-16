@@ -135,6 +135,8 @@
   // Pages like Gmail keep adding content; underline new parts as they appear.
   let pendingRoots = new Set(), flushT = null;
   const mo = new MutationObserver((list) => {
+    if (dead) return;
+    if (!alive()) { retire(false); return; } // turned off on chrome://extensions: stop underlining new text
     if (!active()) return;
     for (const r of list) r.addedNodes.forEach((nd) => { if (nd.nodeType === 1 && nd.id !== 'linger-ui' && !nd.classList.contains('linger-w')) pendingRoots.add(nd); else if (nd.nodeType === 3 && nd.parentElement) pendingRoots.add(nd.parentElement); });
     clearTimeout(flushT);
@@ -1229,7 +1231,9 @@
   function retire(stale) {
     if (dead) return;
     dead = true;
+    try { clearInterval(watchdog); } catch {} // (defined further down)
     try { mo.disconnect(); } catch {}
+    try { unwrapAll(); } catch {} // underlines off and swapped words back to the page's own text
     hideChip(); closeCard(); closePanel(); closeAsk();
     if (fab) fab.remove(); fab = null;
     if (pageTr && pageTr.bar) pageTr.bar.remove();
@@ -1242,7 +1246,14 @@
   if (api) document.addEventListener('linger-retire', () => retire(false));
   // The ✦ Ask Linger button sometimes went missing (a page redrew itself, or an old copy took the layer with it).
   // Check every couple of seconds and put it back if it should be there.
-  setInterval(() => { if (!dead && fab !== undefined) showFab(); }, 2000);
+  // When Linger is turned off (or removed) on chrome://extensions, Chrome leaves this script running in tabs that were
+  // already open. It used to keep putting the button back, so Linger seemed to switch itself on again. Now it notices
+  // the extension is gone and cleans up after itself instead.
+  const watchdog = setInterval(() => {
+    if (dead) return;
+    if (!alive()) { retire(false); return; }
+    showFab();
+  }, 2000);
   // Why the button isn't showing, for the toolbar menu.
   const askWhy = () => (!S.aiOn ? 'ai-off' : !S.assistant ? 'button-off' : S.paused.includes(host) ? 'site-off' : window !== window.top ? 'frame' : fab && fab.isConnected && host$.isConnected ? 'shown' : 'missing');
   // Some sites rebuild the page and drop elements they didn't make (the Ask Linger button vanished): put it back.

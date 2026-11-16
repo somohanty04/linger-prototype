@@ -37,6 +37,7 @@ The menu shows the last problem under Eye tracking.
 
 - **After installing or updating Linger**, it now adds itself to tabs that were already open, so you don't have to reload them. If a page still shows **"Linger was updated. Reload this page"**, press Reload.
 - **"Linger AI didn't answer this time"** on a card: the AI server was busy or the connection dropped (Linger already retried once). The card shows the dictionary meaning instead. Click the word again to retry.
+- **Turning Linger off** on `chrome://extensions` now also clears it from tabs that were already open within a couple of seconds (underlines, swapped words and the ✦ button), instead of the old copy carrying on.
 - **No ✦ Ask Linger button**: it only shows when **AI explanations**, **Ask Linger button** and **On this site** are all on. The Linger menu now says which one is off. If a site removes the button, Linger puts it back within a couple of seconds. If the menu says **Reload this page to use the new version**, that tab still runs an older copy.
 
 ## Pair with the phone

@@ -93,8 +93,10 @@
       if (m.gesture) onSwipe(m.gesture);
     });
     port.onDisconnect.addListener(() => {
-      void chrome.runtime.lastError;
+      try { void chrome.runtime.lastError; } catch {}
       if (G.port === port) G.port = null;
+      // Linger was turned off or removed: don't try to start eye tracking again, just remove the chip.
+      if (!(chrome.runtime && chrome.runtime.id)) { dead = true; G.on = false; host.remove(); return; }
       if (!G.on) return;
       // The tracker isn't running (browser restarted, or it was closed): ask for it, then try again.
       setStatus({ s: 'loading' });
