@@ -665,21 +665,28 @@
     </div>`;
   }
 
+  // Review: the Lens/Words layout. Two activities you can do now; what's coming is one quiet card.
+  const storyIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 11h7M4 16h5"/><rect x="13" y="13" width="7" height="5" rx="1.5" stroke-dasharray="2 2"/></svg>';
   function viewReview() {
-    const n = S.saved.filter((k) => D[k]).length;
-    const act = (id, ic, title, sub) => `<button type="button" class="act" data-action="play" data-v="${id}"><span class="ic">${ic}</span><span><strong>${title}</strong><span class="small">${sub}</span></span><span class="go">›</span></button>`;
-    const soon = (ic, title, sub) => `<div class="act soon"><span class="ic">${ic}</span><span><strong>${title}</strong><span class="small">${sub}</span></span><span class="go">Soon</span></div>`;
-    return `${hero('Review', 'Practice the words you met')}
-    <div class="body">
-      <div class="label" style="color: var(--indigo-500)">Activities</div>
-      ${act('story', '✍️', 'Fill in the story', 'Put your words back into a short story')}
-      ${act('cards', '🃏', 'Flashcards', `${n} ${n === 1 ? 'word' : 'words'}, with the sentence where you met each one`)}
-      <div class="label" style="color: var(--muted); margin-top: 6px">Coming soon</div>
-      ${soon('📬', 'Read the notice', 'A short text using your words, then a question')}
-      ${soon('⚖️', 'Landlord or friend?', 'Sort words by how formal they are')}
-      ${soon('📖', 'Dictionary or local?', 'Pick the meaning that fits here')}
+    const n = S.saved.filter((k) => D[k]).length, words = `${n} ${n === 1 ? 'word' : 'words'}`;
+    const act = (id, icon, title, sub) => `<button type="button" class="rv-act" data-action="play" data-v="${id}">
+        <span class="rv-ic" aria-hidden="true">${icon}</span>
+        <span class="rv-txt"><span class="rv-title">${title}</span><span class="mean">${sub}</span></span>
+        <span class="rv-go">Start</span></button>`;
+    return `<header class="hero wh lh2">
+      <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
+      ${logo}
+      <div class="wh-title"><div class="wh-row"><h1>Review</h1></div>
+        <div class="hsub">${n ? `${words} ready to practice` : 'Save words to practice them here'}</div></div>
+    </header>
+    <div class="body wb rv-body">
+      ${act('story', storyIcon, 'Fill in the story', 'Put your words back into a short story.')}
+      ${act('cards', '<i class="ti" style="--ic: url(icons/figma/tab-cards.svg)"></i>', 'Flashcards', `Go through your ${words}, with the sentence where you met each one.`)}
+      <article class="loc-item rv-soon"><span class="badge b-common">Coming soon</span>
+        <ul><li>Read the notice <span>a short text with your words</span></li><li>Landlord or friend? <span>sort words by how formal they are</span></li><li>Dictionary or local? <span>pick the meaning that fits here</span></li></ul></article>
     </div>`;
   }
+
 
   // ---------- full-screen activities ----------
   function viewCards() {

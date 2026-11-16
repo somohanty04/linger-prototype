@@ -608,3 +608,19 @@ label.btn.lh-cta { cursor: pointer; }
 .loc-where { font-size: 12px; font-weight: 600; color: var(--muted); }
 .loc-bar { height: 6px; border-radius: 99px; background: var(--teal-100); overflow: hidden; }
 .loc-bar span { display: block; height: 100%; border-radius: 99px; background: var(--teal-500); }
+
+/* ---------- Review: same layout as Lens and Words ---------- */
+.body.wb.rv-body { gap: 16px; }
+.rv-act { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px; text-align: left; border: 1px solid #E8E8E8; border-radius: 12px; background: linear-gradient(90deg, #FFFFFF, #FCFDFF); color: var(--ink); cursor: pointer; }
+.rv-act:active { transform: scale(0.99); }
+.rv-ic { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 12px; background: #EAEFFF; color: #6D79FF; }
+.rv-ic .ti { width: 24px; height: 24px; background: currentColor; -webkit-mask: var(--ic) center / 24px 24px no-repeat; mask: var(--ic) center / 24px 24px no-repeat; }
+.rv-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.rv-title { font-size: 20px; font-weight: 800; line-height: 24px; color: #1F2AA8; }
+.rv-txt .mean { font-size: 14px; line-height: 20px; color: var(--ink); }
+.rv-go { flex: none; height: 32px; padding: 0 14px; display: grid; place-items: center; border-radius: 999px; background: #6D79FF; color: #FFFFFF; font-size: 14px; font-weight: 700; }
+.rv-soon { gap: 8px; }
+.rv-soon ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.rv-soon li { font-size: 14px; font-weight: 700; line-height: 20px; color: var(--muted); }
+.rv-soon li span { font-weight: 500; }
+.rv-soon li span::before { content: "· "; }
