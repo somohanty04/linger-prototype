@@ -9,10 +9,11 @@ one). Built on the same Firebase project (`linger-f41a7`) and the same Firestore
 ## Files
 
 - `account.js` (new): Firebase Authentication (email + password), the account word store, two-way sync, and the
-  account card on the Words screen.
+  account card (shown in the account sheet, opened from the profile picture at the top right of every screen), and the
+  profile: `saveProfile()` and loading it on sign-in, for the onboarding answers and the profile picture.
 - `sync.js`: shares its Firebase app with `account.js` (`LingerSync.firebase()`); optional `?emulator=1`.
-- `app.js`: three small hooks: tells `account.js` when saved words change, shows the account card above the pairing
-  card, and gives `account.js` read/apply access to the saved words.
+- `app.js`: hooks that tell `account.js` when saved words change, show the account card in the account sheet, give
+  `account.js` read/apply access to the saved words, and use the profile (onboarding answers, profile picture).
 - `index.html`: loads `account.js`.
 - `firestore.rules`: adds rules for `users/{uid}`. The pairing rules are unchanged.
 - `firebase.json`: points the Firebase CLI at `firestore.rules` and sets the emulator ports.
@@ -20,7 +21,10 @@ one). Built on the same Firebase project (`linger-f41a7`) and the same Firestore
 ## Data
 
 ```
-users/{uid}                 { createdAt, schema: 1 }                       profile (settings later)
+users/{uid}                 { createdAt, schema: 1, prefs, photo }         profile
+                            prefs: { reads: [...], level, lang, at }       the onboarding answers (newest 'at' wins)
+                            photo: 'data:image/jpeg;base64,…'              160×160 profile picture, a few KB
+                            learn: { word: { n, r, x, s, c, w, k, h, lr, ll, u } }   learning progress (learn.js), newest 'u' wins per word
 users/{uid}/words/{key}     { w, m, s, p, place, date, createdAt, updatedAt }
 ```
 

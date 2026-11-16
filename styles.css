@@ -635,3 +635,83 @@ label.btn.lh-cta { cursor: pointer; }
 .rv-soon li { font-size: 14px; font-weight: 700; line-height: 20px; color: var(--muted); }
 .rv-soon li span { font-weight: 500; }
 .rv-soon li span::before { content: "· "; }
+
+/* ---------- Account button (top right of every header) and the account sheet ---------- */
+.hero.wh .av-btn { right: 12px; top: calc(14px + var(--sa)); z-index: 2; }
+.av-btn { width: 48px; height: 48px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.av-btn:focus-visible { outline: 3px solid #9FEAFF; outline-offset: 0; }
+.avatar { display: grid; place-items: center; flex: none; overflow: hidden; border-radius: 50%; font-weight: 800; }
+.avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.av-sm { width: 40px; height: 40px; border: 1.5px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.16); color: #FFFFFF; font-size: 18px; line-height: 1; }
+.av-sm.in { border: 2px solid #FFFFFF; background: #FFFFFF; color: var(--indigo-900); }
+.loc-hero .av-sm.in { color: var(--teal-900); }
+.av-btn:active .av-sm { transform: scale(0.95); }
+.av-lg { width: 72px; height: 72px; background: var(--indigo-100); color: var(--indigo-500); font-size: 30px; line-height: 1; }
+.av-lg svg { width: 34px; height: 34px; }
+.av-lg.in { background: var(--cta); color: #FFFFFF; }
+.sheet.acct-sheet { z-index: 26; }
+.acct-head { display: flex; align-items: center; gap: 16px; padding: 6px 0 4px; }
+.acct-pic { position: relative; flex: none; }
+.acct-cam { position: absolute; right: -4px; bottom: -4px; width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--indigo-300); border-radius: 50%; background: #FFFFFF; color: var(--indigo-500); box-shadow: 0 2px 6px rgba(31, 42, 168, 0.18); cursor: pointer; }
+.acct-cam input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.acct-cam:focus-within { outline: 3px solid var(--indigo-300); outline-offset: 1px; }
+.acct-who { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.acct-who .small { font-size: 14px; overflow-wrap: anywhere; }
+.acct-setup { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(90deg, #FFFFFF, #FCFDFF); }
+.acct-setup-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.acct-setup-h strong { font-size: 16px; font-weight: 800; color: var(--indigo-900); }
+.acct-setup-h .link-btn { font-size: 14px; text-decoration: none; }
+.acct-row { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 8px; font-size: 14px; line-height: 20px; }
+.acct-row span:first-child { color: var(--muted); font-weight: 500; }
+.acct-row span:last-child { color: var(--ink-2); font-weight: 600; }
+
+/* ---------- Onboarding: three short questions, same header and sheet as the tabs ---------- */
+.onb { position: absolute; inset: 0; z-index: 25; display: flex; flex-direction: column; background: var(--surface); animation: fade 0.2s ease-out; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.onb-hero { --sa: env(safe-area-inset-top, 0px); position: relative; flex: none; overflow: hidden; padding: calc(16px + var(--sa)) 24px 48px; background: linear-gradient(163.52deg, #1F2DA8 1.41%, #5464D9 105.55%); color: #FFFFFF; }
+.onb-hero > * { position: relative; }
+.onb-rings { position: absolute; left: 112.92px; top: calc(-200.6px + var(--sa)); width: 489.359px; height: 489.359px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.onb-rings img { display: block; flex: none; transform: rotate(-34.98deg); }
+.onb-top { display: flex; align-items: center; justify-content: space-between; margin-left: -5px; }
+.onb-skip { height: 36px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 9999px; background: rgba(255, 255, 255, 0.12); color: #FFFFFF; font: 700 14px/16px var(--font); cursor: pointer; }
+.onb-skip:focus-visible, .onb-opt:focus-visible { outline: 3px solid #9FEAFF; outline-offset: 2px; }
+.onb-dots { display: flex; gap: 6px; margin-top: 26px; }
+.onb-dots i { width: 28px; height: 6px; border-radius: 9px; background: rgba(255, 255, 255, 0.3); transition: background 0.2s; }
+.onb-dots i.on { background: #FFFFFF; }
+.onb-kicker { margin-top: 18px; font-size: 14px; font-weight: 700; line-height: 16px; color: #CFD6FF; }
+.onb-hero h1 { margin: 8px 0 0; font-size: 30px; line-height: 34px; font-weight: 800; letter-spacing: 0; }
+.onb-dots + h1 { margin-top: 18px; }
+.onb-hero p { margin: 10px 0 0; max-width: 320px; font-size: 16px; line-height: 22px; font-weight: 600; color: #E0E6FF; }
+.onb-body { position: relative; flex: 1; min-height: 0; margin-top: -24px; padding: 28px 16px 16px; overflow-y: auto; border-radius: 24px 24px 0 0; background: var(--surface); }
+.onb-body::before { content: ""; position: absolute; left: 50%; top: 10.76px; margin-left: -21.58px; width: 43.161px; height: 4px; background: url('icons/figma/handle.svg') no-repeat center / 43.161px 4px; }
+.onb-list { display: flex; flex-direction: column; gap: 10px; }
+.onb-opt { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(90deg, #FFFFFF, #FCFDFF); color: var(--ink); text-align: left; cursor: pointer; transition: border-color 0.12s, background 0.12s; }
+.onb-opt.on { border-color: var(--indigo-500); background: var(--indigo-50); box-shadow: 0 0 0 1px var(--indigo-500) inset; }
+.onb-opt:active { transform: scale(0.99); }
+.onb-ic { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--indigo-100); color: var(--indigo-900); font-size: 19px; font-weight: 800; line-height: 1; }
+.onb-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.onb-txt strong { font-size: 17px; font-weight: 800; line-height: 22px; color: var(--indigo-900); }
+.onb-txt small { font-size: 13px; font-weight: 500; line-height: 18px; color: var(--muted); }
+.onb-check { width: 24px; height: 24px; flex: none; border: 2px solid var(--indigo-300); border-radius: 50%; background: #FFFFFF; }
+.onb-check.box { border-radius: 7px; }
+.onb-opt.on .onb-check { border-color: var(--indigo-500); background: var(--indigo-500) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5 10 17 19 7'/%3E%3C/svg%3E") center / 14px no-repeat; }
+.onb-search { height: 44px; margin-top: 4px; }
+.onb-have { margin: 18px 0 4px; text-align: center; font-size: 14px; font-weight: 500; color: var(--muted); }
+.onb-have .link-btn { text-decoration: none; }
+.onb-foot { flex: none; display: flex; gap: 8px; padding: 12px 16px calc(24px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #F0F1F4; background: var(--surface); }
+.onb-foot .btn.primary.lh-cta { flex: 1; width: auto; }
+.onb-foot .btn.primary.lh-cta:disabled { opacity: 0.45; cursor: default; }
+
+/* ---------- Learning progress (learn.js): a meter on each saved word, and the flashcard answer ---------- */
+.kn { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.kn-bar { width: 44px; height: 6px; flex: none; overflow: hidden; border-radius: 9px; background: var(--indigo-100); }
+.kn-bar span { display: block; height: 100%; border-radius: 9px; background: var(--indigo-500); }
+.kn-txt { min-width: 0; font-size: 12px; font-weight: 500; line-height: 16px; color: var(--muted); }
+.kn-txt b { font-weight: 700; color: var(--indigo-900); }
+.kn-txt i { font-style: normal; font-weight: 700; color: var(--bad-ink); }
+.kn-known .kn-bar { background: #D6F3E6; }
+.kn-known .kn-bar span { background: #2BA36B; }
+.kn-known .kn-txt b { color: var(--ok-ink); }
+.kn-almost .kn-bar span { background: #8E98FF; }
+.fc-answer { display: flex; gap: 8px; width: 342px; }
+.fc-answer .btn.fc-btn { flex: 1; width: auto; min-width: 0; }
