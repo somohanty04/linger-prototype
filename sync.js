@@ -6,6 +6,7 @@
   const SDK = 'https://www.gstatic.com/firebasejs/10.12.4/';
   const testMode = (() => { try { if (new URLSearchParams(location.search).get('synctest') === '1') localStorage.setItem('linger.synctest', '1'); return localStorage.getItem('linger.synctest') === '1'; } catch { return false; } })();
   const hasFirebase = () => !!(window.LINGER_FIREBASE && window.LINGER_FIREBASE.projectId);
+  const useEmulator = (() => { try { const q = new URLSearchParams(location.search).get('emulator'); if (q === '1') localStorage.setItem('linger.emulator', '1'); if (q === '0') localStorage.removeItem('linger.emulator'); return localStorage.getItem('linger.emulator') === '1'; } catch { return false; } })();
 
   // Codes avoid look-alike characters (0/o, 1/l/i) so they're easy to type.
   const ALPHA = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -18,7 +19,9 @@
     if (fb) return fb;
     const [{ initializeApp }, F] = await Promise.all([import(SDK + 'firebase-app.js'), import(SDK + 'firebase-firestore.js')]);
     const app = initializeApp(window.LINGER_FIREBASE);
-    fb = { db: F.getFirestore(app), F };
+    fb = { app, db: F.getFirestore(app), F, emulator: useEmulator };
+    // ?emulator=1: talk to the Firebase emulators on this computer instead of the real project (for testing).
+    if (useEmulator) F.connectFirestoreEmulator(fb.db, '127.0.0.1', 8080);
     return fb;
   }
 
@@ -56,6 +59,8 @@
   window.LingerSync = {
     available: () => !!backend(),
     mode: () => (hasFirebase() ? 'firebase' : testMode ? 'test' : 'off'),
+    // The shared Firebase app and Firestore, for account.js (one app per page).
+    firebase: () => firestore(),
     newCode, tidy, pretty,
     // Start syncing: onWords gets the full shared word map whenever it changes.
     async connect(code, onWords, onError) {

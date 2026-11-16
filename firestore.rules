@@ -11,5 +11,31 @@ service cloud.firestore {
         && request.resource.data.words.size() <= 300;
       allow delete: if false;
     }
+
+    // Linger accounts (account.js): a signed-in user can read and write only their own profile and saved words.
+    //   users/{uid}               profile and, later, settings
+    //   users/{uid}/words/{key}   one saved word: w, m, s, p, place, date (strings, as in pairing) and timestamps.
+    // Other fields are allowed (room for status, lookups, familiarity, reviews…) with a cap on how many and how big.
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function optString(d, f, max) {
+      return !(f in d) || (d[f] is string && d[f].size() <= max);
+    }
+    function validWord(d) {
+      return d.size() <= 40
+        && d.w is string && d.w.size() > 0 && d.w.size() <= 80
+        && optString(d, 'm', 2000) && optString(d, 's', 2000) && optString(d, 'p', 2000)
+        && optString(d, 'place', 200) && optString(d, 'date', 40)
+        && (!('status' in d) || d.status in ['learning', 'mastered']);
+    }
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && request.resource.data.size() <= 40;
+      match /words/{key} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && key.size() <= 64 && validWord(request.resource.data);
+      }
+    }
   }
 }
