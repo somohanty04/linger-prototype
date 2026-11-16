@@ -566,7 +566,7 @@ label.btn.lh-cta { cursor: pointer; }
 /* ---------- Local: same layout as Lens and Words, in teal ---------- */
 .hero.wh.loc-hero { background: linear-gradient(163.52deg, #0A5560 1.41%, #14A3B0 105.55%); }
 .loc-city { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0; border: 0; background: none; color: #FFFFFF; text-align: left; cursor: pointer; }
-.hero.wh .loc-city h1 { width: auto; max-width: 270px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hero.wh .loc-city h1 { width: auto; max-width: 270px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-bottom: 8px; margin-bottom: -8px; } /* room for g, y, p below the line (overflow would cut them) */
 .loc-city svg { flex: none; margin-top: 4px; }
 .loc-hero .hsub { color: #D3F3EF; }
 .body.wb.loc-body { gap: 16px; }
