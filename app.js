@@ -618,43 +618,50 @@
   }
   function setCity(id) { if (!CITIES[id]) return; S.city = id; S.cityPick = false; try { localStorage.setItem('linger.city', id); } catch {} }
 
+  // Local: the same layout as Lens and Words (gradient header, white sheet, a switch, plain cards), in teal.
+  const bookmarkIcon = (on) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
+  const locateIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="#FFFFFF"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
   function viewLocal() {
     const c = city(), id = CITIES[S.city] ? S.city : 'pgh';
-    const segs = [['slang', '💬', 'Slang'], ['customs', '🤝', 'Customs'], ['around', '🚌', 'Getting around'], ['hotspots', '📍', 'Pause map']];
-    let body = '';
+    const segs = [['slang', 'Slang'], ['customs', 'Customs'], ['around', 'Transit'], ['hotspots', 'Pause map']];
+    let note = '', items = '';
     if (S.localSeg === 'slang') {
-      body = `<p class="sec-note">Words you’ll hear around ${esc(c.name)}. Tap 🔊 to hear how they sound.</p>` + citySlang(id).map((k) => { const e = D[k], sv = isSaved(k); return `<article class="phrase">
-        <div class="ph-top"><div class="ph-name"><span class="ph-word">${esc(e.word)}</span>${e.say ? `<span class="ph-say">/${esc(e.say)}/</span>` : ''}</div>
-          <div class="ph-acts"><button type="button" class="hear" data-action="hear" data-k="${k}" aria-label="Hear ${esc(e.word)}">${speaker}</button>
-          <button type="button" class="save ${sv ? 'saved' : ''}" data-action="save" data-k="${k}">${sv ? 'Saved ✓' : 'Save'}</button></div></div>
-        <div class="ph-mean">${esc(e.meaning)}</div>
-        <div class="ph-ex">“${esc(e.sentence)}”</div>
-        ${e.local ? `<div class="ph-local">${pin}<span>${esc(e.local)}</span></div>` : ''}</article>`; }).join('');
+      note = `Words you’ll hear around ${esc(c.name)}.`;
+      items = citySlang(id).map((k) => { const e = D[k], sv = isSaved(k); return `<article class="loc-item">
+        <div class="item-head"><div class="loc-wl"><span class="word loc-word">${esc(e.word)}</span>${e.say ? `<span class="loc-say">/${esc(e.say)}/</span>` : ''}</div>
+          <div class="loc-acts"><button type="button" class="loc-ic" data-action="hear" data-k="${k}" aria-label="Hear ${esc(e.word)}">${speaker}</button>
+          <button type="button" class="loc-ic ${sv ? 'on' : ''}" data-action="save" data-k="${k}" aria-pressed="${sv}" aria-label="${sv ? 'Saved to Words' : 'Save to Words'}">${bookmarkIcon(sv)}</button></div></div>
+        <span class="mean">${esc(e.meaning)}</span>
+        <span class="quote">“${esc(e.sentence)}”</span>
+        ${e.local ? `<span class="meta loc-meta">${pin}${esc(e.local)}</span>` : ''}</article>`; }).join('');
     } else if (S.localSeg === 'customs') {
-      body = `<p class="sec-note">Unwritten rules that help you fit in.</p>` + cityCustoms(id).map((t) => `<article class="tip"><span class="tip-ic" aria-hidden="true">${t.ic}</span><div><span class="tip-tag">${esc(t.tag)}</span><div class="tip-title">${esc(t.title)}</div><div class="tip-body">${esc(t.body)}</div></div></article>`).join('');
+      note = 'Unwritten rules that help you fit in.';
+      items = cityCustoms(id).map((t) => `<article class="loc-item"><div class="item-head"><span class="loc-title">${esc(t.title)}</span><span class="badge b-loc">${esc(t.tag)}</span></div><span class="mean">${esc(t.body)}</span></article>`).join('');
     } else if (S.localSeg === 'around') {
-      body = `<p class="sec-note">How people move around ${esc(c.name)}, and the words on the signs.</p><div class="routes">` + (c.around || []).map((r) => `<div class="route"><span class="route-ic" aria-hidden="true">${r.ic}</span><div><div class="tip-title">${esc(r.title)}</div><div class="tip-body">${esc(r.body)}</div></div></div>`).join('') + '</div>';
+      note = `How people get around ${esc(c.name)}, and the words on the signs.`;
+      items = `<article class="loc-item loc-list">${(c.around || []).map((r) => `<div class="loc-row"><span class="loc-title">${esc(r.title)}</span><span class="mean">${esc(r.body)}</span></div>`).join('')}</article>`;
     } else {
       const hs = cityHotspots(id), max = Math.max(...hs.map((h) => h.n));
-      body = `<div class="dark local-dark"><div style="font-weight: 800; font-size: 16px; margin-bottom: 4px">Where newcomers pause in ${esc(c.name)}</div>When lots of people new to the area linger on the same word, Linger adds it here. Only the word and the area are shared, never your eye data.</div>`
-        + hs.map((h) => `<div class="tip hot"><div style="flex: 1"><div class="item-head" style="align-items: baseline"><span class="tip-title">${esc(h.label)}</span><span class="count local-count">${h.n} paused</span></div>
-          <div class="small" style="font-size: 12px">${esc(h.where)}</div><div class="bar local-bar"><span style="width: ${Math.round(h.n / max * 100)}%"></span></div>
-          <div class="tip-body">${esc(h.note)}</div></div></div>`).join('')
-        + '<div class="small" style="font-size: 12px; text-align: center">Sample data for the prototype</div>';
+      note = `Words that newcomers in ${esc(c.name)} pause on most. Only the word and the area are shared, never your eye data. Sample data.`;
+      items = hs.map((h) => `<article class="loc-item"><div class="item-head"><span class="loc-title">${esc(h.label)}</span><span class="loc-count">${h.n} paused</span></div>
+          <span class="loc-where">${esc(h.where)}</span><div class="loc-bar"><span style="width: ${Math.round(h.n / max * 100)}%"></span></div>
+          <span class="mean">${esc(h.note)}</span></article>`).join('');
     }
     const ess = [['🚨', '911', 'Emergencies: police, fire, ambulance'], ['☎️', '311', 'City help: trash, noise, potholes'], ['🚌', 'Transit', c.transit], ['💵', 'Tipping', '18–20% at sit-down restaurants']];
-    return `<header class="hero local-hero">${rings([['ring', 'width:200px;height:200px;right:-60px;top:-60px;border-color:rgba(155,227,196,0.45)'], ['dot', 'width:80px;height:80px;right:22px;top:-16px;background:rgba(155,227,196,0.5)']])}
-      <div class="hero-top">${logo}${pairPill}</div>
-      <div class="over">${pin}Your city guide</div>
-      <button type="button" class="city-btn" data-action="city-pick" aria-haspopup="dialog"><span class="city-emoji" aria-hidden="true">${c.emoji}</span>
-        <span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span><span class="chev" aria-hidden="true">▾</span></button>
-      <button type="button" class="locate" data-action="city-locate">◎ Use my location</button>
+    return `<header class="hero wh lh2 loc-hero">
+      <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
+      ${logo}
+      <div class="wh-title"><div class="wh-row"><button type="button" class="loc-city" data-action="city-pick" aria-haspopup="dialog" aria-label="City: ${esc(cityName(c))}. Change city"><h1>${esc(c.name)}</h1><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button type="button" class="lh-gear" data-action="city-locate" aria-label="Use my location">${locateIcon}</button></div>
+        <div class="hsub">${esc(c.state)} · ${esc(c.nick)}</div></div>
     </header>
-    <div class="body local-body">
-      <div class="ess" role="list">${ess.map(([ic, t, d]) => `<div class="ess-card" role="listitem"><span class="ess-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</div>
-      <nav class="ltabs" aria-label="City guide sections">${segs.map(([v, ic, l]) => `<button type="button" class="ltab ${S.localSeg === v ? 'on' : ''}" data-action="seg" data-v="${v}" aria-pressed="${S.localSeg === v}"><span aria-hidden="true">${ic}</span>${l}</button>`).join('')}</nav>
-      <div class="lcontent">${body}</div>
-      <div class="talk"><span class="talk-ic" aria-hidden="true">🗨️</span><div><strong>Easy small talk</strong><div class="tip-body">${esc(c.talk)}</div></div></div>
+    <div class="body wb loc-body">
+      <article class="loc-item loc-gk"><span class="loc-title">Good to know</span>
+        ${ess.map(([ic, t, d]) => `<div class="gk-row"><span class="gk-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</article>
+      <div class="lh-switch loc-switch" role="group" aria-label="City guide sections">${segs.map(([v, l]) => `<button type="button" class="lh-seg ${S.localSeg === v ? 'on' : ''}" data-action="seg" data-v="${v}" aria-pressed="${S.localSeg === v}">${l}</button>`).join('')}</div>
+      <p class="loc-note">${note}</p>
+      <div class="wlist">${items}</div>
+      <article class="loc-item"><span class="badge b-loc">Small talk</span><span class="mean">${esc(c.talk)}</span></article>
     </div>`;
   }
 
