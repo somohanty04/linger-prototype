@@ -1,0 +1,21 @@
+extension/content.js
+  s_99ec2d8108581c::t_92f0478db97917 208-209,237
+extension/manifest.json
+  s_99ec2d8108581c::t_5d453c3c8f89aa 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b818d711b67481831848f2f2b5b5072eb40292fb",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
