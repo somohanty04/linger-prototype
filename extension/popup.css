@@ -80,3 +80,19 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 #saved li.empty span { width: 283.777px; font-size: 16px; font-weight: 600; line-height: 22px; }
 
 .blocked, .problem { align-self: stretch; margin: 0; padding: 10px 12px; border-radius: 12px; background: #FFE7DF; color: var(--bad); font-size: 13px; line-height: 18px; }
+
+/* Translation: language picker row */
+.pick { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; }
+.pick > span { display: flex; flex-direction: column; min-width: 0; }
+.pick b { font-size: 16px; font-weight: 700; line-height: 22px; color: var(--text-primary); }
+.pick small { font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-muted); }
+.pick small.w207 { width: 207px; }
+.pick select { flex: none; width: 150px; height: 40px; padding: 0 10px; border: 1px solid #B1B7FF; border-radius: 10px; background: #FFFFFF; color: var(--indigo-900); font: 700 14px/20px 'Figtree', system-ui, sans-serif; cursor: pointer; }
+.pick select:focus-visible { outline: 3px solid #B1B7FF; outline-offset: 2px; }
+.tmsg { align-self: stretch; margin: -8px 0 0; text-align: center; }
+.tmsg:empty { display: none; }
+
+.askwhy { align-self: stretch; margin: -8px 0 0; padding: 8px 12px; border-radius: 10px; background: #FFF6E0; color: #5B4A1F; }
+
+/* Main Linger switch off: everything else in the menu is greyed out until it's turned back on. */
+body.all-off main > section:nth-of-type(2), body.all-off main > section:nth-of-type(3), body.all-off main > section:first-of-type > :not(h2, .rows), body.all-off .rows .sw:not(:has(#power)) { opacity: .45; }

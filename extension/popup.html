@@ -8,7 +8,7 @@
 <body>
 <header class="top">
   <img class="rings" src="icons/popup/rings.svg" width="252.51" height="252.51" alt="">
-  <h1>Linger</h1>
+  <h1 translate="no">Linger</h1>
   <button type="button" class="glass" id="recal"><img src="icons/popup/recalibrate.svg" width="18.818" height="19.004" alt=""> Recalibrate</button>
 </header>
 
@@ -18,20 +18,34 @@
   <section>
     <h2>Reading help</h2>
     <div class="rows">
-      <label class="sw"><span><b>On this site</b><small id="siteLabel">this page</small></span><input type="checkbox" id="site"><i></i></label>
+      <label class="sw"><span><b>Linger</b><small>On every website</small></span><input type="checkbox" id="power"><i></i></label>
+      <label class="sw"><span><b>On this site</b><small id="siteLabel" translate="no">this page</small></span><input type="checkbox" id="site"><i></i></label>
       <label class="sw"><span><b>Underline hard words</b><small>On every website</small></span><input type="checkbox" id="highlight"><i></i></label>
+      <label class="pick"><span><b>Hard words show as</b><small class="w207">Swaps them right in the text. Shortcut on any page: Alt+Shift+L</small></span>
+        <select id="swap"><option value="">The original words</option><option value="easy">Easier English</option><option value="mine" id="swapMine">My language</option></select></label>
       <label class="sw"><span><b>Bigger words</b><small>Larger underlined words, easier to tap</small></span><input type="checkbox" id="bigger"><i></i></label>
       <label class="sw"><span><b>AI explanations</b><small class="w207">Meaning in context from Claude. Sends the highlighted text and its sentence.</small></span><input type="checkbox" id="aiOn"><i></i></label>
       <label class="sw"><span><b>Ask Linger button</b><small class="w207">A small ✦ button in the corner to ask about the page or get help deciding</small></span><input type="checkbox" id="assistant"><i></i></label>
     </div>
+    <p class="hint askwhy" id="askWhy" role="status" hidden></p>
     <button type="button" class="btn primary wide" id="explain">Explain this page</button>
+  </section>
+
+  <section>
+    <h2>Translation</h2>
+    <div class="rows">
+      <label class="pick"><span><b>My language</b><small class="w207">Word and highlight cards also show the meaning in this language</small></span>
+        <select id="transLang"><option value="">Off</option></select></label>
+    </div>
+    <button type="button" class="btn wide" id="translatePage" disabled>Translate this page</button>
+    <p class="hint tmsg" id="transMsg" role="status"></p>
   </section>
 
   <section>
     <h2>Eye tracking</h2>
     <div class="rows">
       <label class="sw"><span><b>Notice when I’m stuck</b><small class="w207">On every tab. Uses your webcam; video stays on this laptop.</small></span><input type="checkbox" id="eye"><i></i></label>
-      <label class="slider"><span>Pause after <output id="secsOut">3</output> s on one line</span><input type="range" id="secs" min="1.5" max="6" step="0.5" value="3"></label>
+      <label class="slider"><span>Pause after <output id="secsOut" translate="no">3</output> s on one line</span><input type="range" id="secs" min="1.5" max="6" step="0.5" value="3"></label>
       <label class="sw"><span><b>Show where I’m looking</b><small>A dot where Linger thinks you’re looking</small></span><input type="checkbox" id="showGaze"><i></i></label>
       <label class="sw"><span><b>Answer with a hand swipe</b><small class="w207">When it asks “Stuck on...?”: swipe right for yes, left for no</small></span><input type="checkbox" id="handSwipe"><i></i></label>
       <label class="sw"><span><b>More space between lines</b><small>Makes lines easier for the webcam to tell apart</small></span><input type="checkbox" id="spread"><i></i></label>
@@ -50,15 +64,16 @@
       <button type="submit" class="btn primary">Connect</button>
     </form>
     <p class="hint msg" id="pairMsg" role="status"></p>
-    <div id="paired" class="paired" hidden><p class="ok"><span class="dot"></span>Saving to your phone · <span id="codeShow"></span></p><button type="button" class="link" id="unpair">Disconnect</button></div>
+    <div id="paired" class="paired" hidden><p class="ok"><span class="dot"></span>Saving to your phone · <span id="codeShow" translate="no"></span></p><button type="button" class="link" id="unpair">Disconnect</button></div>
   </section>
 
   <section>
-    <h2 class="saved-h">Saved <span class="count" id="savedCount">0</span></h2>
-    <ul id="saved"></ul>
+    <h2 class="saved-h">Saved <span class="count" id="savedCount" translate="no">0</span></h2>
+    <ul id="saved" translate="no"></ul>
     <a class="btn wide white" href="https://somohanty04.github.io/linger-prototype/" target="_blank" rel="noopener">Open the Linger app</a>
   </section>
 </main>
+<script src="langs.js"></script>
 <script src="popup.js"></script>
 </body>
 </html>
