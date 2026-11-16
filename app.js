@@ -136,6 +136,7 @@
     const custom = {};
     S.saved.forEach((k) => { const e = D[k]; if (e && (e.scanned || e.imported || e.city)) { const { pending, ...rest } = e; custom[k] = rest; } });
     try { localStorage.setItem(STORE, JSON.stringify({ saved: S.saved, savedDates: S.savedDates, custom })); } catch {}
+    if (window.LingerAccount) LingerAccount.localChanged(); // signed in: account.js syncs the change
   }
   (function restore() {
     let data = null;
@@ -666,7 +667,7 @@
         <span class="quote">“${esc(e.sentence)}”</span>
         <span class="meta"><img src="icons/figma/pin.svg" width="12" height="12" alt="">${esc(placeOf(e))}</span></button>`; }).join('')
         : `<div class="empty">${q ? 'No saved words match your search.' : 'Nothing here yet. Words you save from the lens or the local guide show up here.'}</div>`}
-      ${syncCard()}</div>
+      ${window.LingerAccount ? LingerAccount.card() : ''}${syncCard()}</div>
       <div class="start-wrap"><button type="button" class="btn primary start" data-action="play" data-v="story"><img src="icons/figma/sparkle.svg" width="19.534" height="20.078" alt="">Start Activity</button></div>
     </div>`;
   }
@@ -1178,6 +1179,19 @@
   const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join(' ');
   if (shared) { handleText(shared, 'share'); history.replaceState(null, '', location.pathname); }
   { const saved = (() => { try { return localStorage.getItem(SYNC_KEY); } catch { return null; } })(); if (saved) startSync(saved); }
+  // Account sync (account.js): the same word shape as pairing, kept under the signed-in user. Works alongside pairing.
+  if (window.LingerAccount) LingerAccount.attach({
+    words: () => Object.fromEntries(S.saved.filter((k) => D[k]).map((k) => [k, wordData(k)])),
+    apply: ({ add = {}, remove = [], quiet = false }) => {
+      Object.entries(add).forEach(([k, it]) => {
+        if (!D[k]) D[k] = { word: String(it.w || k).toLowerCase(), kind: 'hard', meaning: String(it.m || ''), ctx: it.p ? 'In plain English: ' + it.p : 'Saved on another device.', sentence: String(it.s || ''), place: String(it.place || 'Another device'), imported: true };
+        if (!isSaved(k)) { S.saved.unshift(k); S.savedDates[k] = it.date || today(); }
+      });
+      remove.forEach((k) => { const i = S.saved.indexOf(k); if (i >= 0) S.saved.splice(i, 1); if (syncConn && !quiet) syncConn.remove(k); }); // quiet: signing out, leave the pairing document alone
+      persist(); render();
+    },
+    render: () => render()
+  });
   if (params.get('import')) {
     const n = importWords(params.get('import'));
     S.tab = 'words';
