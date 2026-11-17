@@ -751,9 +751,8 @@
   // ---------- views ----------
   const rings = (a) => a.map(([cls, st]) => `<span class="${cls}" style="${st}"></span>`).join('');
   const heroDeco = rings([['ring', 'width:190px;height:190px;right:-50px;top:-70px'], ['dot', 'width:78px;height:78px;right:24px;top:-18px']]);
-  const pairPill = `<a class="pair" href="glasses.html" aria-label="Phone mode, glasses not paired. Open the glasses simulation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="14" r="4"/><circle cx="18" cy="14" r="4"/><path d="M10 14h4M2 12l2-5M22 12l-2-5"/></svg>Phone mode</a>`;
   const hero = (title, sub, over) => `<header class="hero">${heroDeco}
-    <div class="hero-top">${logo}${pairPill}</div>
+    <div class="hero-top">${logo}</div>
     ${over ? `<div class="over">${pin}${esc(over)}</div>` : ''}
     <h1>${esc(title)}</h1>${sub ? `<div class="hsub">${esc(sub)}</div>` : ''}</header>`;
 
@@ -839,7 +838,7 @@
       </div></div>`;
   }
 
-  // Settings (opened from the gear on Lens): the reading switches, sharing from other apps, and the glasses demo.
+  // Settings (opened from the gear on Lens): the reading switches, your language, and sharing from other apps.
   function viewSettings() {
     return `<header class="set-head"><button type="button" class="set-back" data-action="tab" data-tab="lens" aria-label="Back to Lens">‹</button><h1>Settings</h1></header>
     <div class="body set-body">
@@ -851,7 +850,6 @@
       </div>
       <button type="button" class="act share-card" data-action="lang-open"><span class="ic">🌐</span><span><strong>My language</strong><span class="small" ${S.lang ? langAttrs() : ''}>${esc(langLabel())} · meanings and summaries also show in it</span></span><span class="go">›</span></button>
       <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">Select text anywhere, tap Share, then “Explain with Linger”</span></span><span class="go">›</span></button>
-      <a class="act share-card" href="glasses.html"><span class="ic">👓</span><span><strong>Glasses</strong><span class="small">Phone mode · see it through the glasses</span></span><span class="go">›</span></a>
     </div>`;
   }
 

@@ -10,11 +10,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Linger">
 <title>Linger · clickable prototype</title>
-<meta name="description" content="Linger: smart glasses and a companion app that notice when you pause on a word and explain what it means here.">
+<meta name="description" content="Linger: a reading companion that notices when you pause on a word and explains what it means here.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700&family=Source+Serif+4:wght@500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=28">
+<link rel="stylesheet" href="styles.css?v=29">
 </head>
 <body>
 <main class="stage">
@@ -35,8 +35,8 @@
     <p class="lede">Your pause is the search bar.</p>
     <p>For adults who speak English as a second language and moved to the US. Linger spots hard words, local slang and confusing letters, explains them in context and for your area, reads them aloud, and helps you practice the words you meet.</p>
     <p class="hint">Try it: the app opens on <strong>Lens</strong>. Tap the round button to turn on the camera, fit a letter, sign or bill in the frame, and tap again to scan it. No camera? Use <strong>Upload a photo</strong> or <strong>Paste text</strong>. Tap any underlined word for its meaning, then press <strong>Start Activity</strong> on Words to practice.</p>
-    <button type="button" class="glasses-link" id="getExt" aria-haspopup="dialog">Get the Chrome extension →</button>
-    <a class="glasses-link" href="reader.html" style="background: var(--surface); color: var(--indigo-900); border: 1px solid var(--indigo-300)">Try the laptop pause test →</a>
+    <button type="button" class="side-link" id="getExt" aria-haspopup="dialog">Get the Chrome extension →</button>
+    <a class="side-link" href="reader.html" style="background: var(--surface); color: var(--indigo-900); border: 1px solid var(--indigo-300)">Try the laptop pause test →</a>
     <p class="note">Clickable prototype with sample content set in Pittsburgh. Pause-map numbers are sample data.</p>
   </aside>
 </main>
@@ -83,7 +83,7 @@
 <script src="extension/langs.js?v=1"></script>
 <script src="learn.js?v=1"></script>
 <script src="entest.js?v=2"></script>
-<script src="app.js?v=30"></script>
+<script src="app.js?v=31"></script>
 <script>
   // "Get the Chrome extension" opens the step-by-step guide.
   (() => {
