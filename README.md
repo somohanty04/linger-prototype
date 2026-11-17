@@ -1,125 +1,136 @@
 # Linger
 
-**Your pause is the search bar.**
+Linger is an AI reading helper for adults who are learning English and new to the US. It turns hard English into plain English: confusing words, local slang, and official letters, bills and forms.
 
-Linger is a reading companion for people who read English as a second language and recently moved to the US. When you linger on a word you don't know, Linger offers to explain it: what it means in that sentence, easier words that fit, how people use it locally, and the same thing in your own language. It saves the word to your account so you can review it later on your phone or laptop.
+You can use it in several ways:
 
-Version 2 has two parts that share one account:
+- **Highlight** any word, phrase or sentence, and Linger explains what it means in that context, in simple words, with easier words you could use instead.
+- **Ask** the AI assistant questions about a whole page, or get help deciding what to do (for example, how to respond to a letter from a landlord).
+- **Scan** anything with words with your phone camera, and Linger reads it and explains it.
+- **Translate:** see meanings in your own language, or translate a whole page.
+- **Listen:** Linger can read text and answers out loud.
+- **Save and practice** the words you meet. Your words, setup and progress stay in your account, so they're the same on your phone and laptop.
+- **Eye tracking (optional):** Linger notices when you pause on a line and asks "Want help with this word?". You can answer with a hand swipe.
 
-- **The Chrome extension** for reading websites, emails and online letters on a laptop. This is where the webcam eye tracking runs.
-- **The phone web app** for scanning paper letters and signs, reviewing saved words, and the local city guide.
+There are two parts: a phone web app and a Chrome extension.
 
-## How to open it
+## 1. Phone app
 
-### Phone app
+**How to open it:** go to https://somohanty04.github.io/linger-prototype/
 
-- **Open:** https://somohanty04.github.io/linger-prototype/
-- **Device:** a phone, in Safari on iPhone or Chrome on Android. On a laptop the same link shows the app inside a phone-sized frame, which works for a demo but not for scanning.
-- **First launch:** three setup questions (what you read, your languages, your English level, with an optional four-minute English check). Every question has **Skip**.
-- **Optional:** add it to your home screen (Safari: Share → Add to Home Screen; Chrome: menu → Install app). On Android, installing also adds Linger to the Share menu of other apps.
-- **Account:** tap the profile picture at the top right to sign in or create an account. Your words, setup and progress then follow you to other devices.
+**Which device:** best on a phone, in Safari or Chrome. On a laptop, the app shows inside a phone frame. That works for a demo, but not for scanning.
 
-### Chrome extension
+**What to try:**
 
-- **Device:** a laptop or desktop computer with Google Chrome (Mac, Windows or ChromeOS). Chrome on phones doesn't support extensions. Eye tracking needs a webcam. Translating into your language on the laptop itself needs Chrome 138 or newer.
-- **Install:**
-  1. Download [linger-extension.zip](https://somohanty04.github.io/linger-prototype/linger-extension.zip) and unzip it.
-  2. In Chrome, open `chrome://extensions` and turn on **Developer mode** (top right).
-  3. Click **Load unpacked** and choose the unzipped `linger-extension` folder.
-  4. Pin Linger: click the puzzle-piece icon in the toolbar, then the pin next to Linger.
-  5. Open any article or online letter. Click the Linger icon to turn things on.
-- The prototype site also has a step-by-step guide: **Get the Chrome extension →** next to the phone.
-- **Try first:** highlight a word or sentence and click **✦ Explain**. Then try **Underline hard words**, **My language**, **Ask Linger** (the ✦ button in the corner), and **Offer help when I pause** (eye tracking, with a one-time 35-second setup and a reading test; called "Notice when I'm stuck" in the older download).
+- **Set up:** tap the profile picture at the top right. Linger asks what you read, your languages and your English level. If you're not sure of your level, take the four-minute English check. You can skip any question.
+- **Account:** sign in from the same place to keep your words on every device. You can also delete your account and data there.
+- **Lens:** scan with the camera, upload a photo, or paste text. Hard words for your level get a dotted underline. Tap one to see what it means.
+- **Explain this letter:** a plain-English summary of what the letter wants from you, with key dates. It can read the summary out loud.
+- **Words:** the words you save, each marked Learning, Almost or Known.
+- **Local:** a city guide with slang, customs and getting around.
+- **Review:** practice with Fill in the story and Flashcards. Your answers tell Linger which words you know.
 
-More detail: [extension/README.md](extension/README.md).
+## 2. Chrome extension
 
-### Run it on your own computer
+**How to open it:** on the website above, click **Get the Chrome extension** and follow the steps: download, unzip, then in `chrome://extensions` turn on Developer mode and click **Load unpacked**.
 
-```bash
-python3 -m http.server 8000
-```
+**Which device:** a laptop or desktop computer with Google Chrome. Eye tracking also needs a webcam.
 
-Then open http://localhost:8000 in a browser. Add `?accounttest=1` to try accounts without Firebase (a stand-in that keeps everything in this browser).
+**What to try:**
 
-## What's real and what's still faked
+- Highlight any word or sentence and click **✦ Explain**. The first time, Linger asks before it sends anything to AI.
+- Pick **My language** in the Linger menu to see an "In your language" box on every card. You can also translate the whole page.
+- Turn on **Underline hard words** to mark hard words on any page. Click one to see what it means in that sentence.
+- Click the ✦ button in the corner to ask questions about the page.
+- Click the bookmark on a card to save the word to the phone app.
+- **Eye tracking (optional):** turn on **Offer help when I pause**. After a short setup, Linger uses the webcam to notice when you pause on a line, and asks if you want help.
 
-| Part | Status |
-|---|---|
-| Eye tracking in the Chrome extension | **Real.** The webcam and Google's MediaPipe face and iris model run on the laptop; video never leaves it. It's accurate to about a line of text, not a single letter, so it uses the line you're on to guess the word, and always asks "Want help with this word?" before explaining. |
-| Eye tracking on the phone | **Faked.** Tapping a word stands in for your eyes pausing on it. Phones don't let one app track your gaze while you read in another app. |
-| Reading inside Instagram, TikTok or other phone apps | **Not possible on iPhone.** iOS doesn't let Linger draw over other apps or see which word you tap. Instead, share text to Linger, paste it, or scan a screenshot. |
-| AI explanations, Ask Linger and translation | **Real.** Claude (Haiku 5.5) through Linger's server (`functions/`). The API key stays on the server. |
-| The phone app's "Explain" summary of a letter | **Partly faked.** It's built by rules (swapping formal words for plain ones), not by AI. |
-| Word meanings on the phone | Hand-written for the sample texts; other words come from Wiktionary. |
-| Sample content | The lease letter, café sign, saved words and the seven city guides on Local are written by us. The **Pause map** on Local uses made-up data. |
-| Accounts and sync | **Real** (Firebase) for the phone app. The extension still links to the phone with a 12-character pairing code, not the account. |
-| Learning model and English check | **Real code, not yet validated.** The English check picked the right level 92% of the time in simulations, not with real learners. |
+## What's real and what's faked
 
-## Change log: v1 → v2
+**Real (working):**
 
-**v1** is the version we used in concept testing (P1–P6, November 2–4). **v2** is `main` as of November 16 (extension 0.7.6).
+- Webcam eye tracking in the extension. The video stays on the laptop.
+- AI explanations, translation and the ✦ assistant. They use Claude through a small server we set up.
+- Reading text from camera photos.
+- Accounts: your words, setup and progress sync between devices.
+- Saving words from the laptop to the phone.
 
-### Chrome extension
+**Faked or simplified:**
 
-- **Word card redesigned:** synonym chips at the top, and a new, much simpler example sentence (never the page's own sentence). *Why:* P4 and P5 asked for synonyms, P3 wanted a different example each time, and the 11/10 critique asked for "synonyms at the top first as chips" and less text.
-- **Highlight a phrase or sentence to explain it**, with a plain-English version and its hard words. *Why:* P1, P2 and P5 said the confusion is often the whole sentence, not one word.
-- **AI meaning in context (Claude).** *Why:* P3 found dictionary definitions that "just restate the word", and P1 and P2 already paste whole sentences into AI. Explaining in place removes the copy-and-paste step they found inconvenient.
-- **Ask Linger:** a chat about the page you're on, for "what does this letter want from me, and by when?" and help deciding what to do.
-- **Translation:** pick **My language** (43 languages) for an "In your language" box on every card, **Translate this page**, and an option to show hard words in easier English or your language. *Why:* P5 and P6 asked for their own language; Dan suggested switching hard words into the reader's language.
-- **Underlines start off.** Highlighting works without them. *Why:* in the critique, a reviewer said underlines would bother her the way Grammarly's do; P4 asked why words he knew were underlined.
-- **Eye tracking:** typical error went from about 140px to 80px; blinks no longer throw the gaze off; a soft dot shows where it thinks you're looking; you can answer Linger's question with a hand swipe; and a reading test (Task A, read normally; Task B, pause on purpose) measures how often it's right. *Why:* our instructors questioned whether laptop eye tracking was good enough, and the critique suggested gestures.
-- **A main Linger switch** turns it off on every website, and the menu is smaller and matches our Figma design system.
+- **Eye tracking on the phone:** tapping a word stands in for it.
+- **Reading inside other apps:** iPhone doesn't let Linger read inside apps like Instagram, so share, paste or screenshot the text instead.
+- **Letter summaries in the phone app** are made by simple rules, not AI.
+- **Sample content:** it's set in Pittsburgh, and the Pause map in Local uses made-up data.
+- **Laptop to phone:** the extension connects to the phone with a pairing code, not your account yet.
+- **Learning model and English check:** they work, but they haven't been tested with real learners yet.
 
-### Phone app
+**Known issues:**
 
-- **Onboarding** asks what you read, your languages and your English level, with an optional English check. Your level decides which words count as hard. *Why:* the critique suggested "a test at the beginning" and "more specific settings".
-- **Accounts:** saved words, setup and progress sync between phone and laptop, with a profile picture. *Why:* the critique said "saving to phone" should be "save to account", and we kept hearing that people shouldn't start as a new user every time.
-- **Learning model** (`learn.js`): repeated lookups, flashcard answers (**I knew it** / **Still learning**) and story results estimate which words you know. Words show Learning, Almost or Known, Review shows what's due, and Linger stops underlining words you know. *Why:* P2 wanted to mark words as known; Dan asked how Linger notices when someone keeps looking up the same word.
-- **Lens redesigned:** one screen with a Scan / Upload a photo / Paste text switch. Uploading and pasting happen in the card instead of on separate pages, and the camera has a front/back switch. *Why:* the critique and P5 found v1 text-heavy and repetitive.
-- **Scanning reads photos much better:** words read correctly went from 87% to 98% on a 1080p camera, and from 58% to 82% on a shadowed close-up. Junk words on the shadowed close-up dropped from 123 to 8.
-- **Words, Local and Review share one layout:** a toggle switch for filters, fewer emojis, no side stripes or shadows on cards, and a sheet you can drag up to fill the screen. *Why:* the critique and P5 said there was too much text; Local felt busy and hard to scan.
-- **Removed:** the WhatsApp helper and the smart-glasses demo. *Why:* P3 couldn't work out the glasses view or the laptop pause test, and they pulled attention from reading help.
+- **Eye tracking accuracy:** it works, but it isn't always accurate. A normal webcam can't see your eyes as precisely as a real eye tracker. It works best in good lighting, sitting still, with the laptop at eye level. If it drifts, click Recalibrate in the Linger menu.
+- **The extension download is older.** It doesn't have the ethical audit changes yet: AI is on by default, and the eye-tracking switch is still called "Notice when I'm stuck". To get the new version, use **Load unpacked** on the `extension/` folder in this repository.
 
-### Ethical audit fixes (merged November 16)
+## What changed since v1
 
-From [pull request #19](https://github.com/somohanty04/linger-prototype/pull/19) and [pull request #20](https://github.com/somohanty04/linger-prototype/pull/20):
+**Chrome extension**
 
-- AI explanations off until you allow them, with an accurate list of what's sent.
-- Eye-tracking wording changed to "Offer help when I pause" and "Want help with this word?".
-- A note about what syncing shares.
-- **Delete account and data** in the phone app.
-- WCAG 2.2 AA colour contrast and keyboard access across the app and extension.
+- **Word card:** synonyms come first, as chips, with a shorter, simpler example sentence. *Why:* the critique asked for "synonyms at the top first as chips" and less text.
+- **Underlines start off.** Highlighting works without them. *Why:* a reviewer said underlines would bother her, the way Grammarly's do.
+- **Translation in 43 languages:**
+  - an "In your language" box under the English meaning
+  - optional whole-page translation
+  - hard words switched into easier English or your language
 
-The phone app changes are live. The extension changes are in `extension/`, but `linger-extension.zip` hasn't been rebuilt yet, so the download is still the older 0.7.6 (AI explanations on by default, "Notice when I'm stuck"). Until it's rebuilt, use **Load unpacked** on the `extension/` folder from this repository to get them.
+  *Why:* P5 and P6 asked for their own language. The English stays on the card, so Linger still helps you learn English.
+- **A main on/off switch** turns Linger off on every website, and it stays off. *Why:* it used to turn itself back on.
 
-## What we learned from the team-to-team critique (November 10)
+**Phone app**
 
-Two reviewers each watched a demo and gave feedback.
+- **Set up:** what you read, your languages and your English level, with an optional English check. Your level decides which words are underlined. You can change it later, and it adjusts as you use Linger. *Why:* the critique suggested "a test at the beginning" and "more specific settings".
+- **Accounts with a profile picture:** your words, setup and progress follow you between phone and laptop. *Why:* the critique said "save to account", not "save to phone", and people shouldn't start as a new user every time.
+- **Learning model:** lookups, repeat lookups, saves and review answers estimate which words you know. Words show Learning, Almost or Known, Review shows what's due, and known words stop being underlined. *Why:* our iteration plan aimed to notice the words someone keeps looking up and practice them more.
+- **Meanings and letter summaries in your language.** *Why:* the same reason as translation in the extension.
+- **A calmer layout:**
+  - Lens puts scan, upload and paste in one card.
+  - Words, Local and Review share one layout, with fewer emojis and less text.
 
-**What landed:**
-- The first reviewer said "wooo" when the definition pop-up appeared, liked the AI chatbot, and really liked the plain-English paraphrase.
-- The second reacted to highlighting a phrase to explain it, the chatbot, uploading a photo and the word game.
+  *Why:* the critique and P5 found v1 text-heavy.
+- **Removed the smart-glasses demo.** *Why:* it pulled attention away from reading help, and P3 couldn't work out how to use it.
 
-**What they pushed on, and what we did:**
+**Ethical audit fixes**
+
+- **AI explanations are off until you allow them**, and Linger says exactly what it sends. *Why:* informed consent. People read private emails and bills with Linger.
+- **Neutral eye-tracking wording:** "Offer help when I pause" and "Want help with this word?" replace "Notice when I'm stuck". *Why:* pausing or rereading doesn't always mean someone is struggling.
+- **Pairing explains what syncs** between devices. *Why:* transparency about personal information.
+- **Delete account and data** in the phone app. *Why:* people should be able to remove their information.
+- **WCAG 2.2 AA contrast and keyboard access:**
+  - buttons
+  - the local slang tag
+  - header text
+  - underlines
+
+  *Why:* low vision and reduced contrast sensitivity.
+
+## Team-to-team critique (November 10)
+
+**What landed:** the definition pop-up got a "wooo". Reviewers also liked the plain-English paraphrase, highlighting a phrase to explain it, the AI chatbot, uploading a photo and the word game.
+
+**What it changed:**
 
 | Feedback | What we changed |
 |---|---|
-| Put synonyms first, as chips, in the definition pop-up. | Done: synonym chips sit right under the meaning. |
-| Too much text; group it into sections or make it smaller. | New word card layout; cleaned up Lens, Local and Review. |
-| Underlining would bother her, like Grammarly. | Underlines start off; highlight to explain works without them. |
-| She might feel pressured to keep reading, or "called out" when Linger pops up on a word. | Eye tracking stays off unless you turn it on, the pause time is adjustable, and Linger asks before explaining. After the ethical audit the switch is called "Offer help when I pause" and the question is "Want help with this word?" |
-| Set a level, maybe with a test at the beginning. | Onboarding with an English level and an optional English check. |
-| It doesn't need to be an App Store app: one website for phone and laptop, with the computer as the focus, and "save to account" instead of "save to phone". | The phone app stays a web app, the extension became the main reading tool, and accounts sync across devices. |
-| Eye tracking is hard; add gestures (finger pointing was seen as unstable). | Hand swipes to answer yes or no. Zoom and next-page gestures aren't built. |
-| Most people already send PDFs and websites to AI, so where is Linger used day to day? Maybe email. | The extension works on webmail and any website, and Ask Linger answers questions about the page without copying it into another app. |
-| No subtitles in the cinema: an audio transcript? | Not built; kept as a stretch idea. |
+| Put synonyms first, as chips. | Synonym chips sit at the top of the word card. |
+| Too much text. | A shorter word card and a calmer layout on every phone screen. |
+| Underlining would bother her, like Grammarly. | Underlines start off. |
+| She might feel "called out" when Linger pops up on a word. | Neutral wording, and eye tracking stays optional. |
+| Set a level, maybe with a test at the beginning. | Setup with an English level and an optional English check. |
+| One website for phone and laptop, and "save to account" instead of "save to phone". | We kept the phone app as a website instead of an App Store app, and added accounts that sync. |
 
-**What we decided not to change yet:** whether to keep eye tracking at all. The second reviewer wasn't sure she'd use it even if it worked well, and the first wanted gestures to make it steadier. We kept it, but optional and off by default, so Linger is useful by highlighting alone, and the reading test measures whether the webcam version is good enough to keep.
+## For developers
 
-## Other parts of this repository
-
-- `reader.html`: the original laptop pause test (WebGazer.js), with a QR code and live sync to send words to the phone.
-- `mac/`: Linger for Mac, a menu-bar app that explains the word under the mouse in any Mac app. See [mac/README.md](mac/README.md).
-- `functions/`: the AI server (Firebase Cloud Function calling Claude). See [functions/README.md](functions/README.md).
-- [ACCOUNTS.md](ACCOUNTS.md): how accounts and sync work, and how to test them with the Firebase emulators.
-- `cities.js`: the Local city guides. `entest.js`: the English check. `learn.js`: the learning model.
+- Run it locally with `python3 -m http.server 8000`, then open http://localhost:8000. Add `?accounttest=1` to try accounts without Firebase.
+- More detail:
+  - [extension/README.md](extension/README.md): the extension
+  - [ACCOUNTS.md](ACCOUNTS.md): accounts and sync
+  - [ACCESSIBILITY.md](ACCESSIBILITY.md): colour and keyboard rules
+  - [functions/README.md](functions/README.md): the AI server
+  - [mac/README.md](mac/README.md): Linger for Mac
