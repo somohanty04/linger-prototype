@@ -20,6 +20,13 @@ or for white text on top of it. Use these instead:
 | Local page header, light end | `#0E7C86` (was `#14A3B0`) | white text 4.9:1 |
 | "Small talk" (local) badge text on `#DDF4F5` | `#0A6E79` (was `#0B7A86`, 4.4:1) | 5.2:1 |
 | "Local slang" badge (white text) | `#167B92` | 4.9:1 |
+| Hard-word dotted underline (`--dotted`; app, reading test, glasses demo, extension) | `#B86E00` (was `#F2A33A`, 2.1:1) | 4.0:1 on white, 3.7:1 on `#F6F6F6` |
+| Extension: underline of a switched (easier) word | `#1F8A57` (was `#2BA36B`, 3.0:1 on light grey) | 4.4:1 on white |
+| Pills on the blue headers (Language, Skip) | `rgba(31, 42, 168, 0.6)` fill (was see-through white) | white text 6.7:1 or more, even over the cyan rings |
+
+The cyan rings on the blue headers bring pale text under 3:1 where they cross it. They start 245px from the
+left on every phone width, so the header subtitles wrap at 214px (`.hero.wh .hsub`) to stay clear of them.
+Keep new header text inside that width, or put it on a dark pill.
 
 Don't use these for text, field edges or the "off" switch: `#B1B7FF` (1.9:1), `#C9CDD8` (1.6:1) or `#E8E8E8` (1.2:1).
 They're fine for decorative lines and for borders on buttons that already have text.

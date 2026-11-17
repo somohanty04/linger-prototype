@@ -3,7 +3,7 @@
   --blue: #2E50D8; --cyan: #44C9E6; --teal: #1ED2D2;
   --ink: #14161F; --ink-2: #252A39; --muted: #5B6070; --idle: #6B7080; --line: #E8E8E8; --surface: #FFFFFF; --page: #E4E7F5; --warm: #FFFCF9;
   --ok-ink: #115940; --ok-bg: #F0FFFA; --bad-ink: #A81F64; --bad-bg: #FFE7DF;
-  --dotted: #F2A33A; --glow: #FFD98A; --lens: #161A33; --paper: #FFFDF7;
+  --dotted: #B86E00; --glow: #FFD98A; --lens: #161A33; --paper: #FFFDF7;
   --hero: linear-gradient(160deg, #1F2DA8 0%, #5464D9 100%);
   --cta: linear-gradient(90deg, #5362FF 0%, #2B39B2 100%);
   --font: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -414,7 +414,8 @@ a.share-card { text-decoration: none; color: inherit; }
 .wh-row { display: flex; align-items: flex-start; justify-content: space-between; }
 .hero.wh h1 { margin: 0; width: 274.113px; font-size: 36px; line-height: 36px; font-weight: 800; letter-spacing: 0; }
 .hero.wh .cal { width: 24px; height: 24px; }
-.hero.wh .hsub { margin: 0; font-size: 20px; line-height: 20px; font-weight: 600; color: #E0E6FF; }
+/* Wrap before the cyan rings (they start 245px from the left on every phone): pale text on the rings is under 3:1 */
+.hero.wh .hsub { margin: 0; max-width: 214px; font-size: 20px; line-height: 22px; font-weight: 600; color: #E0E6FF; }
 .hero.wh .week { left: 0; right: 0; top: calc(208px + var(--sa)); margin: 0; padding: 0 16px; gap: 0; justify-content: space-between; }
 .hero.wh .week .d { width: 36px; height: 36px; font-size: 16px; line-height: 16px; font-weight: 500; background: var(--indigo-fill); border: 1px solid #B1B7FF; }
 .hero.wh .week .d.on { background: #FFFFFF; color: var(--indigo-600); border-color: #DFFFFF; }
@@ -543,7 +544,7 @@ a.share-card { text-decoration: none; color: inherit; }
 
 /* ---------- My language ---------- */
 .lh-tools { display: flex; align-items: center; gap: 8px; }
-.lh-lang { display: inline-flex; align-items: center; gap: 4px; max-width: 150px; height: 36px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px; background: rgba(255, 255, 255, 0.16); color: #FFFFFF; font: 700 14px/1 'Figtree', system-ui, sans-serif; cursor: pointer; }
+.lh-lang { display: inline-flex; align-items: center; gap: 4px; max-width: 150px; height: 36px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px; background: rgba(31, 42, 168, 0.6); color: #FFFFFF; font: 700 14px/1 'Figtree', system-ui, sans-serif; cursor: pointer; }
 .lh-lang span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lh-lang:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 2px; }
 .tr-box { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 14px; background: #F0FFFA; border: 1px solid #BDE8D7; color: #115940; }
@@ -689,7 +690,7 @@ label.btn.lh-cta { cursor: pointer; }
 .onb-rings { position: absolute; left: 112.92px; top: calc(-200.6px + var(--sa)); width: 489.359px; height: 489.359px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 .onb-rings img { display: block; flex: none; transform: rotate(-34.98deg); }
 .onb-top { display: flex; align-items: center; justify-content: space-between; margin-left: -5px; }
-.onb-skip { height: 36px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 9999px; background: rgba(255, 255, 255, 0.12); color: #FFFFFF; font: 700 14px/16px var(--font); cursor: pointer; }
+.onb-skip { height: 36px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 9999px; background: rgba(31, 42, 168, 0.6); color: #FFFFFF; font: 700 14px/16px var(--font); cursor: pointer; }
 .onb-skip:focus-visible, .onb-opt:focus-visible { outline: 3px solid #9FEAFF; outline-offset: 2px; }
 .onb-dots { display: flex; gap: 6px; margin-top: 26px; }
 .onb-dots i { width: 28px; height: 6px; border-radius: 9px; background: rgba(255, 255, 255, 0.3); transition: background 0.2s; }

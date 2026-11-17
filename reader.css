@@ -1,7 +1,7 @@
 :root {
   --indigo-900: #1F2AA8; --indigo-700: #2B39B2; --indigo-600: #4451E0; --indigo-fill: #5362FF; --indigo-500: #6D79FF; --indigo-300: #B1B7FF; --indigo-100: #EAEFFF; --indigo-50: #F6F8FF;
   --cyan: #44C9E6; --ink: #14161F; --ink-2: #252A39; --muted: #5B6070; --line: #E8E8E8; --surface: #FFFFFF; --page: #F6F8FF; --warm: #FFFCF9;
-  --ok-ink: #115940; --ok-bg: #F0FFFA; --bad-ink: #A81F64; --bad-bg: #FFE7DF; --dotted: #F2A33A; --glow: #FFD98A;
+  --ok-ink: #115940; --ok-bg: #F0FFFA; --bad-ink: #A81F64; --bad-bg: #FFE7DF; --dotted: #B86E00; --glow: #FFD98A;
   --hero: linear-gradient(160deg, #1F2DA8 0%, #5464D9 100%);
   --cta: linear-gradient(90deg, #5362FF 0%, #2B39B2 100%);
   --font: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;

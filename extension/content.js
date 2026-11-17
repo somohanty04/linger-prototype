@@ -72,11 +72,11 @@
   // ---------- styles on the page ----------
   const style = document.createElement('style');
   style.textContent = `
-    .linger-w { text-decoration: underline dotted #F2A33A 2px !important; text-underline-offset: 3px !important; cursor: help !important; border-radius: 3px; transition: background .12s; }
+    .linger-w { text-decoration: underline dotted #B86E00 2px !important; text-underline-offset: 3px !important; cursor: help !important; border-radius: 3px; transition: background .12s; }
     @media (prefers-reduced-motion: reduce) { .linger-w { transition: none !important; } }
     .linger-w:focus-visible { outline: 2px solid #1F2AA8 !important; outline-offset: 2px !important; }
     .linger-w:hover, .linger-w.linger-on { background: rgba(255, 217, 138, 0.45) !important; }
-    .linger-w.linger-swapped { text-decoration: underline solid #2BA36B 2px !important; text-underline-offset: 3px !important; background: rgba(189, 232, 215, 0.35) !important; }
+    .linger-w.linger-swapped { text-decoration: underline solid #1F8A57 2px !important; text-underline-offset: 3px !important; background: rgba(189, 232, 215, 0.35) !important; }
     .linger-nounder .linger-w:not(.linger-swapped) { text-decoration: none !important; cursor: inherit !important; background: none !important; }
     .linger-big .linger-w { font-size: 1.25em !important; padding: 0 2px !important; }
     .linger-spread p, .linger-spread li, .linger-spread dd, .linger-spread td, .linger-spread blockquote { line-height: 2.1 !important; }
