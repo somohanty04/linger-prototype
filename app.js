@@ -147,7 +147,8 @@
   const pin = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const speaker = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   const xIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
-  const logo = '<img class="logo" src="icons/figma/logo.svg" width="33" height="33.48" alt="Linger">';
+  const BETA = window.LINGER_BETA && window.LingerBeta ? window.LingerBeta : null; // beta/index.html only
+  const logo = '<img class="logo" src="icons/figma/logo.svg" width="33" height="33.48" alt="Linger">' + (BETA ? '<span class="beta-tag" aria-label="Beta version">Beta</span>' : '');
   const isSaved = (k) => S.saved.includes(k);
   function toggleSave(k) {
     const i = S.saved.indexOf(k);
@@ -211,7 +212,7 @@
   function stopSync() { if (syncConn) syncConn.stop(); syncConn = null; S.sync = { status: 'off', code: '', msg: '' }; try { localStorage.removeItem(SYNC_KEY); } catch {} }
   function syncCard() {
     if (!window.LingerSync || !LingerSync.available()) return '';
-    const sy = S.sync, readerUrl = new URL('reader.html', location.href).href;
+    const sy = S.sync, readerUrl = new URL('reader.html', document.baseURI).href;
     if (sy.status === 'on') return `<div class="sync-card on"><div class="sync-h"><span class="dot-live"></span><strong>Live sync with your laptop is on</strong></div>
       <div class="small">On your laptop, open <b>Linger Reader</b> and enter this code. Words you save there appear here right away.</div>
       <div class="sync-code">${esc(LingerSync.pretty(sy.code))}</div>
@@ -850,7 +851,45 @@
       </div>
       <button type="button" class="act share-card" data-action="lang-open"><span class="ic">🌐</span><span><strong>My language</strong><span class="small" ${S.lang ? langAttrs() : ''}>${esc(langLabel())} · meanings and summaries also show in it</span></span><span class="go">›</span></button>
       <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">Select text anywhere, tap Share, then “Explain with Linger”</span></span><span class="go">›</span></button>
+      ${BETA ? betaSettings() : ''}
     </div>`;
+  }
+  // ---------- beta ----------
+  function betaSettings() {
+    const queued = BETA.pending();
+    return `<div class="beta-sec"><div class="label">Beta</div>
+      <button type="button" class="act share-card" data-action="beta-feedback"><span class="ic">💬</span><span><strong>Send feedback</strong><span class="small">Tell us what broke, what was confusing, or what you wish Linger did</span></span><span class="go">›</span></button>
+      ${BETA.standalone() ? '' : `<button type="button" class="act share-card" data-action="beta-install"><span class="ic">📲</span><span><strong>Add Linger to your Home Screen</strong><span class="small">Then it opens full screen, like an app</span></span><span class="go">›</span></button>`}
+      <p class="small beta-ver">Linger Beta ${esc(BETA.version)} · ${esc(BETA.date)}${BETA.standalone() ? ' · installed' : ''}${queued ? ` · ${queued} feedback ${queued === 1 ? 'message' : 'messages'} waiting to send` : ''}</p></div>`;
+  }
+  function betaOverlay() {
+    let html = '';
+    if (S.feedback) {
+      const f = S.feedback, kinds = [['bug', 'Something broke'], ['idea', 'An idea'], ['other', 'Something else']];
+      html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close feedback" data-action="beta-close"></button>
+        <div class="panel" role="dialog" aria-labelledby="fbTitle"><div class="grab"></div>
+          <div class="sheet-word" id="fbTitle" style="font-size: 26px">Send feedback</div>
+          <div class="lh-switch" role="group" aria-label="What kind of feedback">${kinds.map(([id, l]) => `<button type="button" class="lh-seg ${f.kind === id ? 'on' : ''}" data-action="beta-kind" data-v="${id}" aria-pressed="${f.kind === id}">${esc(l)}</button>`).join('')}</div>
+          <textarea id="fbText" class="paste-box" placeholder="${f.kind === 'bug' ? 'What happened? What did you expect?' : f.kind === 'idea' ? 'What would make Linger more useful for you?' : 'Tell us anything'}" aria-label="Your feedback">${esc(f.text)}</textarea>
+          <label class="small fb-email">Email, if you'd like a reply (optional)<input id="fbEmail" type="email" autocomplete="email" value="${esc(f.email)}"></label>
+          <p class="small">We also send your app version and phone type, so we can find the problem. Not your words or scans.</p>
+          <button type="button" class="btn primary" id="fbSend" data-action="beta-send" ${f.text.trim() && !f.sending ? '' : 'disabled'}>${f.sending ? 'Sending…' : 'Send'}</button></div></div>`;
+    }
+    if (S.installHelp) {
+      const ios = BETA.platform === 'ios';
+      html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="beta-close"></button>
+        <div class="panel" role="dialog" aria-labelledby="ihTitle"><div class="grab"></div>
+          <div class="sheet-word" id="ihTitle" style="font-size: 26px">Add Linger to your Home Screen</div>
+          ${ios ? `<ol class="beta-steps"><li>Open this page in <b>Safari</b>.</li><li>Tap the <b>Share</b> button <span aria-hidden="true">(the square with an arrow)</span>.</li><li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open Linger from your Home Screen.</li></ol>`
+            : installEvt ? '<p>Tap <b>Install</b> and Linger will open full screen, like an app. It also shows up in your Share menu.</p>'
+            : '<ol class="beta-steps"><li>In Chrome, tap <b>⋮</b> at the top right.</li><li>Tap <b>Install app</b> or <b>Add to Home screen</b>.</li><li>Open Linger from your Home Screen.</li></ol>'}
+          <div class="grid2"><button type="button" class="btn" data-action="beta-close">Not now</button>${!ios && installEvt ? '<button type="button" class="btn primary" data-action="install">Install</button>' : '<button type="button" class="btn primary" data-action="beta-close">Got it</button>'}</div></div></div>`;
+    }
+    // One-time tip on the phone, after setup, when Linger isn't on the Home Screen yet.
+    if (S.installTip && !html && S.tab !== 'settings' && !S.coach && !S.sheet && !S.pending && !S.explain && !S.paste && !S.shareHelp && !S.langPick && !S.cityPick && !S.acct && !S.onb && !S.activity)
+      html += `<div class="beta-tip" role="dialog" aria-label="Add Linger to your Home Screen"><span>📲 <strong>Add Linger to your Home Screen</strong> so it opens like an app.</span>
+        <span class="coach-acts"><button type="button" class="link-btn" data-action="beta-tip-later">Later</button><button type="button" class="btn primary small-btn" data-action="beta-install">Show me</button></span></div>`;
+    return html;
   }
 
   // How well they know a saved word: a short meter, the label, and why.
@@ -1133,6 +1172,7 @@
       html += `<div class="coach" role="dialog" aria-label="Set up your account"><span class="coach-arrow" aria-hidden="true"></span>
         <strong>Set up your account now</strong><span>Pick your languages and level, and keep your words on every device.</span>
         <div class="coach-acts"><button type="button" class="link-btn" data-action="coach-later">Later</button><button type="button" class="btn primary small-btn" data-action="acct-open">Set up</button></div></div>`;
+    if (BETA) html += betaOverlay();
     if (S.toast) html += `<div class="toast" role="status">${esc(S.toast)}</div>`;
     if (S.sheet) {
       const e = D[S.sheet];
@@ -1361,7 +1401,20 @@
     'sync-off': () => { stopSync(); },
     'sync-copy': async () => { const u = (document.getElementById('readerUrl') || {}).textContent || ''; try { await navigator.clipboard.writeText(u); showToast('Reader link copied'); } catch { window.prompt('Open this on your laptop:', u); } },
     'share-try': () => { S.shareHelp = false; handleText(SHARE_SAMPLE, 'share'); },
-    install: async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; },
+    'beta-feedback': () => { S.feedback = { kind: 'bug', text: '', email: signedInAs() || '', screen: S.tab, sending: false }; },
+    'beta-kind': (d) => { S.feedback.kind = d.v; },
+    'beta-send': async () => {
+      const f = S.feedback; if (!f || !f.text.trim() || f.sending) return;
+      f.sending = true; render();
+      const r = await BETA.sendFeedback(f.text, { kind: f.kind, screen: f.screen, email: f.email });
+      S.feedback = null;
+      showToast(r === 'sent' ? 'Thanks! Your feedback was sent.' : 'Saved on this phone. Linger will send it later.');
+      render();
+    },
+    'beta-install': () => { S.installHelp = true; S.installTip = false; betaTipLater(); },
+    'beta-tip-later': () => { S.installTip = false; betaTipLater(); },
+    'beta-close': () => { S.feedback = null; S.installHelp = false; },
+    install: async () => { S.installHelp = false; if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; },
     capture: () => { capture(); },
     quit: () => { S.activity = null; S.game = null; },
     'card-reveal': () => { S.cards.revealed = true; },
@@ -1427,6 +1480,8 @@
       over.innerHTML = overlay();
       const q = document.getElementById('langQ'); if (q) { q.focus(); q.setSelectionRange(pos, pos); }
     }
+    if (ev.target.id === 'fbText' && S.feedback) { S.feedback.text = ev.target.value; const b = document.getElementById('fbSend'); if (b) b.disabled = !S.feedback.text.trim(); }
+    if (ev.target.id === 'fbEmail' && S.feedback) S.feedback.email = ev.target.value;
     if (ev.target.id === 'pasteText') {
       S.pasteDraft = ev.target.value;
       const go = document.getElementById('pasteGo'); if (go) go.disabled = !S.pasteDraft.trim();
@@ -1435,6 +1490,7 @@
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
+    if (S.feedback || S.installHelp) { S.feedback = null; S.installHelp = false; render(); return; }
     if (S.acct) { S.acct = false; S.acctFromOnb = false; render(); return; }
     if (S.onb) { if (S.onb.edit) { S.onb = null; render(); } return; } // first-time setup: use Skip
     if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp || S.cityPick || S.langPick) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; S.cityPick = false; S.langPick = false; render(); }
@@ -1532,6 +1588,11 @@
   const COACH_KEY = 'linger.coach.later';
   S.coach = !S.prefs.done && !shared && !params.get('import') && (() => { try { return Date.now() - Number(localStorage.getItem(COACH_KEY) || 0) > 86400000; } catch { return true; } })();
   if (S.coach) render();
+  // Beta: offer the Home Screen once on a phone (not again for a week after "Later").
+  const TIP_KEY = 'linger.beta.installtip';
+  function betaTipLater() { try { localStorage.setItem(TIP_KEY, String(Date.now())); } catch {} }
+  if (BETA && !BETA.standalone() && BETA.platform !== 'other')
+    S.installTip = (() => { try { return Date.now() - Number(localStorage.getItem(TIP_KEY) || 0) > 7 * 86400000; } catch { return false; } })();
 
   render();
 })();
