@@ -49,7 +49,7 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 
 /* Buttons (Figma "Action / Button" and the gradient pill) */
 .btn { display: flex; align-items: center; justify-content: center; height: 49px; padding: 0 24px; border: 2px solid var(--border-default); border-radius: 9999px; background: var(--surface-card); color: var(--indigo-900); font: 600 16px/16px 'Figtree', system-ui, sans-serif; text-decoration: none; cursor: pointer; white-space: nowrap; }
-.btn.primary { border-color: #2533AD; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: var(--text-inverse); box-shadow: 0 0 4px 0 #7A67E9; }
+.btn.primary { border-color: #2533AD; background: linear-gradient(90deg, #5362FF, #2B39B2); color: var(--text-inverse); box-shadow: 0 0 4px 0 #7A67E9; }
 .btn.white { height: 52px; border-width: 1px; color: var(--text-primary); font-weight: 700; line-height: 20px; }
 .btn.wide { width: 342px; max-width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: default; }
@@ -92,6 +92,11 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 .tmsg { align-self: stretch; margin: -8px 0 0; text-align: center; }
 .tmsg:empty { display: none; }
 
+.consent { align-self: stretch; display: flex; flex-direction: column; gap: 10px; margin: -8px 0 0; padding: 12px; border-radius: 12px; background: var(--surface-soft); color: var(--text-secondary); font-size: 13px; line-height: 18px; }
+.consent p { margin: 0; }
+.consent-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.consent-btns .btn { width: auto; padding: 0 18px; }
+.consent[hidden] { display: none; }
 .askwhy { align-self: stretch; margin: -8px 0 0; padding: 8px 12px; border-radius: 10px; background: #FFF6E0; color: #5B4A1F; }
 
 /* Main Linger switch off: everything else in the menu is greyed out until it's turned back on. */

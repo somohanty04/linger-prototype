@@ -49,9 +49,15 @@ async function postAI(body, ms) {
     await new Promise((res) => setTimeout(res, r && r.status === 429 ? 2500 : 1200));
   }
 }
+// Nothing goes to Claude unless the reader explicitly allowed it (aiConsent: 'yes', asked on a word card or in the menu)
+// AND the AI explanations switch is on. Every AI request (cards, hover prefetch, eye tracking, swaps, translation, the
+// menu's own translation, Ask Linger) passes through askAI or askPage, so this is the one place that enforces it.
+async function aiAllowed() {
+  const { aiOn, aiConsent } = await chrome.storage.local.get({ aiOn: false, aiConsent: '' });
+  return !!AI_URL && aiOn === true && aiConsent === 'yes';
+}
 async function askAI({ mode, text, context, lang, langName, from, sentence, texts, items }) {
-  const { aiOn } = await chrome.storage.local.get({ aiOn: true });
-  if (!AI_URL || !aiOn) return null;
+  if (!(await aiAllowed())) return null;
   const extra = mode === 'translate' ? { lang, langName, from, sentence: !!sentence } : mode === 'translate-many' ? { lang, langName, from, texts } : mode === 'swap-many' ? { lang, langName, items } : {};
   const key = JSON.stringify([mode, text, context, extra]);
   if (aiCache.has(key)) return aiCache.get(key);
@@ -90,8 +96,7 @@ async function diskPut(key, v) {
 
 // Ask Linger: a question about the whole page (no caching: every question is different).
 async function askPage(body) {
-  const { aiOn } = await chrome.storage.local.get({ aiOn: true });
-  if (!AI_URL || !aiOn) return { error: 'off' };
+  if (!(await aiAllowed())) return { error: 'off' };
   try {
     const r = await postAI({ ...body, mode: 'ask' }, 50000);
     if (r && r.status === 429) return { error: 'busy' };
@@ -137,7 +142,7 @@ let creating = null;
 async function hasTracker() { return (await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] })).length > 0; }
 async function ensureTracker() {
   if (await hasTracker()) return;
-  if (!creating) creating = chrome.offscreen.createDocument({ url: 'tracker.html', reasons: ['USER_MEDIA'], justification: 'Webcam eye tracking that notices when you are stuck on a word' }).finally(() => { creating = null; });
+  if (!creating) creating = chrome.offscreen.createDocument({ url: 'tracker.html', reasons: ['USER_MEDIA'], justification: 'Webcam eye tracking that offers help when you pause on a word' }).finally(() => { creating = null; });
   await creating;
 }
 async function closeTracker() { if (await hasTracker()) await chrome.offscreen.closeDocument().catch(() => {}); }

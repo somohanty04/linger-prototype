@@ -14,7 +14,7 @@ let offset = [0, 0], offsetT = 0;  // quick correction for drift (from clicks), 
 const fx = new OneEuro(), fy = new OneEuro();
 const gate = new BlinkGate(); // drops blinks, and the half-closed frames around them
 let saveTimer = null;
-// Hand swipes answer "Stuck on …?". Hand tracking only runs while a tab has that question open (it costs CPU).
+// Hand swipes answer "Want help with this word?". Hand tracking only runs while a tab has that question open (it costs CPU).
 const asking = new Set();          // ports of tabs showing the question, with swipes turned on
 let hands = null, handsLoading = null;
 const swipe = new SwipeDetector();

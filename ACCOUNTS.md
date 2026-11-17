@@ -48,6 +48,25 @@ users/{uid}/words/{key}     { w, m, s, p, place, date, createdAt, updatedAt }
 - **Signing out** removes the account's words from the device (they stay in the account and come back on sign-in), so the next person to sign in on that browser doesn't get them merged into their own account. Words saved while signed out stay. The pairing document isn't touched.
 - **Pairing and an account at the same time:** words arriving through a pairing code are added to the account too.
 
+## Deleting an account
+
+Account sheet (the profile picture) → **Delete account and data**. The card lists what is deleted and what isn't, then
+asks for the password again (Firebase only deletes a sign-in that was used recently, and this also confirms it's the
+owner). In order: the profile document (reading setup, learning history, picture), every saved word, a check that
+nothing is left, then the Firebase Authentication user. This device then forgets the account (its words, the
+`linger.acct.<uid>.*` keys, the backup and the cached picture) and, if ticked, its own reading setup and learning
+history, and reloads. Other devices still signed in see the profile and words disappear and sign out instead of
+uploading their copy back.
+
+Not deleted: pairing-code documents (`pairs/{code}`). They aren't tied to an account, and the rules don't allow
+deleting them. The card says so. The extension's saved list stays on the laptop.
+
+The current rules already allow it (owners can delete their own profile and words), so no deploy is needed for this.
+Known gaps: another device that is still signed in could, for up to an hour (until its sign-in token expires), write
+to the deleted account if it saves a word at that moment; and a future subcollection under `users/{uid}` would need
+adding to the deletion. Both are closed for good by deleting server-side instead (a Cloud Function with the Admin SDK,
+or the "Delete User Data" Firebase extension).
+
 ## Firebase console setup (one time, by a project owner)
 
 1. **Turn on email sign-in:** Firebase console → `linger-f41a7` → **Authentication** → **Get started** (first time) →
