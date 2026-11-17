@@ -47,7 +47,6 @@ Then open http://localhost:8000 in a browser. Add `?accounttest=1` to try accoun
 |---|---|
 | Eye tracking in the Chrome extension | **Real.** The webcam and Google's MediaPipe face and iris model run on the laptop; video never leaves it. It's accurate to about a line of text, not a single letter, so it uses the line you're on to guess the word, and always asks "Want help with this word?" before explaining. |
 | Eye tracking on the phone | **Faked.** Tapping a word stands in for your eyes pausing on it. Phones don't let one app track your gaze while you read in another app. |
-| Smart glasses | **Faked.** `glasses.html` is a drawn simulation (Settings → Glasses). There is no glasses hardware. |
 | Reading inside Instagram, TikTok or other phone apps | **Not possible on iPhone.** iOS doesn't let Linger draw over other apps or see which word you tap. Instead, share text to Linger, paste it, or scan a screenshot. |
 | AI explanations, Ask Linger and translation | **Real.** Claude (Haiku 5.5) through Linger's server (`functions/`). The API key stays on the server. |
 | The phone app's "Explain" summary of a letter | **Partly faked.** It's built by rules (swapping formal words for plain ones), not by AI. |
@@ -79,7 +78,7 @@ Then open http://localhost:8000 in a browser. Add `?accounttest=1` to try accoun
 - **Lens redesigned:** one screen with a Scan / Upload a photo / Paste text switch. Uploading and pasting happen in the card instead of on separate pages, and the camera has a front/back switch. *Why:* the critique and P5 found v1 text-heavy and repetitive.
 - **Scanning reads photos much better:** words read correctly went from 87% to 98% on a 1080p camera, and from 58% to 82% on a shadowed close-up. Junk words on the shadowed close-up dropped from 123 to 8.
 - **Words, Local and Review share one layout:** a toggle switch for filters, fewer emojis, no side stripes or shadows on cards, and a sheet you can drag up to fill the screen. *Why:* the critique and P5 said there was too much text; Local felt busy and hard to scan.
-- **Removed from the main flow:** the WhatsApp helper and the glasses link on the front page (the glasses demo is still in Settings). *Why:* P3 couldn't work out the glasses view or the laptop pause test, and they pulled attention from reading help.
+- **Removed:** the WhatsApp helper and the smart-glasses demo. *Why:* P3 couldn't work out the glasses view or the laptop pause test, and they pulled attention from reading help.
 
 ### Ethical audit fixes (merged November 16)
 
@@ -120,7 +119,6 @@ Two reviewers each watched a demo and gave feedback.
 ## Other parts of this repository
 
 - `reader.html`: the original laptop pause test (WebGazer.js), with a QR code and live sync to send words to the phone.
-- `glasses.html`: the smart-glasses simulation.
 - `mac/`: Linger for Mac, a menu-bar app that explains the word under the mouse in any Mac app. See [mac/README.md](mac/README.md).
 - `functions/`: the AI server (Firebase Cloud Function calling Claude). See [functions/README.md](functions/README.md).
 - [ACCOUNTS.md](ACCOUNTS.md): how accounts and sync work, and how to test them with the Firebase emulators.
