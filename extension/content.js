@@ -303,6 +303,10 @@
     .wc-missing .wc-badge { background: #D82E2E; }
     .wc-missing .wc-icon { width: 20px; height: 20px; }
     .wc-missing .wc-body { display: none; }
+    /* Not in the dictionary, and AI not asked about yet: keep just the "Explain this with AI?" question under the red header */
+    .wc-missing.wc-ask .wc-top { border-radius: 12px 12px 0 0; }
+    .wc-missing.wc-ask .wc-body { display: flex; }
+    .wc-missing.wc-ask .wc-body > :not(#ai) { display: none; }
     .panel { position: fixed; top: 16px; right: 16px; width: 360px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; color: #14161F; border-radius: 18px; box-shadow: 0 14px 40px rgba(16, 20, 80, 0.3); border: 1px solid #E8E8E8; font-size: 14px; line-height: 1.45; }
     .phead { background: linear-gradient(160deg, #1F2DA8, #5464D9); color: #FFFFFF; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; border-radius: 18px 18px 0 0; }
     .phead strong { font-size: 18px; }
@@ -550,7 +554,13 @@
       redraw();
     };
     if (aiOK()) aiP.then(useAI);
-    else if (aiUndecided()) consentPrompt(card.querySelector('#ai'), () => askAI('word', raw, sentence).then(useAI));
+    // Allowed from this card: ask Claude now. If the card already turned red (not in the dictionary), open it again,
+    // so Claude gets its turn at the meaning, just as it would have with AI already on.
+    let allowP = null;
+    if (!aiOK() && aiUndecided()) consentPrompt(card.querySelector('#ai'), () => {
+      if (card && cardSpan === sp && card.classList.contains('wc-missing')) { openCard(sp, why); return; }
+      allowP = askAI('word', raw, sentence); allowP.then(useAI);
+    });
     // Not in the dictionary: the red card with just the word (and the speaker and bookmark still work).
     function showMissing() {
       if (!card || cardSpan !== sp) return;
@@ -576,8 +586,15 @@
       dict = api ? await send({ type: 'lookup', word: k }) : await directLookup(k);
       if (!meaning && !(dict && dict.meaning)) {
         // Not in the dictionary: Claude may still know it (new words, slang, names of things).
-        const a = await aiP;
-        if (!(a && a.meaning)) { if (card && cardSpan === sp) card.querySelector('#ai').textContent = ''; showMissing(); return; }
+        const a = await (allowP || aiP);
+        if (!(a && a.meaning)) {
+          if (card && cardSpan === sp) {
+            const note = card.querySelector('#ai');
+            // Still asking about AI: keep the question on the red card (these are the words Claude helps with most).
+            if (note.classList.contains('wc-consent')) card.classList.add('wc-ask'); else note.textContent = '';
+          }
+          showMissing(); return;
+        }
       }
       if (!meaning) meaning = ctx.ai ? meaning : dict.meaning;
       if (card && cardSpan === sp) card.querySelector('#m').textContent = meaning;
