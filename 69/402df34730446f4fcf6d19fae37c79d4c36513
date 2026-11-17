@@ -1,0 +1,28 @@
+README.md
+  s_99ec2d8108581c::t_649ea226fc0d3b 81
+styles.css
+  s_99ec2d8108581c::t_b748974befc8f4 40-42
+app.js
+  s_99ec2d8108581c::t_4e53b610497c72 755
+  s_99ec2d8108581c::t_5c6140d49aef89 841
+index.html
+  s_99ec2d8108581c::t_f3d1a5a361956e 38-39
+  s_99ec2d8108581c::t_d157eea3d5896e 13,17
+  s_99ec2d8108581c::t_e56adbe417e6d7 86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "69402df34730446f4fcf6d19fae37c79d4c36513",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
