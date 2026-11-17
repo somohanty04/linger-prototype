@@ -107,3 +107,6 @@ body.all-off main > section:nth-of-type(2), body.all-off main > section:nth-of-t
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
 }
+/* Hand gestures: the list of gestures under the switch */
+.gest { margin: 0; padding: 0 2px 0 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 18px; color: var(--text-muted); }
+.gest b { color: var(--text-primary); font-weight: 700; }

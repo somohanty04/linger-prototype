@@ -43,7 +43,7 @@ async function localize(lang) {
 }
 
 // The bar's filled part shows the pause time.
-function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min) * 100) + '%'); }
+function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min) * 100) + '%'); }
 
 (async () => {
   // Words already translated for this language, so messages set below are in it right away.
@@ -66,7 +66,7 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
     el.hidden = !text; el.textContent = L(text);
   };
 
-  const st = await chrome.storage.local.get({ highlight: false, paused: [], bigger: false, aiOn: false, aiConsent: '', assistant: true, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null });
+  const st = await chrome.storage.local.get({ highlight: false, paused: [], bigger: false, aiOn: false, aiConsent: '', assistant: true, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null, handOn: false, handSecs: 2 });
   if (st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = 'Last problem: ' + st.gazeProblem.why + '. Open Recalibrate to check the camera.'; }
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
@@ -132,6 +132,21 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
   $('recal').onclick = async () => { await chrome.runtime.sendMessage({ type: 'eye-recal', tabId: tab && tab.id }); window.close(); };
   $('secs').oninput = (e) => { $('secsOut').textContent = e.target.value; fill(); };
   $('secs').onchange = (e) => chrome.storage.local.set({ pauseSecs: Number(e.target.value) });
+
+  // Hand gestures: a feature of its own (no eye-tracking setup needed). The camera has to be allowed once, on the
+  // practice page (Chrome only asks on a page you can see), so the first time the switch opens that page.
+  $('hand').checked = st.handOn;
+  $('handSecs').value = st.handSecs; $('handSecsOut').textContent = st.handSecs; fill('handSecs');
+  const camOK = async () => { try { return (await navigator.permissions.query({ name: 'camera' })).state === 'granted'; } catch { return false; } };
+  $('hand').onchange = async (e) => {
+    if (!e.target.checked) { chrome.storage.local.set({ handOn: false }); return; }
+    if (await camOK()) { chrome.storage.local.set({ handOn: true }); return; }
+    e.target.checked = false;
+    await chrome.runtime.sendMessage({ type: 'hand-setup' }); window.close();
+  };
+  $('handPractice').onclick = async () => { await chrome.runtime.sendMessage({ type: 'hand-setup' }); window.close(); };
+  $('handSecs').oninput = (e) => { $('handSecsOut').textContent = e.target.value; fill('handSecs'); };
+  $('handSecs').onchange = (e) => chrome.storage.local.set({ handSecs: Number(e.target.value) });
 
   // Phone pairing: the same 12-character code the phone app shows under Words → live sync.
   const showPair = (code) => { $('paired').hidden = !code; $('pairForm').hidden = !!code; $('pairHint').hidden = !!code; $('codeShow').textContent = pretty(code); };
