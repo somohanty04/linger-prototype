@@ -59,12 +59,13 @@ The beta's files are `beta/index.html`, `beta/manifest.webmanifest` and `beta.js
 - Click the ✦ button in the corner to ask questions about the page.
 - Click the bookmark on a card to save the word to the phone app.
 - **Eye tracking (optional):** turn on **Offer help when I pause**. After a short setup, Linger uses the webcam to notice when you pause on a line, and asks if you want help.
+- **Hand gestures (optional):** turn on **Use hand gestures** and try them on the practice page. Point at a word and hold to get asked if you want help, swipe an open hand right or left to answer, swipe up or down to scroll, and pinch, hold and move up or down to zoom.
 
 ## What's real and what's faked
 
 **Real (working):**
 
-- Webcam eye tracking in the extension. The video stays on the laptop.
+- Webcam eye tracking and hand gestures in the extension. The video stays on the laptop.
 - AI explanations, translation and the ✦ assistant. They use Claude through a small server we set up.
 - Reading text from camera photos.
 - Accounts: your words, setup and progress sync between devices.
@@ -96,6 +97,7 @@ The beta's files are `beta/index.html`, `beta/manifest.webmanifest` and `beta.js
 
   *Why:* P5 and P6 asked for their own language. The English stays on the card, so Linger still helps you learn English.
 - **A main on/off switch** turns Linger off on every website, and it stays off. *Why:* it used to turn itself back on.
+- **Hand gestures**, separate from eye tracking: point at a word with your finger and hold to get help, swipe to answer or scroll, and pinch to zoom. *Why:* the critique suggested gestures for zooming, the next page and pointing at a word with a finger.
 
 **Phone app**
 
@@ -137,6 +139,7 @@ The beta's files are `beta/index.html`, `beta/manifest.webmanifest` and `beta.js
 | Underlining would bother her, like Grammarly. | Underlines start off. |
 | She might feel "called out" when Linger pops up on a word. | Neutral wording, and eye tracking stays optional. |
 | Set a level, maybe with a test at the beginning. | Setup with an English level and an optional English check. |
+| Add gestures: zoom, next page, pointing at a word with a finger. | Hand gestures: point and hold on a word, swipe to scroll, pinch to zoom. |
 | One website for phone and laptop, and "save to account" instead of "save to phone". | We kept the phone app as a website instead of an App Store app, and added accounts that sync. |
 
 ## For developers

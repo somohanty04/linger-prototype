@@ -1384,5 +1384,36 @@
   } else apply();
 
   // Shared with gaze.js (eye tracking), which runs in this same isolated world.
-  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf, translatePage, restorePage, alive: () => !dead && alive(), retire, version: VERSION, prefetch };
+  // Hand gestures (hand.js): the word under a point on the screen, and its card. Works on any word, like
+  // double-clicking: an underlined word opens its own card; another word is wrapped the same way first.
+  const WCH = /[A-Za-z'’-]/;
+  function wordAt(x, y) {
+    if (dead || offHere() || pageTr || !document.caretRangeFromPoint) return null;
+    const r = document.caretRangeFromPoint(x, y);
+    if (!r || !r.startContainer || r.startContainer.nodeType !== 3) return null;
+    const node = r.startContainer, text = node.data;
+    let i = Math.min(r.startOffset, text.length);
+    if (!WCH.test(text[i] || '')) { if (i > 0 && WCH.test(text[i - 1])) i--; else return null; }
+    let a = i, b = i + 1;
+    while (a > 0 && WCH.test(text[a - 1])) a--;
+    while (b < text.length && WCH.test(text[b])) b++;
+    while (a < b && /['’-]/.test(text[a])) a++;
+    while (b > a && /['’-]/.test(text[b - 1])) b--;
+    const word = text.slice(a, b);
+    if (!/^[A-Za-z][A-Za-z'’-]{1,30}$/.test(word)) return null;
+    const range = document.createRange(); range.setStart(node, a); range.setEnd(node, b);
+    const rect = range.getBoundingClientRect();
+    if (!rect.width || x < rect.left - 6 || x > rect.right + 6 || y < rect.top - 6 || y > rect.bottom + 6) return null;
+    const span = node.parentElement && node.parentElement.closest('.linger-w');
+    if (!span && !okParent(node)) return null;
+    return { word: span ? (span.dataset.orig || span.textContent) : word, rect, range, span };
+  }
+  function openWordAt(x, y, why) {
+    const hit = wordAt(x, y);
+    if (!hit) return false;
+    if (hit.span) { openCard(hit.span, why); return hit.span; }
+    const sp = document.createElement('span'); sp.className = 'linger-w'; sp.dataset.kind = classify(hit.word, true) || 'common'; sp.dataset.k = keyOf(hit.word);
+    try { hit.range.surroundContents(sp); kbdWord(sp, S.highlight); openCard(sp, why); return sp; } catch { return false; }
+  }
+  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf, translatePage, restorePage, alive: () => !dead && alive(), retire, version: VERSION, prefetch, wordAt, openWordAt };
 })();

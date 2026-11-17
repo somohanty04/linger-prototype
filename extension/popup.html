@@ -59,6 +59,21 @@
   </section>
 
   <section>
+    <h2>Hand gestures</h2>
+    <div class="rows">
+      <label class="sw"><span><b>Use hand gestures</b><small class="w207">On every tab. Uses your webcam; video stays on this laptop. Works without eye tracking.</small></span><input type="checkbox" id="hand"><i></i></label>
+      <label class="slider"><span>Ask after pointing <output id="handSecsOut" translate="no">2</output> s at a word</span><input type="range" id="handSecs" aria-label="Seconds to point at a word before Linger asks if you want help" min="1" max="4" step="0.5" value="2"></label>
+    </div>
+    <ul class="gest" aria-label="Gestures">
+      <li><b>👆 Point</b> with your index finger to move the pointer. Hold it on a word and Linger asks if you want help.</li>
+      <li><b>✋ Swipe</b> an open hand right for yes, left for no.</li>
+      <li><b>✋ Swipe</b> an open hand up or down to scroll.</li>
+      <li><b>🤏 Pinch</b> your thumb and index finger, hold, then move up to zoom in or down to zoom out.</li>
+    </ul>
+    <button type="button" class="btn wide" id="handPractice">Practice hand gestures</button>
+  </section>
+
+  <section>
     <div class="head">
       <h2>Your phone</h2>
       <p class="hint" id="pairHint">In the Linger app, open <span>Words → Turn on live sync and type the code here.</span></p>

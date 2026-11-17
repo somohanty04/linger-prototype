@@ -3,7 +3,7 @@
 // Each camera frame → MediaPipe face + iris landmarks → features → screen point → smoothed → sent to the tab.
 import { FaceLandmarker, HandLandmarker } from './vendor/mediapipe/vision_bundle.mjs';
 import { features, predict, learn, headCheck, OneEuro, BlinkGate } from './gazemodel.mjs';
-import { SwipeDetector, palm } from './gestures.mjs';
+import { SwipeDetector, HandGestures, palm } from './gestures.mjs';
 
 const url = (p) => chrome.runtime.getURL(p);
 const ports = new Set();
@@ -18,6 +18,16 @@ let saveTimer = null;
 const asking = new Set();          // ports of tabs showing the question, with swipes turned on
 let hands = null, handsLoading = null;
 const swipe = new SwipeDetector();
+// Hand gestures (a separate feature): tabs with it on connect as 'hand' and get the pointer, pose and gestures.
+const handPorts = new Set();
+const gestures = new HandGestures();
+const hx = new OneEuro(1.0, 0.6), hy = new OneEuro(1.0, 0.6); // steadies the pointer (0–1 page units)
+let hStatus = { s: 'loading', msg: 'Starting hand gestures…' };
+function setHStatus(s, msg = '') {
+  if (hStatus.s === s && hStatus.msg === msg) return;
+  hStatus = { s, msg };
+  for (const p of handPorts) try { p.postMessage({ hstatus: hStatus }); } catch {}
+}
 let files = null;
 const dbg = (self.lingerDebug = { frames: 0, faces: 0, path: '', err: '' }); // for testing
 
@@ -25,11 +35,19 @@ function setStatus(s, msg = '') {
   if (status.s === s && status.msg === msg) return;
   status = { s, msg };
   for (const p of ports) try { p.postMessage({ status }); } catch {}
+  if (s === 'error') setHStatus('error', msg.replace('Open eye tracking setup', 'Open Practice hand gestures').replace('Eye tracking', 'The camera'));
 }
 const problem = (why) => chrome.runtime.sendMessage({ type: 'gaze-problem', why }).catch(() => {});
 
 // ---------- tabs and the calibration page connect here ----------
 chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'hand') {
+    handPorts.add(port);
+    port.postMessage({ hstatus: hStatus });
+    port.onDisconnect.addListener(() => { handPorts.delete(port); if (!handPorts.size) { gestures.reset(); hx.reset(); hy.reset(); } });
+    loadHands();
+    return;
+  }
   if (port.name !== 'gaze' && port.name !== 'calib') return;
   ports.add(port);
   port.postMessage({ status, hasModel: !!model });
@@ -66,8 +84,9 @@ function learnAt([sx, sy], strong) {
 function onFrame(src, W, H) {
   const now = performance.now();
   dbg.frames++;
-  if (!ports.size) return; // nobody is looking: skip the work (the camera stays ready)
-  if (asking.size && hands) handFrame(src, now);
+  if (!ports.size && !handPorts.size) return; // nobody is using it: skip the work (the camera stays ready)
+  if ((asking.size || handPorts.size) && hands) handFrame(src, now, W / H);
+  if (!ports.size || !landmarker) return; // hand gestures only (or the face model didn't load): skip the face
   let res;
   try { res = landmarker.detectForVideo(src, now); } catch (e) { dbg.err = String((e && e.message) || e); return; }
   const lm = res.faceLandmarks && res.faceLandmarks[0];
@@ -95,11 +114,19 @@ function send({ t, f }) {
 }
 
 // ---------- hand swipes ----------
-function handFrame(src, now) {
+function handFrame(src, now, asp) {
   let res;
   try { res = hands.detectForVideo(src, now); } catch (e) { dbg.handErr = String((e && e.message) || e); return; }
   const lm = res.landmarks && res.landmarks[0];
   if (lm) dbg.hands = (dbg.hands || 0) + 1;
+  if (handPorts.size) {
+    const r = gestures.push(now, lm || null, asp || 16 / 9);
+    const pointer = r.pointer ? { x: hx.filter(r.pointer.x, now / 1000), y: hy.filter(r.pointer.y, now / 1000) } : null;
+    if (!r.pointer) { hx.reset(); hy.reset(); }
+    setHStatus('ok');
+    for (const p of handPorts) try { p.postMessage({ h: { hand: r.hand, pose: r.pose, pointer, events: r.events } }); } catch {}
+  }
+  if (!asking.size) return;
   const dir = swipe.push(now, palm(lm));
   if (!dir) return;
   dbg.swipes = (dbg.swipes || 0) + 1;
@@ -111,7 +138,7 @@ function loadHands() {
   handsLoading = HandLandmarker.createFromOptions(files, opts('GPU'))
     .catch(() => HandLandmarker.createFromOptions(files, opts('CPU')))
     .then((h) => { hands = h; })
-    .catch((e) => { dbg.handErr = 'load: ' + ((e && e.message) || e); problem('hand swipes ' + ((e && e.message) || e)); })
+    .catch((e) => { dbg.handErr = 'load: ' + ((e && e.message) || e); problem('hand swipes ' + ((e && e.message) || e)); setHStatus('error', 'Hand tracking couldn’t load.'); })
     .finally(() => { handsLoading = null; });
 }
 
@@ -129,12 +156,13 @@ async function start() {
     setStatus('error', msg); problem('camera ' + n); return;
   }
   setStatus('loading', 'Loading eye tracking…');
+  setHStatus('loading', 'Loading hand tracking…');
   files = { wasmLoaderPath: url('vendor/mediapipe/vision_wasm_internal.js'), wasmBinaryPath: url('vendor/mediapipe/vision_wasm_internal.wasm') };
   const opts = (delegate) => ({ baseOptions: { modelAssetPath: url('vendor/mediapipe/face_landmarker.task'), delegate }, runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true });
   try { landmarker = await FaceLandmarker.createFromOptions(files, opts('GPU')); }
-  catch { try { landmarker = await FaceLandmarker.createFromOptions(files, opts('CPU')); } catch (e) { setStatus('error', 'Eye tracking couldn’t load.'); problem('model ' + ((e && e.message) || e)); return; } }
-  setStatus(model ? 'ok' : 'nomodel', model ? '' : 'Set up eye tracking first.');
-  if (asking.size) loadHands();
+  catch { try { landmarker = await FaceLandmarker.createFromOptions(files, opts('CPU')); } catch (e) { status = { s: 'error', msg: 'Eye tracking couldn’t load.' }; for (const p of ports) try { p.postMessage({ status }); } catch {} problem('model ' + ((e && e.message) || e)); } }
+  if (landmarker) setStatus(model ? 'ok' : 'nomodel', model ? '' : 'Set up eye tracking first.');
+  if (asking.size || handPorts.size) loadHands();
   lastFace = performance.now();
 
   // Read frames straight from the camera track (works in a hidden page); fall back to a <video> element.

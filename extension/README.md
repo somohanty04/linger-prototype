@@ -23,6 +23,12 @@ Underlines hard English words on any website, explains them in plain words, and 
 - **Explain this page** (toolbar menu): "What this page wants from you" with key dates and amounts. Select text first to explain only that part.
 - **The bookmark (Save to Linger)** keeps the word in the menu's Saved list and, once paired, sends it to the phone app's Words tab right away (Firebase).
 - **Eye tracking** (toolbar menu, off by default): uses the webcam with Google's MediaPipe face and iris model. It runs **once for the whole browser**, so it works on every tab and website (even ones that block cameras), and you set it up only once. The first time, a setup page opens: check your face and lighting, then follow a dot full screen through 20 spots, plus 5 green check spots that measure accuracy (about 35 seconds). It measures where the iris sits inside each eye *and* how your head is turned and positioned, so small head movements don't throw it off. Reading normally won't trigger it: Linger looks at the last few seconds as a whole, and only asks "Want help with this word?" when your eyes stay in one place (no sweeping across or moving down) for the pause time, or go clearly back up to re-read. It keeps learning: every click (people look at what they click) corrects drift right away and improves the model, and so does every "Yes, explain". The chip at the bottom left says when it can't see your eyes or when you've moved far from where you sat during setup. **Hand swipes**: while it asks "Want help with this word?", swipe your hand to your right for *Yes, explain* or to your left for *No* (the hand tracker only runs while the question is open). Options: **Answer with a hand swipe**, **Show where I'm looking** (a soft dot where it thinks you’re looking) and **More space between lines**. The video never leaves the laptop.
+- **Hand gestures** (toolbar menu → Hand gestures, off by default; a feature of its own, no eye-tracking setup needed): uses the webcam with MediaPipe's hand model, in the same hidden camera page as eye tracking, so it works on every tab. The first time, the switch opens **Practice hand gestures**, which asks Chrome for the camera and ticks off each gesture as you try it. With one hand in front of the webcam:
+  - **👆 Point** with your index finger: a dot follows it on the page. Hold it on any word (underlined or not) for 2 seconds (1–4 s in the menu) and a ring fills, then Linger asks **"Want help with this word?"**.
+  - **✋ Swipe** an open hand to your right for yes (the word's card opens) or your left for no, or click.
+  - **✋ Swipe** an open hand up to scroll down, or down to scroll up, by most of a screen. It scrolls a scrolling panel in the middle of the page (like webmail) if there is one.
+  - **🤏 Pinch** (thumb on your index fingertip), hold a moment, then move up to zoom in or down to zoom out, using Chrome's zoom steps for that tab. Open your fingers to stop. A held pinch is used instead of a phone-style spread because the camera can't tell a spread from someone relaxing a pointing hand.
+  - Only the tab you're looking at reacts. A pointing hand that moves never scrolls; only an open hand swipes. A chip at the bottom of the page shows what Linger sees and has **Turn off**. Answers are logged on the laptop (`handLog`), like eye tracking's.
 - **Toolbar menu**: the main **Linger** switch (off on every website: no underlines, swapped words, ✦ button or eye tracking, the camera turns off, and the toolbar icon shows OFF), underline on/off, translation language and Translate this page, turn off for this site, bigger words, eye tracking with sensitivity and recalibrate, phone pairing, saved words.
 
 ## If eye tracking doesn't start
@@ -49,6 +55,7 @@ In the Linger phone app, open **Words → Turn on live sync** and type the 12-ch
 
 - Doesn't run on Chrome's built-in PDF viewer, Google Docs (text is drawn, not real text) or Chrome's own pages.
 - Webcam eye tracking is about as accurate as a finger pointing: good enough to tell which line you're on with normal text, not which letter. More space between lines helps.
+- Hand gestures need good light and your hand inside the camera's view (roughly the middle of the picture). They were tested with recorded hand shapes and in the browser with simulated tracker data, not yet with many people.
 - Meanings come from Linger's word list and Wiktionary, synonyms from Linger's list and the Datamuse thesaurus, not AI. "Explain this page" swaps formal words for plain ones in the important sentences.
 - Whole-page translation translates each piece of text separately, so a sentence split by a link or bold word can read a little choppy, and content a page adds after translating (infinite scroll, new emails) stays in the original language. Chrome's translator picks one meaning for a single word; the translated sentence under it shows the sense used here.
 - Common-word list: google-10000-english (Google Web Trillion Word Corpus), permitted for educational use.
@@ -57,11 +64,13 @@ In the Linger phone app, open **Words → Turn on live sync** and type the 12-ch
 
 - `manifest.json`: extension setup (Manifest V3)
 - `content.js`: underlining, word card, Explain this page (runs on every page)
-- `tracker.html/js`: the eye tracker (camera + MediaPipe face/iris model), one hidden page for the whole browser
+- `tracker.html/js`: the camera page for eye tracking and hand gestures (MediaPipe face/iris and hand models), one hidden page for the whole browser
 - `calibrate.html/css/js`: the eye tracking setup page
 - `gazemodel.mjs`: the gaze math (features, calibration fit, smoothing)
 - `gaze.js`: on every page; turns the gaze point into "Want help with this word?" prompts and answers them on a hand swipe
-- `gestures.mjs`: spots left/right hand swipes from MediaPipe hand landmarks
+- `gestures.mjs`: hand poses (point, open hand, pinch), swipes, scrolling, pinch-zoom and the pointer, from MediaPipe hand landmarks
+- `hand.js`: on every page; hand gestures (pointer, "Want help with this word?" after holding on a word, swipe answers, scrolling, zoom)
+- `hands.html/js`: the Practice hand gestures page (allows the camera, ticks off each gesture)
 - `vendor/mediapipe/`: MediaPipe Tasks Vision 0.10.35 and the face and hand landmarker models (Apache 2.0)
 - `background.js`: Wiktionary lookups, Datamuse synonyms, saving, sending words to Firestore
 - `dict.js`: picks a short meaning and an example sentence from a Wiktionary entry
