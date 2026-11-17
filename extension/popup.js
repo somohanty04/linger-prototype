@@ -66,7 +66,7 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
     el.hidden = !text; el.textContent = L(text);
   };
 
-  const st = await chrome.storage.local.get({ highlight: false, paused: [], bigger: false, aiOn: true, assistant: true, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null });
+  const st = await chrome.storage.local.get({ highlight: false, paused: [], bigger: false, aiOn: false, aiConsent: '', assistant: true, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null });
   if (st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = 'Last problem: ' + st.gazeProblem.why + '. Open Recalibrate to check the camera.'; }
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
@@ -75,8 +75,23 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
   $('power').checked = !off; document.body.classList.toggle('all-off', off);
   $('power').onchange = (e) => { chrome.storage.local.set({ off: !e.target.checked }); document.body.classList.toggle('all-off', !e.target.checked); $('askWhy').hidden = true; };
   $('bigger').checked = st.bigger;
-  $('aiOn').checked = st.aiOn;
-  $('aiOn').onchange = (e) => chrome.storage.local.set({ aiOn: e.target.checked });
+  // AI explanations: on only with explicit consent (aiConsent: 'yes'), kept apart from the switch itself. An older
+  // aiOn: true without consent shows as off, and turning it on asks first.
+  const aiOK = () => st.aiConsent === 'yes' && st.aiOn === true;
+  $('aiOn').checked = aiOK();
+  const aiAsk = (show) => { $('aiAsk').hidden = !show; if (show) $('aiNo').focus(); }; // focus the safe choice; the group's text is read first
+  $('aiOn').onchange = (e) => {
+    if (!e.target.checked) { st.aiOn = false; aiAsk(false); chrome.storage.local.set({ aiOn: false }); return; }
+    if (st.aiConsent === 'yes') { st.aiOn = true; chrome.storage.local.set({ aiOn: true }); return; }
+    e.target.checked = false; aiAsk(true); // not on until they choose Allow
+  };
+  const choose = (yes) => {
+    Object.assign(st, { aiOn: yes, aiConsent: yes ? 'yes' : 'no' });
+    chrome.storage.local.set({ aiOn: yes, aiConsent: st.aiConsent, aiConsentAt: Date.now() });
+    $('aiOn').checked = yes; aiAsk(false); $('aiOn').focus();
+  };
+  $('aiYes').onclick = () => choose(true);
+  $('aiNo').onclick = () => choose(false);
   $('assistant').checked = st.assistant;
   $('assistant').onchange = (e) => chrome.storage.local.set({ assistant: e.target.checked });
   $('showGaze').checked = st.showGaze;

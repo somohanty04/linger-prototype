@@ -10,8 +10,8 @@
 <header class="top" data-linger-skip>
   <div class="top-in">
     <div class="brand"><img src="icons/icon-32.png" width="28" height="28" alt=""> Linger reading test</div>
-    <h1>Does Linger notice when you’re stuck?</h1>
-    <p class="lead">Read the letter twice: once normally, once getting stuck on purpose. Answer every “Stuck on …?” honestly. That shows how often eye tracking is right.</p>
+    <h1>Does Linger notice when you pause?</h1>
+    <p class="lead">Read the letter twice: once normally, once pausing on purpose. Answer every “Want help with this word?” honestly. That shows how often eye tracking is right.</p>
   </div>
 </header>
 
@@ -24,7 +24,7 @@
 
     <div class="tasks" data-linger-skip role="group" aria-label="Which task">
       <button type="button" class="task" data-task="A" aria-pressed="true"><b>Task A</b> Read normally</button>
-      <button type="button" class="task" data-task="B" aria-pressed="false"><b>Task B</b> Get stuck on purpose</button>
+      <button type="button" class="task" data-task="B" aria-pressed="false"><b>Task B</b> Pause on purpose</button>
     </div>
     <p class="howto" id="howto" data-linger-skip></p>
 
@@ -38,7 +38,7 @@
     </article>
 
     <div class="after" data-linger-skip>
-      <button type="button" class="btn ghost" id="missed" hidden>I got stuck and Linger didn’t ask</button>
+      <button type="button" class="btn ghost" id="missed" hidden>I paused and Linger didn’t ask</button>
       <button type="button" class="btn primary" id="next">Done reading · go to Task B</button>
     </div>
   </section>
@@ -49,7 +49,7 @@
       <div class="row"><span>Status</span><strong id="eyeState">checking…</strong></div>
       <div class="row"><span>Setup accuracy</span><strong id="acc">–</strong></div>
       <label class="slider"><span>Ask after <output id="secsOut">3</output> s on one line</span>
-        <input type="range" id="secs" min="1.5" max="6" step="0.5" value="3"></label>
+        <input type="range" id="secs" aria-label="Seconds to pause on one line before Linger asks" min="1.5" max="6" step="0.5" value="3"></label>
       <label class="check"><input type="checkbox" id="showGaze"> Show where I’m looking</label>
       <label class="check"><input type="checkbox" id="handSwipe"> Answer with a hand swipe</label>
       <p class="note">These settings apply on every site, same as in the Linger menu.</p>

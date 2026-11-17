@@ -1,9 +1,9 @@
 :root {
-  --indigo-900: #1F2AA8; --indigo-700: #2B39B2; --indigo-500: #6D79FF; --indigo-300: #B1B7FF; --indigo-100: #EAEFFF; --indigo-50: #F6F8FF;
+  --indigo-900: #1F2AA8; --indigo-700: #2B39B2; --indigo-600: #4451E0; --indigo-fill: #5362FF; --indigo-500: #6D79FF; --indigo-300: #B1B7FF; --indigo-100: #EAEFFF; --indigo-50: #F6F8FF;
   --cyan: #44C9E6; --ink: #14161F; --ink-2: #252A39; --muted: #5B6070; --line: #E8E8E8; --surface: #FFFFFF; --page: #F6F8FF; --warm: #FFFCF9;
-  --ok-ink: #115940; --ok-bg: #F0FFFA; --bad-ink: #A81F64; --bad-bg: #FFE7DF; --dotted: #F2A33A; --glow: #FFD98A;
+  --ok-ink: #115940; --ok-bg: #F0FFFA; --bad-ink: #A81F64; --bad-bg: #FFE7DF; --dotted: #B86E00; --glow: #FFD98A;
   --hero: linear-gradient(160deg, #1F2DA8 0%, #5464D9 100%);
-  --cta: linear-gradient(90deg, #6D79FF 0%, #2B39B2 100%);
+  --cta: linear-gradient(90deg, #5362FF 0%, #2B39B2 100%);
   --font: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --serif: 'Source Serif 4', Georgia, serif;
 }
@@ -12,7 +12,7 @@
 html, body { margin: 0; }
 body { background: var(--page); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.45; }
 button { font-family: inherit; cursor: pointer; }
-:focus-visible { outline: 2px solid var(--indigo-500); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 2px; }
 
 .top { background: var(--hero); color: #FFFFFF; padding: 22px 16px 40px; }
 .top-inner { max-width: 1240px; margin: 0 auto; }
@@ -38,7 +38,7 @@ button { font-family: inherit; cursor: pointer; }
 .tips { margin: 0 0 16px; padding-left: 20px; color: var(--ink-2); display: flex; flex-direction: column; gap: 6px; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .choice { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 12px; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
-.choice legend { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--indigo-500); padding: 0 4px; }
+.choice legend { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--indigo-600); padding: 0 4px; }
 .choice label { display: flex; align-items: flex-start; gap: 8px; }
 .choice input { accent-color: var(--indigo-500); margin-top: 3px; }
 .calib.see { background: rgba(246, 248, 255, 0.8); }
@@ -59,7 +59,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .reader-head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .seg { display: flex; gap: 4px; background: var(--indigo-100); border-radius: 99px; padding: 4px; flex-wrap: wrap; }
-.seg button { flex: 1; min-height: 40px; border: 0; border-radius: 99px; background: transparent; color: var(--indigo-500); font-size: 14px; font-weight: 700; padding: 0 12px; }
+.seg button { flex: 1; min-height: 40px; border: 0; border-radius: 99px; background: transparent; color: var(--indigo-600); font-size: 14px; font-weight: 700; padding: 0 12px; }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--indigo-900); box-shadow: 0 1px 4px rgba(31, 42, 168, 0.18); }
 .task { margin: 0; font-size: 14px; color: var(--ink-2); background: var(--indigo-50); border-radius: 12px; padding: 10px 12px; }
 
@@ -117,7 +117,10 @@ button { font-family: inherit; cursor: pointer; }
 #webgazerVideoContainer { top: auto !important; bottom: 16px !important; left: 16px !important; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 18px rgba(20, 22, 31, 0.25); z-index: 40 !important; }
 #webgazerGazeDot { z-index: 60 !important; }
 
-@media (prefers-reduced-motion: reduce) { .ln, .meter span { transition: none; } }
+/* Reduce motion (system setting): no sliding, fading or gliding; things appear in place. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
+}
 
 /* Words for the phone */
 .phone-card h3 { display: flex; align-items: center; gap: 8px; }
@@ -129,8 +132,8 @@ button { font-family: inherit; cursor: pointer; }
 .phone-list .empty-li { background: none; color: var(--muted); padding: 0; display: block; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .pop .expl dd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.sv { flex: none; height: 30px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--indigo-500); background: var(--indigo-500); color: #FFFFFF; font-size: 12px; font-weight: 700; }
-.sv.done { background: #FFFFFF; color: var(--indigo-500); }
+.sv { flex: none; height: 30px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--indigo-fill); background: var(--indigo-fill); color: #FFFFFF; font-size: 12px; font-weight: 700; }
+.sv.done { background: #FFFFFF; color: var(--indigo-600); }
 .qr-modal { position: fixed; inset: 0; z-index: 70; background: rgba(16, 20, 50, 0.55); display: grid; place-items: center; padding: 16px; }
 .qr-card { background: var(--surface); border-radius: 20px; padding: 24px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 20px 50px rgba(16, 20, 50, 0.35); }
 .qr-card h2 { margin: 0 0 8px; font-size: 22px; color: var(--indigo-900); }
@@ -139,7 +142,7 @@ button { font-family: inherit; cursor: pointer; }
 .qr-acts { justify-content: center; }
 .sync-box { border-top: 1px solid var(--line); margin: 4px 0 12px; padding-top: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
 .sync-form { display: flex; flex-direction: column; gap: 8px; }
-.sync-form input { flex: 1; min-width: 0; height: 36px; border: 1px solid var(--indigo-300); border-radius: 99px; padding: 0 14px; font: inherit; font-size: 14px; letter-spacing: 0.04em; }
+.sync-form input { flex: 1; min-width: 0; height: 36px; border: 1px solid var(--indigo-500); border-radius: 99px; padding: 0 14px; font: inherit; font-size: 14px; letter-spacing: 0.04em; }
 .sync-live { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--ok-ink); }
 .dot-live { width: 9px; height: 9px; border-radius: 50%; background: #1DB954; box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.2); flex: none; }
 .sync-box .small { margin: 0; }
