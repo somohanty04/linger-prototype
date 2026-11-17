@@ -29,7 +29,7 @@ Version 2 has two parts that share one account:
   4. Pin Linger: click the puzzle-piece icon in the toolbar, then the pin next to Linger.
   5. Open any article or online letter. Click the Linger icon to turn things on.
 - The prototype site also has a step-by-step guide: **Get the Chrome extension →** next to the phone.
-- **Try first:** highlight a word or sentence and click **✦ Explain**. Then try **Underline hard words**, **My language**, **Ask Linger** (the ✦ button in the corner), and **Notice when I'm stuck** (eye tracking, with a one-time 35-second setup and a reading test).
+- **Try first:** highlight a word or sentence and click **✦ Explain**. Then try **Underline hard words**, **My language**, **Ask Linger** (the ✦ button in the corner), and **Offer help when I pause** (eye tracking, with a one-time 35-second setup and a reading test; called "Notice when I'm stuck" in the older download).
 
 More detail: [extension/README.md](extension/README.md).
 
@@ -45,7 +45,7 @@ Then open http://localhost:8000 in a browser. Add `?accounttest=1` to try accoun
 
 | Part | Status |
 |---|---|
-| Eye tracking in the Chrome extension | **Real.** The webcam and Google's MediaPipe face and iris model run on the laptop; video never leaves it. It's accurate to about a line of text, not a single letter, so it uses the line you're on to guess the word, and always asks "Stuck on …?" before explaining. |
+| Eye tracking in the Chrome extension | **Real.** The webcam and Google's MediaPipe face and iris model run on the laptop; video never leaves it. It's accurate to about a line of text, not a single letter, so it uses the line you're on to guess the word, and always asks "Want help with this word?" before explaining. |
 | Eye tracking on the phone | **Faked.** Tapping a word stands in for your eyes pausing on it. Phones don't let one app track your gaze while you read in another app. |
 | Smart glasses | **Faked.** `glasses.html` is a drawn simulation (Settings → Glasses). There is no glasses hardware. |
 | Reading inside Instagram, TikTok or other phone apps | **Not possible on iPhone.** iOS doesn't let Linger draw over other apps or see which word you tap. Instead, share text to Linger, paste it, or scan a screenshot. |
@@ -68,7 +68,7 @@ Then open http://localhost:8000 in a browser. Add `?accounttest=1` to try accoun
 - **Ask Linger:** a chat about the page you're on, for "what does this letter want from me, and by when?" and help deciding what to do.
 - **Translation:** pick **My language** (43 languages) for an "In your language" box on every card, **Translate this page**, and an option to show hard words in easier English or your language. *Why:* P5 and P6 asked for their own language; Dan suggested switching hard words into the reader's language.
 - **Underlines start off.** Highlighting works without them. *Why:* in the critique, a reviewer said underlines would bother her the way Grammarly's do; P4 asked why words he knew were underlined.
-- **Eye tracking:** typical error went from about 140px to 80px; blinks no longer throw the gaze off; a soft dot shows where it thinks you're looking; you can answer "Stuck on …?" with a hand swipe; and a reading test (Task A, read normally; Task B, pause on purpose) measures how often it's right. *Why:* our instructors questioned whether laptop eye tracking was good enough, and the critique suggested gestures.
+- **Eye tracking:** typical error went from about 140px to 80px; blinks no longer throw the gaze off; a soft dot shows where it thinks you're looking; you can answer Linger's question with a hand swipe; and a reading test (Task A, read normally; Task B, pause on purpose) measures how often it's right. *Why:* our instructors questioned whether laptop eye tracking was good enough, and the critique suggested gestures.
 - **A main Linger switch** turns it off on every website, and the menu is smaller and matches our Figma design system.
 
 ### Phone app
@@ -81,17 +81,17 @@ Then open http://localhost:8000 in a browser. Add `?accounttest=1` to try accoun
 - **Words, Local and Review share one layout:** a toggle switch for filters, fewer emojis, no side stripes or shadows on cards, and a sheet you can drag up to fill the screen. *Why:* the critique and P5 said there was too much text; Local felt busy and hard to scan.
 - **Removed from the main flow:** the WhatsApp helper and the glasses link on the front page (the glasses demo is still in Settings). *Why:* P3 couldn't work out the glasses view or the laptop pause test, and they pulled attention from reading help.
 
-### In review, not yet on the live site
+### Ethical audit fixes (merged November 16)
 
-The ethical audit fixes are in [pull request #19](https://github.com/somohanty04/linger-prototype/pull/19) and [pull request #20](https://github.com/somohanty04/linger-prototype/pull/20):
+From [pull request #19](https://github.com/somohanty04/linger-prototype/pull/19) and [pull request #20](https://github.com/somohanty04/linger-prototype/pull/20):
 
 - AI explanations off until you allow them, with an accurate list of what's sent.
-- Eye-tracking wording changed to "Offer help when I pause".
+- Eye-tracking wording changed to "Offer help when I pause" and "Want help with this word?".
 - A note about what syncing shares.
-- **Delete account and data**.
-- WCAG 2.2 AA colour contrast across the app and extension.
+- **Delete account and data** in the phone app.
+- WCAG 2.2 AA colour contrast and keyboard access across the app and extension.
 
-Until they're merged, the live extension still has AI explanations on by default.
+The phone app changes are live. The extension changes are in `extension/`, but `linger-extension.zip` hasn't been rebuilt yet, so the download is still the older 0.7.6 (AI explanations on by default, "Notice when I'm stuck"). Until it's rebuilt, use **Load unpacked** on the `extension/` folder from this repository to get them.
 
 ## What we learned from the team-to-team critique (November 10)
 
@@ -108,7 +108,7 @@ Two reviewers each watched a demo and gave feedback.
 | Put synonyms first, as chips, in the definition pop-up. | Done: synonym chips sit right under the meaning. |
 | Too much text; group it into sections or make it smaller. | New word card layout; cleaned up Lens, Local and Review. |
 | Underlining would bother her, like Grammarly. | Underlines start off; highlight to explain works without them. |
-| She might feel pressured to keep reading, or "called out" when Linger pops up on a word. | Eye tracking stays off unless you turn it on, the pause time is adjustable, and Linger asks before explaining. The audit PR renames the switch to "Offer help when I pause" and asks "Want help with this word?" |
+| She might feel pressured to keep reading, or "called out" when Linger pops up on a word. | Eye tracking stays off unless you turn it on, the pause time is adjustable, and Linger asks before explaining. After the ethical audit the switch is called "Offer help when I pause" and the question is "Want help with this word?" |
 | Set a level, maybe with a test at the beginning. | Onboarding with an English level and an optional English check. |
 | It doesn't need to be an App Store app: one website for phone and laptop, with the computer as the focus, and "save to account" instead of "save to phone". | The phone app stays a web app, the extension became the main reading tool, and accounts sync across devices. |
 | Eye tracking is hard; add gestures (finger pointing was seen as unstable). | Hand swipes to answer yes or no. Zoom and next-page gestures aren't built. |
