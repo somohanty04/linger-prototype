@@ -67,7 +67,6 @@ There are two parts: a phone web app and a Chrome extension.
 **Known issues:**
 
 - **Eye tracking accuracy:** it works, but it isn't always accurate. A normal webcam can't see your eyes as precisely as a real eye tracker. It works best in good lighting, sitting still, with the laptop at eye level. If it drifts, click Recalibrate in the Linger menu.
-- **The extension download is older.** It doesn't have the ethical audit changes yet: AI is on by default, and the eye-tracking switch is still called "Notice when I'm stuck". To get the new version, use **Load unpacked** on the `extension/` folder in this repository.
 
 ## What changed since v1
 
