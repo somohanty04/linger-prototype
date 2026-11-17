@@ -30,6 +30,21 @@ There are two parts: a phone web app and a Chrome extension.
 - **Local:** a city guide with slang, customs and getting around.
 - **Review:** practice with Fill in the story and Flashcards. Your answers tell Linger which words you know.
 
+## Phone beta (for testers)
+
+**Link to send testers:** https://somohanty04.github.io/linger-prototype/beta/
+
+It's the same app as the phone prototype, set up for real use on a phone:
+
+- Opens full screen from the Home Screen, like an app (iPhone: Safari → Share → **Add to Home Screen**; Android: Chrome → ⋮ → **Install app**). The app offers this once, and it's also in Settings.
+- A **Beta** label, and the version in **Settings → Beta**.
+- **Send feedback** in Settings: testers pick "Something broke", "An idea" or "Something else", and can leave an email. Each message is saved in Firestore under `feedback`, with the app version and phone type. Only you can read it, in the Firebase console. If the phone is offline, the message waits and sends later.
+- Works offline for screens already opened (AI explanations still need the internet).
+
+The beta's files are `beta/index.html`, `beta/manifest.webmanifest` and `beta.js`. Everything else is shared with the prototype, so a change to the app shows up in both. To release a new beta version, change `version` in `beta/index.html` and bump the `?v=` numbers.
+
+**Before testers use feedback**, deploy the new Firestore rule once: `firebase deploy --only firestore:rules`.
+
 ## 2. Chrome extension
 
 **How to open it:** on the website above, click **Get the Chrome extension** and follow the steps: download, unzip, then in `chrome://extensions` turn on Developer mode and click **Load unpacked**.

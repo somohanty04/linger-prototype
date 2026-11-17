@@ -37,5 +37,17 @@ service cloud.firestore {
         allow create, update: if isOwner(uid) && key.size() <= 64 && validWord(request.resource.data);
       }
     }
+
+    // Beta feedback (beta.js): anyone using the beta can add a message; nobody can read, change or delete one from
+    // the app. Read them in the Firebase console (Firestore → feedback).
+    match /feedback/{id} {
+      allow read, update, delete: if false;
+      allow create: if request.resource.data.keys().hasOnly(['text', 'kind', 'screen', 'email', 'version', 'platform', 'installed', 'tester', 'ua', 'at', 'sentAt'])
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 4000
+        && request.resource.data.kind in ['bug', 'idea', 'other']
+        && request.resource.data.email is string && request.resource.data.email.size() <= 200
+        && request.resource.data.ua is string && request.resource.data.ua.size() <= 300
+        && request.resource.data.sentAt == request.time;
+    }
   }
 }

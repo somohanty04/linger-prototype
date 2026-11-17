@@ -807,3 +807,23 @@ label.btn.lh-cta { cursor: pointer; }
 .acct-start { gap: 8px; background: var(--indigo-50); border-color: var(--indigo-100); }
 .acct-start strong { font-size: 16px; font-weight: 800; color: var(--indigo-900); }
 .acct-start span { font-size: 14px; line-height: 20px; color: var(--ink-2); }
+
+/* ---------- Beta (beta/index.html only) ---------- */
+.beta-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.45); color: #FFFFFF; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.hero.wh .beta-tag { position: absolute; left: 60px; top: calc(28px + var(--sa)); z-index: 2; }
+.hero-top .beta-tag, .onb-top .beta-tag { margin: 0 auto 0 8px; }
+.about .beta-tag { height: 26px; padding: 0 10px; font-size: 14px; vertical-align: middle; background: var(--indigo-50); border-color: var(--indigo-300); color: var(--indigo-900); }
+.beta-sec { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.beta-sec > .label { color: var(--muted); }
+.beta-ver { margin: 2px 4px 0; color: var(--muted); }
+.panel .lh-switch { flex: none; margin: 0; background: #EAEFFF; }
+.panel .lh-seg { color: #1F2AA8; font-size: 13px; }
+.panel .lh-seg.on { background: var(--indigo-fill); color: #FFFFFF; }
+.fb-email { display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); }
+.fb-email input { height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; font: inherit; font-size: 16px; color: var(--ink); }
+.fb-email input:focus { outline: 2px solid var(--indigo-600); outline-offset: 1px; }
+.panel .paste-box { font-size: 16px; } /* 16px stops iPhone zooming in on focus */
+.beta-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; line-height: 1.45; color: var(--ink-2); }
+.beta-tip { position: absolute; z-index: 12; left: 12px; right: 12px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 16px; background: #FFFFFF; color: var(--ink); box-shadow: 0 10px 30px rgba(16, 20, 50, 0.28); animation: up 0.3s ease-out; }
+.beta-tip .coach-acts { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+.beta-tip .small-btn { align-self: auto; }
