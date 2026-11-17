@@ -1,0 +1,28 @@
+README.md
+  s_99ec2d8108581c::t_b2cbe54918f081 65
+  s_99ec2d8108581c::t_3d4d46b06aa5fd 5,7,9-10,12,14,16-20,22,24-32,34,36,44,46-47,49-57,59,61,63,66-72,74,76-81,84-100,103-110,112,114-117,119-127
+  s_99ec2d8108581c::t_350fe327c41ccb 111
+  s_99ec2d8108581c::t_357a5ba89ce924 118
+  s_99ec2d8108581c::t_1da13f44b5ea7f 101-102
+  s_99ec2d8108581c::t_0364377bc4f76a 82
+  s_99ec2d8108581c::t_007a9ab51881a4 48
+  s_99ec2d8108581c::t_cc527062b14173 113
+  s_99ec2d8108581c::t_5a594016ae60be 42
+  s_99ec2d8108581c::t_7d897550bdb293 38-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "360fbd935d17ec3550091fb847ef071e4ee5e730",
+  "prompts": {},
+  "sessions": {
+    "s_99ec2d8108581c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f00da2b-d356-424a-a061-9172b7785428",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Sana Indap <sana.indap@gmail.com>"
+    }
+  }
+}
