@@ -40,6 +40,7 @@
     .ask .yes { background: #FFFFFF; color: #1F2AA8; } .ask .no { background: transparent; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.4); }
     .ask .hint { font-size: 11px; font-weight: 600; opacity: 0.8; white-space: nowrap; }
     .ask button.picked { outline: 3px solid #9BE3C4; outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; } }
   </style><div id="ui"></div>`;
   const ui = root.getElementById('ui');
   const attach = () => { if (!host.isConnected) document.documentElement.appendChild(host); };

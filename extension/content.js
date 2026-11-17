@@ -72,9 +72,11 @@
   // ---------- styles on the page ----------
   const style = document.createElement('style');
   style.textContent = `
-    .linger-w { text-decoration: underline dotted #F2A33A 2px !important; text-underline-offset: 3px !important; cursor: help !important; border-radius: 3px; transition: background .12s; }
+    .linger-w { text-decoration: underline dotted #B86E00 2px !important; text-underline-offset: 3px !important; cursor: help !important; border-radius: 3px; transition: background .12s; }
+    @media (prefers-reduced-motion: reduce) { .linger-w { transition: none !important; } }
+    .linger-w:focus-visible { outline: 2px solid #1F2AA8 !important; outline-offset: 2px !important; }
     .linger-w:hover, .linger-w.linger-on { background: rgba(255, 217, 138, 0.45) !important; }
-    .linger-w.linger-swapped { text-decoration: underline solid #2BA36B 2px !important; text-underline-offset: 3px !important; background: rgba(189, 232, 215, 0.35) !important; }
+    .linger-w.linger-swapped { text-decoration: underline solid #1F8A57 2px !important; text-underline-offset: 3px !important; background: rgba(189, 232, 215, 0.35) !important; }
     .linger-nounder .linger-w:not(.linger-swapped) { text-decoration: none !important; cursor: inherit !important; background: none !important; }
     .linger-big .linger-w { font-size: 1.25em !important; padding: 0 2px !important; }
     .linger-spread p, .linger-spread li, .linger-spread dd, .linger-spread td, .linger-spread blockquote { line-height: 2.1 !important; }
@@ -113,6 +115,7 @@
       if (i > last) frag.appendChild(document.createTextNode(text.slice(last, i)));
       const sp = document.createElement('span');
       sp.className = 'linger-w'; sp.dataset.k = keyOf(w); sp.dataset.kind = kind; sp.textContent = w;
+      kbdWord(sp, S.highlight);
       frag.appendChild(sp); count++;
       last = i + w.length;
     }
@@ -221,11 +224,11 @@
     .wc-syn { display: flex; flex-direction: column; gap: 16px; }
     .wc-syn[hidden], .wc-ctx[hidden] { display: none; }
     .wc-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-    .wc-chip { display: inline-flex; align-items: center; height: 36px; padding: 0 18px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px; background: #EAEFFF; color: #6D79FF; font-size: 14px; font-weight: 700; line-height: 20px; white-space: nowrap; }
+    .wc-chip { display: inline-flex; align-items: center; height: 36px; padding: 0 18px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px; background: #EAEFFF; color: #4451E0; font-size: 14px; font-weight: 700; line-height: 20px; white-space: nowrap; }
     .wc-lbl { color: #5B6070; font-size: 16px; font-weight: 600; line-height: 22px; }
     .wc-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: #F6F7FF; }
     .wc-s { color: #252A39; font-size: 16px; font-weight: 600; font-style: italic; line-height: 22px; overflow-wrap: anywhere; }
-    .wc-s b { color: #6D79FF; font-weight: 700; font-style: italic; }
+    .wc-s b { color: #4451E0; font-weight: 700; font-style: italic; }
     .wc-local { color: #252A39; font-size: 16px; font-weight: 600; line-height: 22px; }
     .wc-note { color: #5B6070; font-size: 13px; font-weight: 600; line-height: 18px; }
     .wc-note:empty { display: none; }
@@ -245,16 +248,16 @@
     .wc-easy { color: #5B6070; }
     .wc-trbox { background: #F0FFFA; }
     .wc-trhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .wc-lang { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 0 4px 0 10px; height: 32px; border: 1px solid #B1B7FF; border-radius: 99px; background: #FFFFFF; color: #1F2AA8; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .wc-lang { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 0 4px 0 10px; height: 32px; border: 1px solid #6D79FF; border-radius: 99px; background: #FFFFFF; color: #1F2AA8; font-size: 13px; font-weight: 700; cursor: pointer; }
     .wc-lang select { max-width: 170px; height: 30px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-    .wc-lang:focus-within { outline: 2px solid #6D79FF; outline-offset: 2px; }
+    .wc-lang:focus-within { outline: 2px solid #4451E0; outline-offset: 2px; }
     .wc-tr { color: #115940; font-size: 20px; font-weight: 700; line-height: 26px; overflow-wrap: anywhere; }
     /* Whole-page translation bar */
     .tbar { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 24px); padding: 8px 8px 8px 16px; border-radius: 99px; background: linear-gradient(90deg, #1F2DA8, #5464D9); color: #FFFFFF; font-size: 14px; font-weight: 700; box-shadow: 0 8px 24px rgba(16, 20, 80, 0.3); font-family: 'Linger Figtree', 'Figtree', system-ui, sans-serif; }
     .tbar span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .tbar button { flex: none; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: #FFFFFF; color: #1F2AA8; font: inherit; cursor: pointer; }
     .tbar button:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
-    .wc-easy b { color: #6D79FF; }
+    .wc-easy b { color: #4451E0; }
     .selchip { position: fixed; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: linear-gradient(90deg, #5362FF, #2B39B2); color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); white-space: nowrap; }
     .selchip:focus-visible { outline: 2px solid #1F2AA8; outline-offset: 2px; }
     /* Ask Linger: the page assistant (button + chat panel) */
@@ -277,10 +280,10 @@
     .ask-x.small:hover { background: rgba(31, 42, 168, 0.1); }
     .ask-log { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 14px 18px; display: flex; flex-direction: column; gap: 16px; border: 1px solid #E8E8E8; background: linear-gradient(90deg, #FFFFFF, #FCFDFF); }
     .msg-ai { align-self: stretch; padding: 12px; border-radius: 12px; background: #F6F7FF; color: #252A39; font-size: 14px; font-weight: 600; line-height: 22px; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .msg-me { align-self: flex-end; max-width: 85%; padding: 10px 12px; border-radius: 12px; background: #6D79FF; color: #FFFFFF; font-size: 14px; font-weight: 600; line-height: 20px; overflow-wrap: anywhere; }
+    .msg-me { align-self: flex-end; max-width: 85%; padding: 10px 12px; border-radius: 12px; background: #5362FF; color: #FFFFFF; font-size: 14px; font-weight: 600; line-height: 20px; overflow-wrap: anywhere; }
     .msg-ai.wait { color: #5B6070; font-style: italic; }
     .msg-ai.err { background: #FFE7DF; color: #A81F64; }
-    .ask-hear { display: block; margin-top: 6px; padding: 0; border: 0; background: none; color: #6D79FF; font-size: 12px; font-weight: 700; line-height: 16px; cursor: pointer; }
+    .ask-hear { display: block; margin-top: 6px; padding: 0; border: 0; background: none; color: #4451E0; font-size: 12px; font-weight: 700; line-height: 16px; cursor: pointer; }
     .ask-sugg { display: flex; flex-direction: column; gap: 6px; }
     .ask-sugg button { height: 36px; padding: 0 16px; text-align: left; border: 1px solid #B1B7FF; border-radius: 9999px; background: transparent; color: #1F2AA8; font-size: 12px; font-weight: 600; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
     .ask-sugg button:hover { background: #F6F7FF; }
@@ -288,9 +291,9 @@
     .ask-focus { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 12px; border-radius: 12px; background: #EAEFFF; color: #1F2AA8; font-size: 12px; font-weight: 600; line-height: 16px; }
     .ask-focus[hidden] { display: none; }
     .ask-form { display: flex; align-items: flex-end; gap: 8px; margin: 0; }
-    .ask-form textarea { flex: 1; min-width: 0; height: 49px; min-height: 49px; max-height: 110px; resize: none; padding: 13.5px 16px; border: 2px solid #E8E8E8; border-radius: 16px; background: #FFFFFF; color: #252A39; font-size: 16px; font-weight: 600; line-height: 18px; }
+    .ask-form textarea { flex: 1; min-width: 0; height: 49px; min-height: 49px; max-height: 110px; resize: none; padding: 13.5px 16px; border: 2px solid #868B99; border-radius: 16px; background: #FFFFFF; color: #252A39; font-size: 16px; font-weight: 600; line-height: 18px; }
     .ask-form textarea::placeholder { color: #5B6070; }
-    .ask-form textarea:focus { outline: none; border-color: #B1B7FF; }
+    .ask-form textarea:focus { outline: 2px solid #4451E0; outline-offset: 1px; border-color: #4451E0; }
     .ask-send { width: 49px; height: 49px; flex: none; padding: 0; display: grid; place-items: center; border: 2px solid #2533AD; border-radius: 9999px; background: linear-gradient(90deg, #5362FF, #2B39B2); color: #FFFFFF; cursor: pointer; }
     .ask-send svg { width: 24px; height: 24px; display: block; }
     /* Not in the dictionary (Figma node 140:496): red, header only, 20px icons */
@@ -313,6 +316,7 @@
     li { display: flex; gap: 10px; background: #F6F8FF; border: 1px solid #EAEFFF; border-radius: 12px; padding: 10px; }
     .chips { display: flex; gap: 6px; flex-wrap: wrap; }
     .chip { border-radius: 99px; padding: 4px 10px; background: #F0FFFA; border: 1px solid #BDE8D7; color: #115940; font-size: 12px; font-weight: 700; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; } }
   </style><div id="layer"></div>`;
   const layer = root.getElementById('layer');
   const attach = () => { if (!host$.isConnected) document.documentElement.appendChild(host$); };
@@ -349,7 +353,7 @@
   }
   function consentPrompt(note, onAllow) {
     note.classList.add('wc-consent');
-    note.innerHTML = '<span><b>Explain this with AI?</b> Linger can send the selected text and the sentence around it to Claude (an AI by Anthropic) to explain it in context. Nothing is sent unless you allow it. You can change this later in the Linger menu.</span>'
+    note.innerHTML = '<span><b>Explain this with AI?</b> Linger will send text to Claude (an AI by Anthropic): the text you select and the paragraph around it, and, when you use Ask Linger, translate a page or switch hard words into your language, text from the page (for Ask Linger, also its title and website). Nothing is sent unless you allow it. You can change this later in the Linger menu.</span>'
       + '<span class="wc-consent-btns"><button type="button" class="wc-no">Not now</button><button type="button" class="wc-yes">Allow AI explanations</button></span>';
     note.querySelector('.wc-no').onclick = async () => { await setConsent(false); note.classList.remove('wc-consent'); note.textContent = 'OK. Nothing was sent. Linger will keep using its dictionary. You can turn on AI explanations in the Linger menu.'; };
     note.querySelector('.wc-yes').onclick = async () => { await setConsent(true); note.classList.remove('wc-consent'); note.textContent = AI_WAIT; onAllow(); };
@@ -431,8 +435,14 @@
   let card = null, cardSpan = null, cardRange = null;
   // Highlighted phrases stay marked while their card is open (CSS Custom Highlight: no changes to the page's HTML).
   const HL = typeof Highlight === 'function' && window.CSS && CSS.highlights ? CSS.highlights : null;
+  // Keyboard and screen readers: an underlined word is a button (Tab to it, Enter or Space opens its card).
+  function kbdWord(sp, on) { if (on) { sp.tabIndex = 0; sp.setAttribute('role', 'button'); sp.setAttribute('aria-haspopup', 'dialog'); } else { sp.removeAttribute('tabindex'); sp.removeAttribute('role'); sp.removeAttribute('aria-haspopup'); } }
+  let cardOpener = null; // the word to return focus to when a card opened from the keyboard closes
+  function focusCard() { if (!card || !cardOpener) return; card.tabIndex = -1; card.focus({ preventScroll: true }); }
   function closeCard() {
+    const back = card && cardOpener && cardOpener.isConnected ? cardOpener : null; cardOpener = null;
     if (card) card.remove(); card = null;
+    if (back) back.focus({ preventScroll: true });
     if (cardSpan) cardSpan.classList.remove('linger-on'); cardSpan = null;
     if (cardRange && HL) HL.delete('linger-sel'); cardRange = null;
     window.dispatchEvent(new CustomEvent('linger-card-closed'));
@@ -548,7 +558,11 @@
     // so Claude gets its turn at the meaning, just as it would have with AI already on.
     let allowP = null;
     if (!aiOK() && aiUndecided()) consentPrompt(card.querySelector('#ai'), () => {
-      if (card && cardSpan === sp && card.classList.contains('wc-missing')) { openCard(sp, why); return; }
+      if (card && cardSpan === sp && card.classList.contains('wc-missing')) {
+        const opener = cardOpener; // opened from the keyboard: keep focus in the new card
+        openCard(sp, why).catch(() => {}); if (opener) { cardOpener = opener; focusCard(); }
+        return;
+      }
       allowP = askAI('word', raw, sentence); allowP.then(useAI);
     });
     // Not in the dictionary: the red card with just the word (and the speaker and bookmark still work).
@@ -842,6 +856,13 @@
     if (sp && !S.highlight && !sp.classList.contains('linger-swapped')) sp = null; // underlines off: plain text stays plain
     if (sp) { e.preventDefault(); e.stopPropagation(); openCard(sp); return; }
     if (card) closeCard();
+  }, true);
+  window.addEventListener('keydown', (e) => {
+    if (dead || (e.key !== 'Enter' && e.key !== ' ') || e.altKey || e.ctrlKey || e.metaKey) return;
+    const sp = e.target && e.target.closest && e.target.closest('.linger-w');
+    if (!sp || (!S.highlight && !sp.classList.contains('linger-swapped'))) return;
+    e.preventDefault(); e.stopPropagation();
+    openCard(sp).catch(() => {}); cardOpener = sp; focusCard();
   }, true);
   // Double-click any word (even one that isn't underlined) to look it up.
   window.addEventListener('dblclick', (e) => {
@@ -1337,6 +1358,7 @@
     document.documentElement.classList.toggle('linger-big', !!S.bigger);
     document.documentElement.classList.toggle('linger-spread', !!S.spread);
     document.documentElement.classList.toggle('linger-nounder', !S.highlight);
+    document.querySelectorAll('.linger-w').forEach((sp) => kbdWord(sp, S.highlight || sp.classList.contains('linger-swapped')));
     if (active()) { scan(document.body); mo.observe(document.body, { childList: true, subtree: true }); }
     else { mo.disconnect(); unwrapAll(); closeCard(); }
     scheduleSwap();

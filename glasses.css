@@ -34,7 +34,7 @@ h1 { margin: 2px 0 0; font-size: clamp(24px, 4vw, 30px); letter-spacing: -0.02em
 .board { position: absolute; left: 50%; top: 70px; transform: translateX(-50%); width: min(600px, 92%); height: 340px; background: var(--cork); border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
 .paper { position: relative; z-index: 1; width: min(540px, 100%); align-self: flex-start; background: var(--paper); border-radius: 6px; padding: 20px 22px; display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 4px; font-size: 19px; line-height: 1.6; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); -webkit-user-select: none; user-select: none; }
 .tok { background: transparent; border: 0; margin: 0; padding: 1px 3px; font: inherit; color: var(--ink); border-radius: 6px; transition: background 0.15s, box-shadow 0.15s; }
-.tok.hard { text-decoration: underline dotted #F2A33A 2px; text-underline-offset: 5px; }
+.tok.hard { text-decoration: underline dotted #B86E00 2px; text-underline-offset: 5px; }
 .hud { position: absolute; z-index: 3; top: 34px; background: var(--hud); color: #FFFFFF; border-radius: 12px; padding: 8px 12px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
 .hud-left { left: 60px; }
 .hud-right { right: 60px; color: var(--amber); font-weight: 700; }
@@ -91,4 +91,7 @@ h1 { margin: 2px 0 0; font-size: clamp(24px, 4vw, 30px); letter-spacing: -0.02em
   .bubble { bottom: 16px; width: calc(100% - 24px); }
   .toast { top: 56px; }
 }
-@media (prefers-reduced-motion: reduce) { .tok { transition: none; } }
+/* Reduce motion (system setting): no sliding, fading or gliding; things appear in place. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
+}
