@@ -28,7 +28,7 @@
     .shade { position: fixed; inset: 0; background: rgba(246, 248, 255, 0.92); pointer-events: auto; }
     .msg { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 400px; text-align: center; background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 16px; padding: 20px; color: #14161F; font-size: 14px; }
     .msg h2 { margin: 0 0 6px; color: #1F2AA8; font-size: 20px; }
-    .msg button { margin-top: 12px; height: 40px; padding: 0 18px; border-radius: 99px; border: 0; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer; }
+    .msg button { margin-top: 12px; height: 40px; padding: 0 18px; border-radius: 99px; border: 0; background: linear-gradient(90deg, #5362FF, #2B39B2); color: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer; }
     .msg .ghost { background: #FFFFFF; color: #1F2AA8; border: 1px solid #B1B7FF; margin-left: 6px; }
     .dot { position: fixed; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: #6D79FF; box-shadow: 0 0 0 10px rgba(109, 121, 255, 0.22); transition: left .35s ease, top .35s ease, transform .35s ease; }
     .dot::after { content: ""; position: absolute; inset: 11px; border-radius: 50%; background: #FFFFFF; }
@@ -72,7 +72,7 @@
 
   // ---------- connection to the tracker ----------
   // The camera and face model run once for the whole browser (tracker.html). This tab just receives where
-  // on the screen you're looking, converts it to a spot on this page, and decides if you're stuck.
+  // on the screen you're looking, converts it to a spot on this page, and decides if you've paused.
   const api = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
   const zoom = () => (G.dpr ? devicePixelRatio / G.dpr : 1);
   const toPage = (sx, sy) => { const z = zoom(); return [(sx - screenX - (outerWidth - innerWidth * z) / 2) / z, (sy - screenY - (outerHeight - innerHeight * z)) / z]; };
@@ -161,7 +161,7 @@
   const q = (a, f) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor((s.length - 1) * f)]; };
   const recentNear = (top, h) => fired.some((f) => performance.now() - f.t < 12000 && Math.abs(f.top - top) < h);
   // Webcam gaze is noisy (often more than a line off), so don't trust single points. Use medians:
-  // reading = eyes sweep across the line and drift down the page; stuck = they stay in one place.
+  // reading = eyes sweep across the line and drift down the page; a pause = they stay in one place.
   function onGaze(d) {
     if (!d || !G.on || document.hidden) return;
     const now = performance.now();
@@ -251,7 +251,7 @@
     const w = (word.dataset.orig || word.textContent).replace(/[<>&"]/g, '');
     // No on the left and Yes on the right, matching the hand swipes (swipe right = yes, left = no).
     const swipes = !!L.settings.handSwipe;
-    a.innerHTML = `<span>👁 Stuck on <b>${w}</b>?</span><button class="no">No</button><button class="yes">Yes, explain</button>` + (swipes ? '<span class="hint">👋 swipe ← no · yes →</span>' : '');
+    a.innerHTML = `<span>👁 Want help with this word? <b>${w}</b></span><button class="no">No</button><button class="yes">Yes, explain</button>` + (swipes ? '<span class="hint">👋 swipe ← no · yes →</span>' : '');
     a.style.left = Math.min(Math.max(8, r.left), innerWidth - 300) + 'px';
     a.style.top = Math.min(r.bottom + 8, innerHeight - 60) + 'px';
     ui.appendChild(a);

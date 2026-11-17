@@ -127,7 +127,7 @@ button.glasses-link { border: 0; font-size: 15px; }
 .meta { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--indigo-500); }
 .badge { flex: none; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 3px 8px; align-self: flex-start; color: #FFFFFF; }
 .b-hard { background: var(--blue); }
-.b-slang { background: var(--cyan); }
+.b-slang { background: #167B92; } /* WCAG AA: 4.9:1 with white text (was #44C9E6, 1.95:1) */
 .b-custom { background: #DDF7F0; color: var(--ok-ink); }
 .b-common { background: #EEF0F5; color: #4A4F5E; }
 .empty { background: var(--surface); border: 1px dashed var(--indigo-300); border-radius: 16px; padding: 24px; text-align: center; color: var(--muted); }
@@ -285,6 +285,15 @@ button.glasses-link { border: 0; font-size: 15px; }
 .sync-code { align-self: flex-start; font-size: 22px; font-weight: 800; letter-spacing: 0.06em; color: var(--indigo-900); background: #FFFFFF; border: 1px dashed var(--indigo-300); border-radius: 12px; padding: 6px 14px; font-variant-numeric: tabular-nums; }
 .sync-acts { display: flex; gap: 16px; }
 .small-btn { height: 42px; align-self: flex-start; font-size: 14px; }
+/* Delete account and data (account.js) */
+.del-card { background: var(--bad-bg); border-color: #F5C2B3; }
+.del-card .sync-h { color: var(--bad-ink); }
+.del-list { margin: 0; padding-left: 20px; }
+.del-dev { display: flex; align-items: flex-start; gap: 8px; }
+.del-dev input { margin-top: 3px; }
+.danger-btn { background: var(--bad-ink); border-color: var(--bad-ink); color: #FFFFFF; }
+.link-btn.del-link { color: var(--bad-ink); }
+.del-card .link-btn { color: var(--indigo-900); }
 
 /* Local: a teal city-guide look, distinct from the indigo Words tab */
 :root { --teal-900: #0A5560; --teal-700: #0B7A86; --teal-500: #14A3B0; --teal-100: #DDF4F5; --teal-50: #F1FAFB; --mint: #9BE3C4; }

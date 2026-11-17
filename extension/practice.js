@@ -1,5 +1,5 @@
-// Linger reading test: the reader-page letter, with Task A (read normally) and Task B (get stuck on purpose).
-// The eye tracking, "Stuck on …?" question, hand swipes and word cards are the same scripts Linger runs on every
+// Linger reading test: the reader-page letter, with Task A (read normally) and Task B (pause on purpose).
+// The eye tracking, "Want help with this word?" question, hand swipes and word cards are the same scripts Linger runs on every
 // website (content.js and gaze.js, loaded by practice.html). This page only records each answer under the open task.
 (() => {
   'use strict';
@@ -7,8 +7,8 @@
   const api = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const HOW = {
-    A: '<b>Task A:</b> read the letter at your normal speed, top to bottom. Don’t stop on purpose. If Linger asks “Stuck on …?”, it’s probably a false alarm, so answer <b>No</b> unless you really were stuck.',
-    B: '<b>Task B:</b> read it again. When you reach a word you don’t know, stop and stare at it, or go back and re-read the line. Answer honestly when Linger asks. If you got stuck and it didn’t ask, press <b>I got stuck and Linger didn’t ask</b>.'
+    A: '<b>Task A:</b> read the letter at your normal speed, top to bottom. Don’t stop on purpose. If Linger asks “Want help with this word?”, it’s probably a false alarm, so answer <b>No</b> unless you wanted help.',
+    B: '<b>Task B:</b> read it again. When you reach a word you don’t know, stop and stare at it, or go back and re-read the line. Answer honestly when Linger asks. If you paused and it didn’t ask, press <b>I paused and Linger didn’t ask</b>.'
   };
   const KEY = 'linger.practice';
   const S = { task: 'A', events: [] };
@@ -30,7 +30,7 @@
   };
 
   // ---------- answers ----------
-  // gaze.js announces each answer to "Stuck on …?" on Linger's own pages (never on websites).
+  // gaze.js announces each answer to "Want help with this word?" on Linger's own pages (never on websites).
   window.addEventListener('linger-answer', (e) => {
     let d; try { d = JSON.parse(e.detail); } catch { return; }
     S.events.push({ t: Date.now(), task: S.task, word: d.word, why: d.why, ans: d.ans, how: d.how });
@@ -46,11 +46,11 @@
     let sum = 'Nothing yet. Start with Task A.';
     if (S.events.length) {
       sum = `Task A: Linger asked ${A.length} time${A.length === 1 ? '' : 's'} while you read normally (${aNo} false alarm${aNo === 1 ? '' : 's'}). `
-        + `Task B: right ${bYes} of ${B.length} time${B.length === 1 ? '' : 's'} it asked, and missed ${miss} time${miss === 1 ? '' : 's'} you were stuck.`;
-      if (bYes + miss) sum += ` It caught ${Math.round(bYes / (bYes + miss) * 100)}% of the times you were stuck.`;
+        + `Task B: right ${bYes} of ${B.length} time${B.length === 1 ? '' : 's'} it asked, and missed ${miss} time${miss === 1 ? '' : 's'} you paused.`;
+      if (bYes + miss) sum += ` It caught ${Math.round(bYes / (bYes + miss) * 100)}% of the times you paused.`;
     }
     $('summary').textContent = sum;
-    const tag = (e) => e.ans === 'missed' ? '<span class="m">Missed</span>' : e.ans === 'yes' ? '<span class="y">Stuck ✓</span>' : `<span class="n">${e.task === 'A' ? 'False alarm' : 'Not stuck'}</span>`;
+    const tag = (e) => e.ans === 'missed' ? '<span class="m">Missed</span>' : e.ans === 'yes' ? '<span class="y">Wanted help ✓</span>' : `<span class="n">${e.task === 'A' ? 'False alarm' : 'No help needed'}</span>`;
     const why = (w) => (/re-read/.test(w || '') ? 're-read' : w ? 'long look' : '');
     $('log').innerHTML = S.events.slice().reverse().map((e) => `<li>${tag(e)} · Task ${e.task}${e.word ? ` · “${esc(e.word)}”` : ''}${why(e.why) ? ' · ' + why(e.why) : ''}${e.how === 'swipe' ? ' · 👋 swipe' : ''}</li>`).join('');
   }

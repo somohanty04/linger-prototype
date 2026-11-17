@@ -18,7 +18,7 @@ h1 { margin: 10px 0 6px; color: var(--indigo-900); font-size: 28px; }
 .tips { margin: 0 0 14px; padding-left: 20px; color: var(--ink); font-size: 14px; line-height: 1.5; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .btn { height: 44px; border-radius: 99px; border: 1px solid var(--indigo-300); background: #FFFFFF; color: var(--indigo-900); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; padding: 0 18px; }
-.btn.primary { border-color: var(--indigo-500); background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; }
+.btn.primary { border-color: var(--indigo-500); background: linear-gradient(90deg, #5362FF, #2B39B2); color: #FFFFFF; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .small { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
 .err { margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: #FFE7DF; color: var(--bad); font-size: 14px; }

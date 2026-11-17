@@ -55,7 +55,12 @@
   }
 
   // ---------- settings ----------
-  const S = { off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '', swap: '' };
+  const S = { off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '' };
+  // AI explanations (Claude) are off until the reader explicitly allows them. aiConsent records that choice ('yes' or
+  // 'no') separately from the on/off switch (aiOn): an older aiOn: true is not consent. Nothing goes to Claude without both.
+  const aiOK = () => S.aiConsent === 'yes' && S.aiOn === true;
+  // Not asked yet (and not switched off in the menu): the card asks before the first AI request.
+  const aiUndecided = () => S.aiConsent !== 'yes' && S.aiConsent !== 'no' && S.aiOn !== false;
   const host = location.hostname || 'file';
   // Off everywhere (the main Linger switch) or just on this site ("On this site").
   const offHere = () => !!S.off || S.paused.includes(host);
@@ -190,7 +195,7 @@
     .lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6070; }
     .row { display: flex; gap: 8px; margin-top: 2px; }
     .btn { flex: 1; height: 40px; border-radius: 99px; border: 1px solid #B1B7FF; background: #FFFFFF; color: #1F2AA8; font-weight: 700; font-size: 14px; cursor: pointer; }
-    .btn.primary { border: 1px solid #6D79FF; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; }
+    .btn.primary { border: 1px solid #5362FF; background: linear-gradient(90deg, #5362FF, #2B39B2); color: #FFFFFF; }
     .btn.done { background: #F0FFFA; color: #115940; border-color: #BDE8D7; }
     .note { font-size: 12px; color: #5B6070; }
     /* Word card (Figma: Linger – App – Design System, node 140:523) */
@@ -224,6 +229,13 @@
     .wc-local { color: #252A39; font-size: 16px; font-weight: 600; line-height: 22px; }
     .wc-note { color: #5B6070; font-size: 13px; font-weight: 600; line-height: 18px; }
     .wc-note:empty { display: none; }
+    .wc-consent { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: #F6F7FF; color: #252A39; font-weight: 500; }
+    .wc-consent b { font-weight: 700; color: #14161F; }
+    .wc-consent-btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+    .wc-consent button { height: 36px; padding: 0 14px; border-radius: 99px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .wc-consent .wc-no { border: 1px solid #B1B7FF; background: #FFFFFF; color: #1F2AA8; }
+    .wc-consent .wc-yes { border: 0; background: linear-gradient(90deg, #5362FF, #2B39B2); color: #FFFFFF; }
+    .wc-consent button:focus-visible { outline: 3px solid #1F2AA8; outline-offset: 2px; }
     .wc-words { display: flex; flex-direction: column; gap: 12px; }
     .wc-msg { color: #FFFFFF; font-size: 20px; font-weight: 600; line-height: 22px; }
     /* Highlighted phrase or sentence: same card, the text as the title, plain words + hard words in the body */
@@ -243,10 +255,10 @@
     .tbar button { flex: none; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: #FFFFFF; color: #1F2AA8; font: inherit; cursor: pointer; }
     .tbar button:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
     .wc-easy b { color: #6D79FF; }
-    .selchip { position: fixed; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); white-space: nowrap; }
+    .selchip { position: fixed; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: linear-gradient(90deg, #5362FF, #2B39B2); color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); white-space: nowrap; }
     .selchip:focus-visible { outline: 2px solid #1F2AA8; outline-offset: 2px; }
     /* Ask Linger: the page assistant (button + chat panel) */
-    .ask-fab { position: fixed; right: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: linear-gradient(135deg, #6D79FF, #2B39B2); color: #FFFFFF; font-size: 20px; line-height: 1; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); transition: transform .12s; }
+    .ask-fab { position: fixed; right: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: linear-gradient(135deg, #5362FF, #2B39B2); color: #FFFFFF; font-size: 20px; line-height: 1; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); transition: transform .12s; }
     .ask-fab:hover { transform: scale(1.07); }
     .ask-fab:focus-visible, .ask-panel button:focus-visible, .ask-panel textarea:focus-visible { outline: 2px solid #1F2AA8; outline-offset: 2px; }
     /* Chat panel: Figma "Frame 48" (node 272:2933) */
@@ -279,7 +291,7 @@
     .ask-form textarea { flex: 1; min-width: 0; height: 49px; min-height: 49px; max-height: 110px; resize: none; padding: 13.5px 16px; border: 2px solid #E8E8E8; border-radius: 16px; background: #FFFFFF; color: #252A39; font-size: 16px; font-weight: 600; line-height: 18px; }
     .ask-form textarea::placeholder { color: #5B6070; }
     .ask-form textarea:focus { outline: none; border-color: #B1B7FF; }
-    .ask-send { width: 49px; height: 49px; flex: none; padding: 0; display: grid; place-items: center; border: 2px solid #2533AD; border-radius: 9999px; background: linear-gradient(90deg, #6D79FF, #2B39B2); color: #FFFFFF; cursor: pointer; }
+    .ask-send { width: 49px; height: 49px; flex: none; padding: 0; display: grid; place-items: center; border: 2px solid #2533AD; border-radius: 9999px; background: linear-gradient(90deg, #5362FF, #2B39B2); color: #FFFFFF; cursor: pointer; }
     .ask-send svg { width: 24px; height: 24px; display: block; }
     /* Not in the dictionary (Figma node 140:496): red, header only, 20px icons */
     .wc.wc-missing { width: 372px; }
@@ -314,7 +326,7 @@
   // Linger AI (Claude): meaning in context. In the extension the background worker calls the Linger server; on the
   // test page, window.LINGER_AI_URL can point at it. Returns null when AI is off or unreachable (cards still work).
   async function askAI(mode, text, context, extra = {}) {
-    if (!S.aiOn) return null;
+    if (!aiOK()) return null;
     if (api) return send({ type: 'ai', mode, text, context, ...extra });
     if (!window.LINGER_AI_URL) return null;
     try {
@@ -324,6 +336,20 @@
     } catch { return null; }
   }
   const AI_WAIT = '✦ Checking what it means here…';
+  // Asks before anything is sent to Claude. Allow: remembered, then this card asks Claude. Not now: remembered too, and
+  // the card keeps the dictionary meaning. Either can be changed later with the AI explanations switch in the Linger menu.
+  function setConsent(yes) {
+    Object.assign(S, { aiConsent: yes ? 'yes' : 'no', aiOn: yes });
+    if (!api || !alive()) return Promise.resolve();
+    return new Promise((res) => { try { chrome.storage.local.set({ aiConsent: S.aiConsent, aiOn: yes, aiConsentAt: Date.now() }, () => res()); } catch { res(); } });
+  }
+  function consentPrompt(note, onAllow) {
+    note.classList.add('wc-consent');
+    note.innerHTML = '<span><b>Explain this with AI?</b> Linger can send the selected text and the sentence around it to Claude (an AI by Anthropic) to explain it in context. Nothing is sent unless you allow it. You can change this later in the Linger menu.</span>'
+      + '<span class="wc-consent-btns"><button type="button" class="wc-no">Not now</button><button type="button" class="wc-yes">Allow AI explanations</button></span>';
+    note.querySelector('.wc-no').onclick = async () => { await setConsent(false); note.classList.remove('wc-consent'); note.textContent = 'OK. Nothing was sent. Linger will keep using its dictionary. You can turn on AI explanations in the Linger menu.'; };
+    note.querySelector('.wc-yes').onclick = async () => { await setConsent(true); note.classList.remove('wc-consent'); note.textContent = AI_WAIT; onAllow(); };
+  }
   const speakIt = (t, lang = 'en-US') => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = lang; u.rate = 0.9; speechSynthesis.speak(u); } catch {} };
 
   // ---------- translation ----------
@@ -393,7 +419,7 @@
       box.innerHTML = r
         ? tl(r.text, 'wc-tr') + (r.sentence ? tl(r.sentence, 'wc-s', true) : '') + (r.note ? tl(r.note, 'wc-def') : '') +
           `<p class="wc-note">${r.by === 'chrome' ? 'Translated by Chrome on this laptop' : 'Translated by Claude'}</p>`
-        : `<p class="wc-note">${S.aiOn ? 'Couldn’t translate this right now. Check your internet connection.' : `Chrome can’t translate into ${esc(L.name)} on this laptop. Turn on AI explanations in the Linger menu to translate with Claude.`}</p>`;
+        : `<p class="wc-note">${aiOK() ? 'Couldn’t translate this right now. Check your internet connection.' : `Chrome can’t translate into ${esc(L.name)} on this laptop. Turn on AI explanations in the Linger menu to translate with Claude.`}</p>`;
       place(card, rect());
     });
   }
@@ -494,7 +520,7 @@
         <div class="wc-syn" id="syn"></div>
         <div class="wc-ctx" id="ctx"></div>
         <div class="wc-ctx" id="tr" hidden></div>
-        <p class="wc-note" id="ai">${S.aiOn ? AI_WAIT : ''}</p>
+        <p class="wc-note" id="ai">${aiOK() ? AI_WAIT : ''}</p>
         <p class="wc-note" id="note"></p>
       </div>`;
     layer.appendChild(card);
@@ -504,7 +530,7 @@
     // Claude's answer: the meaning in this sentence, and easier words that fit here.
     const useAI = (a) => {
       if (!card || cardSpan !== sp) return;
-      card.querySelector('#ai').textContent = !a && S.aiOn ? 'Linger AI didn’t answer this time, so this is the dictionary meaning. Click the word again to retry.' : '';
+      card.querySelector('#ai').textContent = !a && aiOK() ? 'Linger AI didn’t answer this time, so this is the dictionary meaning. Click the word again to retry.' : '';
       if (!a || !a.meaning) return;
       meaning = a.meaning; ctx.ai = true;
       card.querySelector('#m').textContent = meaning;
@@ -513,7 +539,8 @@
       if (a.example && locate(a.example) && !samePage(a.example)) useExample(a.example, a.exampleEasy);
       redraw();
     };
-    if (aiP) aiP.then(useAI);
+    if (aiOK()) aiP.then(useAI);
+    else if (aiUndecided()) consentPrompt(card.querySelector('#ai'), () => askAI('word', raw, sentence).then(useAI));
     // Not in the dictionary: the red card with just the word (and the speaker and bookmark still work).
     function showMissing() {
       if (!card || cardSpan !== sp) return;
@@ -681,7 +708,8 @@
     // Ask Claude for the meaning here, with the whole paragraph as context (or the sentence, if it's very long).
     const para = (block ? block.innerText || block.textContent || '' : '').replace(/\s+/g, ' ').trim();
     let ai = null;
-    const aiP = askAI('phrase', text, para.length <= 1500 ? para : fromText || text);
+    const aiCtx = para.length <= 1500 ? para : fromText || text;
+    const aiP = askAI('phrase', text, aiCtx);
     if (dead) return closeCard();
     const defHtml = (x) => `<p class="wc-def"><b>${esc(x.raw)}</b>: ${x.meaning ? esc(x.meaning) : x.done ? 'Not in the dictionary yet.' : 'Looking up…'}${x.easy ? ` <span class="wc-easy">Easier word: <b>${esc(x.easy)}</b></span>` : ''}</p>`;
     function ctxHtml() {
@@ -723,18 +751,20 @@
         <div class="wc-ctx" id="main"></div>
         <div class="wc-ctx" id="ctx"></div>
         <div class="wc-ctx" id="tr" hidden></div>
-        <p class="wc-note" id="ai">${S.aiOn ? AI_WAIT : ''}</p>
+        <p class="wc-note" id="ai">${aiOK() ? AI_WAIT : ''}</p>
         <p class="wc-note" id="note"></p>
       </div>`;
     layer.appendChild(card);
     redraw();
     addTranslation(() => card && cardRange === range, () => range.getBoundingClientRect(), text, fromText || para.slice(0, 1500), false);
     card.querySelector('#hear').onclick = () => speakIt(text);
-    if (aiP) aiP.then((a) => {
+    const useAI = (a) => {
       if (!card || cardRange !== range) return;
-      card.querySelector('#ai').textContent = !a && S.aiOn ? 'Linger AI didn’t answer this time. Highlight it again to retry.' : '';
+      card.querySelector('#ai').textContent = !a && aiOK() ? 'Linger AI didn’t answer this time. Highlight it again to retry.' : '';
       if (a && a.meaning) { ai = { meaning: a.meaning, plain: a.plain || '', hardWords: a.hardWords || [] }; redraw(); }
-    });
+    };
+    if (aiOK()) aiP.then(useAI);
+    else if (aiUndecided()) consentPrompt(card.querySelector('#ai'), () => askAI('phrase', text, aiCtx).then(useAI));
     const key = 'phrase-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
     const showSaved = () => { card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true'); card.querySelector('#save').title = 'Saved to Linger'; };
     store({ saved: [] }, (v) => { if (card && cardRange === range && v.saved.some((x) => x.key === key)) showSaved(); });
@@ -874,7 +904,7 @@
             if (lang === 'en') {
               const got = await thesaurusSwaps(list.slice(i, i + 150), done); // a page's worth, not hundreds of lookups
               swapNote(got ? 'Linger AI isn’t reachable, so easier words come from a thesaurus and may not always fit.' : 'Linger couldn’t get easier words right now. Only words from its own list switched.');
-            } else swapNote(!S.aiOn ? 'Turn on AI explanations in the Linger menu to switch more words.' : 'Linger couldn’t translate the hard words right now. Check your internet connection.');
+            } else swapNote(!aiOK() ? 'Turn on AI explanations in the Linger menu to switch more words.' : 'Linger couldn’t translate the hard words right now. Check your internet connection.');
             break;
           }
           chunk.forEach((x, j) => done(x, r.swaps[j]));
@@ -989,7 +1019,7 @@
     const en = from === 'en' ? { text } : await translate(text, { from, to: 'en' });
     if (!isCur()) return;
     english = (en && en.text) || '';
-    card.querySelector('#en').textContent = english || (S.aiOn ? 'Couldn’t translate this right now. Check your internet connection.' : 'Turn on AI explanations in the Linger menu to translate this.');
+    card.querySelector('#en').textContent = english || (aiOK() ? 'Couldn’t translate this right now. Check your internet connection.' : 'Turn on AI explanations in the Linger menu to translate this.');
     place(card, range.getBoundingClientRect());
     if (!english) return;
     // 2. What it means, in plain English, and in the reader's language.
@@ -1061,7 +1091,7 @@
     // Chrome's translator when it works here; otherwise Claude, a batch of text pieces at a time (needs AI explanations
     // on). Before, a page whose Chrome translator wasn't ready (Hindi, for one) just said it couldn't translate.
     const t = await chromeTranslator(from, to);
-    if (!t && !S.aiOn) return { ok: false, why: `Chrome can’t translate ${LANG(from).name} into ${LANG(to).name} here. Turn on AI explanations in the Linger menu to translate with Claude.` };
+    if (!t && !aiOK()) return { ok: false, why: `Chrome can’t translate ${LANG(from).name} into ${LANG(to).name} here. Turn on AI explanations in the Linger menu to translate with Claude.` };
     // Underlines split sentences into pieces, so they come off while the page is translated (and back after).
     pageTr = { from, to, orig: new Map(), bar: null };
     mo.disconnect(); unwrapAll(); closeCard(); hideChip();
@@ -1166,7 +1196,7 @@
   const myLang = () => (S.transLang && S.transLang !== 'en' ? S.transLang : '');
   function showFab() {
     // Follows "On this site" (and its own switch), not "Underline hard words": you can ask about a page without underlines.
-    const want = S.assistant && S.aiOn && !offHere() && window === window.top;
+    const want = S.assistant && aiOK() && !offHere() && window === window.top;
     if (!want) { if (fab) fab.remove(); fab = null; closeAsk(); return; }
     if (fab && fab.isConnected && host$.isConnected) return;
     if (fab) fab.remove();
@@ -1281,7 +1311,7 @@
     showFab();
   }, 2000);
   // Why the button isn't showing, for the toolbar menu.
-  const askWhy = () => (!S.aiOn ? 'ai-off' : !S.assistant ? 'button-off' : S.off ? 'all-off' : offHere() ? 'site-off' : window !== window.top ? 'frame' : fab && fab.isConnected && host$.isConnected ? 'shown' : 'missing');
+  const askWhy = () => (!aiOK() ? 'ai-off' : !S.assistant ? 'button-off' : S.off ? 'all-off' : offHere() ? 'site-off' : window !== window.top ? 'frame' : fab && fab.isConnected && host$.isConnected ? 'shown' : 'missing');
   // Some sites rebuild the page and drop elements they didn't make (the Ask Linger button vanished): put it back.
   new MutationObserver(() => { if (!dead && !host$.isConnected && layer.childElementCount) attach(); }).observe(document.documentElement, { childList: true });
 
@@ -1296,14 +1326,14 @@
     showFab();
   }
   if (api) {
-    chrome.storage.local.get({ off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: true, assistant: true, transLang: '', swap: '' }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '' }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       if (dead) return;
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
       if (active() !== was || ch.bigger || ch.spread || ch.highlight) apply();
       else if (ch.swap || ch.transLang) scheduleSwap();
-      if (ch.assistant || ch.aiOn || ch.paused || ch.off || ch.highlight) showFab();
+      if (ch.assistant || ch.aiOn || ch.aiConsent || ch.paused || ch.off || ch.highlight) showFab();
     });
     chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (dead) return;
