@@ -558,7 +558,11 @@
     // so Claude gets its turn at the meaning, just as it would have with AI already on.
     let allowP = null;
     if (!aiOK() && aiUndecided()) consentPrompt(card.querySelector('#ai'), () => {
-      if (card && cardSpan === sp && card.classList.contains('wc-missing')) { openCard(sp, why); return; }
+      if (card && cardSpan === sp && card.classList.contains('wc-missing')) {
+        const opener = cardOpener; // opened from the keyboard: keep focus in the new card
+        openCard(sp, why).catch(() => {}); if (opener) { cardOpener = opener; focusCard(); }
+        return;
+      }
       allowP = askAI('word', raw, sentence); allowP.then(useAI);
     });
     // Not in the dictionary: the red card with just the word (and the speaker and bookmark still work).
