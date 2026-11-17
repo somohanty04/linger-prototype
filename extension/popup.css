@@ -1,7 +1,7 @@
 /* Linger toolbar menu. Matches Figma "Frame 37" (node 239:671) in Linger – App / Design System. */
 @font-face { font-family: 'Figtree'; src: url('fonts/figtree-latin.woff2') format('woff2'); font-weight: 300 900; font-style: normal; }
 :root {
-  --indigo-900: #1F2AA8; --indigo-500: #6D79FF; --indigo-100: #EAEFFF;
+  --indigo-900: #1F2AA8; --indigo-600: #4451E0; --indigo-500: #6D79FF; --indigo-100: #EAEFFF;
   --text-primary: #14161F; --text-secondary: #252A39; --text-muted: #5B6070; --text-inverse: #FFFFFF;
   --border-default: #E8E8E8; --surface-card: #FFFFFF; --surface-soft: #F6F7FF; --track: #EEF0F5;
   --ok: #115940; --bad: #A81F64;
@@ -37,7 +37,7 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 .sw input { position: absolute; opacity: 0; pointer-events: none; }
 .sw i { flex: none; width: 50px; height: 31px; margin-bottom: -1px; background: url('icons/popup/switch-off.svg') no-repeat 0 0 / 50px 31px; }
 .sw input:checked + i { background-image: url('icons/popup/switch-on.svg'); }
-.sw input:focus-visible + i { outline: 2px solid var(--indigo-500); outline-offset: 2px; border-radius: 99px; }
+.sw input:focus-visible + i { outline: 2px solid var(--indigo-600); outline-offset: 2px; border-radius: 99px; }
 .sw input:disabled + i { opacity: 0.45; }
 .sw:has(input:disabled) { cursor: default; }
 
@@ -45,7 +45,7 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 .slider { display: flex; flex-direction: column; gap: 8px; padding: 8px 14px 12px; font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-muted); cursor: pointer; }
 .slider input { --p: 33%; -webkit-appearance: none; appearance: none; width: 100%; height: 8px; margin: 0; border-radius: 99px; background: linear-gradient(90deg, var(--indigo-500) 0 var(--p), var(--track) var(--p) 100%); cursor: pointer; }
 .slider input::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: transparent; }
-.slider input:focus-visible { outline: 2px solid var(--indigo-500); outline-offset: 4px; }
+.slider input:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 4px; }
 
 /* Buttons (Figma "Action / Button" and the gradient pill) */
 .btn { display: flex; align-items: center; justify-content: center; height: 49px; padding: 0 24px; border: 2px solid var(--border-default); border-radius: 9999px; background: var(--surface-card); color: var(--indigo-900); font: 600 16px/16px 'Figtree', system-ui, sans-serif; text-decoration: none; cursor: pointer; white-space: nowrap; }
@@ -53,21 +53,22 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 .btn.white { height: 52px; border-width: 1px; color: var(--text-primary); font-weight: 700; line-height: 20px; }
 .btn.wide { width: 342px; max-width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: default; }
-.btn:focus-visible, .glass:focus-visible, .link:focus-visible { outline: 3px solid #B1B7FF; outline-offset: 2px; }
+.btn:focus-visible, .link:focus-visible { outline: 3px solid var(--indigo-600); outline-offset: 2px; }
+.glass:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 2px; } /* on the blue header */
 
 /* Your phone */
 .hint { margin: 0; font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-muted); }
 .hint span { font-weight: 400; }
 .hint.msg:empty { display: none; }
 .pair { display: flex; gap: 8px; width: 342px; max-width: 100%; }
-.pair input { flex: 1; min-width: 0; height: 49px; border: 2px solid var(--border-default); border-radius: 9999px; padding: 0 12px; text-align: center; font: 600 16px/16px 'Figtree', system-ui, sans-serif; color: var(--text-primary); }
+.pair input { flex: 1; min-width: 0; height: 49px; border: 2px solid #868B99; border-radius: 9999px; padding: 0 12px; text-align: center; font: 600 16px/16px 'Figtree', system-ui, sans-serif; color: var(--text-primary); }
 .pair input::placeholder { color: var(--text-muted); }
-.pair input:focus { outline: none; border-color: var(--indigo-500); }
+.pair input:focus { outline: 2px solid var(--indigo-600); outline-offset: 1px; border-color: var(--indigo-600); }
 .pair .btn { width: 119px; flex: none; padding: 0; }
 .paired { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ok { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--ok); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: #1DB954; }
-.link { border: 0; background: none; padding: 0; font: inherit; font-size: 13px; font-weight: 700; color: var(--indigo-500); text-decoration: underline; cursor: pointer; }
+.link { border: 0; background: none; padding: 0; font: inherit; font-size: 13px; font-weight: 700; color: var(--indigo-900); text-decoration: underline; cursor: pointer; }
 
 /* Saved */
 .saved-h { display: flex; align-items: center; gap: 4px; }
@@ -87,8 +88,8 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 .pick b { font-size: 16px; font-weight: 700; line-height: 22px; color: var(--text-primary); }
 .pick small { font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-muted); }
 .pick small.w207 { width: 207px; }
-.pick select { flex: none; width: 150px; height: 40px; padding: 0 10px; border: 1px solid #B1B7FF; border-radius: 10px; background: #FFFFFF; color: var(--indigo-900); font: 700 14px/20px 'Figtree', system-ui, sans-serif; cursor: pointer; }
-.pick select:focus-visible { outline: 3px solid #B1B7FF; outline-offset: 2px; }
+.pick select { flex: none; width: 150px; height: 40px; padding: 0 10px; border: 1px solid var(--indigo-500); border-radius: 10px; background: #FFFFFF; color: var(--indigo-900); font: 700 14px/20px 'Figtree', system-ui, sans-serif; cursor: pointer; }
+.pick select:focus-visible { outline: 3px solid var(--indigo-600); outline-offset: 2px; }
 .tmsg { align-self: stretch; margin: -8px 0 0; text-align: center; }
 .tmsg:empty { display: none; }
 
@@ -101,3 +102,8 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 
 /* Main Linger switch off: everything else in the menu is greyed out until it's turned back on. */
 body.all-off main > section:nth-of-type(2), body.all-off main > section:nth-of-type(3), body.all-off main > section:first-of-type > :not(h2, .rows), body.all-off .rows .sw:not(:has(#power)) { opacity: .45; }
+
+/* Reduce motion (system setting): no sliding, fading or gliding; things appear in place. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
+}

@@ -24,9 +24,10 @@
     $('next').textContent = t === 'A' ? 'Done reading · go to Task B' : 'Done reading · see results';
   }
   document.querySelectorAll('[data-task]').forEach((b) => { b.onclick = () => setTask(b.dataset.task); });
+  const calm = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'); // no smooth scrolling with Reduce motion
   $('next').onclick = () => {
-    if (S.task === 'A') { setTask('B'); document.querySelector('.tasks').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    else $('summary').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (S.task === 'A') { setTask('B'); document.querySelector('.tasks').scrollIntoView({ behavior: calm(), block: 'start' }); }
+    else $('summary').scrollIntoView({ behavior: calm(), block: 'center' });
   };
 
   // ---------- answers ----------

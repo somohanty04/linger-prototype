@@ -1,6 +1,6 @@
 <svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="50" height="31" viewBox="0 0 50 31" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g id="Input / Switch">
-<path d="M0 15C0 6.71573 6.71573 0 15 0H35C43.2843 0 50 6.71573 50 15V15C50 23.2843 43.2843 30 35 30H15C6.71573 30 0 23.2843 0 15V15Z" fill="#B1B7FF"/>
+<path d="M0 15C0 6.71573 6.71573 0 15 0H35C43.2843 0 50 6.71573 50 15V15C50 23.2843 43.2843 30 35 30H15C6.71573 30 0 23.2843 0 15V15Z" fill="#868B99"/>
 <g id="Ellipse" filter="url(#filter0_d_0_6)">
 <circle cx="15" cy="15" r="12" fill="white"/>
 </g>

@@ -79,7 +79,7 @@ function fill() { const r = $('secs'); r.style.setProperty('--p', ((r.value - r.
   // aiOn: true without consent shows as off, and turning it on asks first.
   const aiOK = () => st.aiConsent === 'yes' && st.aiOn === true;
   $('aiOn').checked = aiOK();
-  const aiAsk = (show) => { $('aiAsk').hidden = !show; if (show) $('aiYes').focus(); };
+  const aiAsk = (show) => { $('aiAsk').hidden = !show; if (show) $('aiNo').focus(); }; // focus the safe choice; the group's text is read first
   $('aiOn').onchange = (e) => {
     if (!e.target.checked) { st.aiOn = false; aiAsk(false); chrome.storage.local.set({ aiOn: false }); return; }
     if (st.aiConsent === 'yes') { st.aiOn = true; chrome.storage.local.set({ aiOn: true }); return; }

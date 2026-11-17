@@ -86,6 +86,7 @@
       step('data');
       const words = () => b.F.getDocs(b.F.collection(b.db, 'users', u.uid, 'words'));
       await b.F.deleteDoc(b.F.doc(b.db, 'users', u.uid));
+      step('words'); // the profile (reading setup, learning history, picture) is gone from here on
       const refs = (await words()).docs.map((d) => d.ref);
       for (let i = 0; i < refs.length; i += 400) { const wb = b.F.writeBatch(b.db); refs.slice(i, i + 400).forEach((r) => wb.delete(r)); await wb.commit(); }
       if (!(await words()).empty || (await b.F.getDoc(b.F.doc(b.db, 'users', u.uid))).exists()) fail('linger/data-left');
@@ -128,7 +129,9 @@
       const cur = T.cur(), all = T.users(), k = cur && cur.email.toLowerCase();
       if (!cur || !all[k] || all[k].pw !== pw) fail('auth/invalid-credential');
       step('data');
-      localStorage.removeItem('acctTest.profile.' + cur.uid); localStorage.removeItem('acctTest.words.' + cur.uid); tellTabs('words:' + cur.uid);
+      localStorage.removeItem('acctTest.profile.' + cur.uid);
+      step('words');
+      localStorage.removeItem('acctTest.words.' + cur.uid); tellTabs('words:' + cur.uid);
       step('auth');
       delete all[k]; store.set('acctTest.users', all);
       await this.signOut();
@@ -267,11 +270,15 @@
       });
     } catch (e) {
       const code = (e && e.code) || '';
-      const dataGone = A.delStep === 'auth';
-      A.deleting = false; A.busy = false; A.delStep = '';
-      A.err = dataGone ? 'Your words, learning history, reading setup and picture were deleted, but your sign-in couldn’t be removed (' + friendly(e) + ') Try again to finish.' : friendly(e);
+      // Say exactly what is already gone. Once anything was deleted, syncing stays paused (A.deleting) so this
+      // device doesn't upload its copy back into a half-deleted account; trying again finishes the job.
+      const at = A.delStep, partly = at === 'words' || at === 'auth';
+      A.busy = false; A.delStep = ''; A.deleting = partly;
+      if (at === 'auth') A.err = 'Your profile (reading setup, learning history and picture) and all your saved words were deleted, but your sign-in couldn’t be removed yet. Try again to finish.';
+      else if (at === 'words') A.err = 'Your profile (reading setup, learning history and picture) was deleted, but some saved words couldn’t be deleted yet, and your sign-in still exists. Try again to finish deleting.';
+      else A.err = friendly(e);
       if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') A.err = 'That password isn’t right.';
-      if (A.auth === 'in' && !unlisten) startListening();
+      if (!partly && A.auth === 'in' && !unlisten) startListening();
       paint(); return;
     }
     await forgetAccount(uid, email, device);
@@ -333,7 +340,7 @@
     const n = remote ? Object.keys(remote).length : 0;
     let code = ''; try { code = localStorage.getItem('linger.sync.code') || ''; } catch {}
     const pretty = code && window.LingerSync ? LingerSync.pretty(code) : code;
-    const step = A.delStep === 'check' ? 'Checking your password…' : A.delStep === 'data' ? 'Deleting your words and profile…' : A.delStep === 'auth' ? 'Deleting your sign-in…' : '';
+    const step = A.delStep === 'check' ? 'Checking your password…' : A.delStep === 'data' ? 'Deleting your profile…' : A.delStep === 'words' ? 'Deleting your saved words…' : A.delStep === 'auth' ? 'Deleting your sign-in…' : '';
     return `<form class="sync-card del-card" id="acctDelForm" novalidate aria-labelledby="acctDelH"><div class="sync-h" id="acctDelH"><strong>Delete your account and data?</strong></div>
       <div class="small">This permanently deletes, for ${esc(A.user.email)}:</div>
       <ul class="small del-list"><li>Your Linger sign-in (this email and password)</li>

@@ -91,4 +91,7 @@ h1 { margin: 2px 0 0; font-size: clamp(24px, 4vw, 30px); letter-spacing: -0.02em
   .bubble { bottom: 16px; width: calc(100% - 24px); }
   .toast { top: 56px; }
 }
-@media (prefers-reduced-motion: reduce) { .tok { transition: none; } }
+/* Reduce motion (system setting): no sliding, fading or gliding; things appear in place. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
+}
