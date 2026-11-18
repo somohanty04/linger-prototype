@@ -1,6 +1,6 @@
 // Network first, so updates show up right away; the cache only helps when offline.
 // Bump CACHE when the list below changes. The beta page (beta/) shares this worker and these files.
-const CACHE = 'linger-v2';
+const CACHE = 'linger-v3';
 const CORE = [
   './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
   './beta/', './beta/index.html', './beta/manifest.webmanifest', './beta.js',
@@ -19,6 +19,8 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   // Offline, a page falls back to its own app shell: the beta page to beta/, everything else to the prototype.
   const shell = new URL(req.url).pathname.includes('/beta/') ? './beta/' : './';
-  e.respondWith(fetch(req).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return res; })
+  // cache: 'no-cache' asks the server every time (a quick "has it changed?" check), so a new version shows up on the
+  // next open instead of after the browser's own 10-minute cache runs out.
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return res; })
     .catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || (req.mode === 'navigate' ? caches.match(shell) : undefined))));
 });
