@@ -945,6 +945,7 @@
     return `<div class="beta-sec"><div class="label">Beta</div>
       <button type="button" class="act share-card" data-action="beta-feedback"><span class="ic">💬</span><span><strong>Send feedback</strong><span class="small">Tell us what broke, what was confusing, or what you wish Linger did</span></span><span class="go">›</span></button>
       ${BETA.standalone() ? '' : `<button type="button" class="act share-card" data-action="beta-install"><span class="ic">📲</span><span><strong>Add Linger to your Home Screen</strong><span class="small">Then it opens full screen, like an app</span></span><span class="go">›</span></button>`}
+      <a class="act share-card" href="privacy.html"><span class="ic">🔒</span><span><strong>Privacy policy</strong><span class="small">What Linger keeps, what it sends, and how to delete it</span></span><span class="go">›</span></a>
       <p class="small beta-ver">Linger Beta ${esc(BETA.version)} · ${esc(BETA.date)}${BETA.standalone() ? ' · installed' : ''}${queued ? ` · <span class="plane-wait" aria-hidden="true">${planeIcon}</span>${queued} feedback ${queued === 1 ? 'message' : 'messages'} waiting to send` : ''}</p></div>`;
   }
   function betaOverlay() {

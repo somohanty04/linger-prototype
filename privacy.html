@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F2DA8">
+<title>Linger Privacy Policy</title>
+<meta name="description" content="What Linger keeps, what it sends to other services, and how to delete your data.">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root { --ink: #14161F; --ink-2: #353A4A; --muted: #5B6070; --line: #E4E6EE; --indigo: #1F2AA8; --bg: #FFFFFF; --soft: #F6F8FF; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ink: #F2F3F8; --ink-2: #D4D7E2; --muted: #A3A8B8; --line: #2C3040; --indigo: #A9B1FF; --bg: #12141C; --soft: #1B1E2A; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  header { background: linear-gradient(163deg, #1F2DA8, #5464D9); color: #FFFFFF; padding: calc(28px + env(safe-area-inset-top, 0px)) 20px 28px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header a { color: #FFFFFF; font-weight: 600; text-decoration: none; opacity: 0.9; }
+  h1 { margin: 14px 0 4px; font-size: 32px; line-height: 1.15; }
+  header p { margin: 0; color: #FFFFFF; opacity: 0.85; }
+  main { padding: 8px 20px calc(48px + env(safe-area-inset-bottom, 0px)); }
+  h2 { margin: 36px 0 8px; font-size: 21px; color: var(--indigo); }
+  p, li { color: var(--ink-2); }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .box { margin: 22px 0 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }
+  .box p { margin: 0; }
+  strong { color: var(--ink); }
+  a { color: var(--indigo); }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <a href="beta/">← Back to Linger</a>
+  <h1>Privacy Policy</h1>
+  <p>For the Linger phone app (website and iPhone app) and the Linger Chrome extension. Last updated November 18, 2026.</p>
+</div></header>
+<main class="wrap">
+  <div class="box"><p><strong>In short:</strong> Linger keeps your saved words and settings so it can help you learn. You don’t need an account. Photos are read on your phone. Linger has no ads, sells nothing about you, and doesn’t track what you do. You can delete your account and its data from inside the app.</p></div>
+
+  <h2>What stays on your device</h2>
+  <p>Your saved words, settings, reading setup (what you read, your languages and English level) and learning progress are kept on your phone or computer. If you don’t make an account, they never leave your device, except as described below.</p>
+
+  <h2>If you make an account (optional)</h2>
+  <p>An account keeps your words the same on every device. We use Google Firebase (Firebase Authentication and Cloud Firestore) to store:</p>
+  <ul>
+    <li>your <strong>email address</strong>, and your password, which Firebase keeps in a protected form that we can’t read</li>
+    <li>your <strong>saved words</strong>: the word, its meaning, the example sentence, where you saw it (for example a website’s name or “Camera scan”) and the date</li>
+    <li>your <strong>reading setup</strong> and the result of the optional English check</li>
+    <li>your <strong>learning progress</strong> for each word</li>
+    <li>a <strong>profile picture</strong>, only if you add one</li>
+  </ul>
+  <p>Other people using Linger can’t see it: the database only lets your account read your data. The people who run Linger can see it in the Firebase console, and only look to fix problems. If you connect the Chrome extension to your phone with a <strong>pairing code</strong> instead of an account, your saved words are stored under that code, and anyone who has the code can see them.</p>
+
+  <h2>Photos, scans and screenshots</h2>
+  <p>When you scan with the camera, upload a photo, or share a screenshot to Linger, the text is read <strong>on your device</strong>. The picture isn’t uploaded or kept. The camera is only on while you’re scanning, and Linger doesn’t record video.</p>
+
+  <h2>AI explanations and translations</h2>
+  <p>Some features use AI: translating meanings into your language in the phone app, and, in the Chrome extension, explanations and the page assistant, which you turn on and agree to first. For these, the text you chose (a word, a sentence or the page you asked about) is sent to Linger’s server, which passes it to <strong>Anthropic’s Claude API</strong> to write the answer. Linger’s server doesn’t store this text. To stop overuse, it briefly remembers your internet address and a random ID made by the app, in memory only. Anthropic handles API data under its own <a href="https://www.anthropic.com/legal/privacy">privacy policy</a>.</p>
+
+  <h2>Word lookups</h2>
+  <p>When you tap a word Linger doesn’t already know, the word (only the word) is sent to <a href="https://www.wiktionary.org/">Wiktionary</a> to find its meaning.</p>
+
+  <h2>Say it (pronunciation)</h2>
+  <p>When you tap the microphone in Say it, your voice is turned into text by speech recognition: Apple’s in the iPhone app, or your browser’s on the website (for example, Chrome sends audio to Google). Linger only gets the text of what was heard, uses it to score your try, and doesn’t keep it. The microphone is only on while you’re saying a word.</p>
+
+  <h2>Your location</h2>
+  <p>If you tap “Use my location” in the city guide, your phone’s location is used <strong>on your device</strong> to pick the nearest city. It isn’t sent anywhere or saved.</p>
+
+  <h2>Eye tracking and hand gestures (Chrome extension)</h2>
+  <p>These optional features use your webcam. The video is processed on your computer and never leaves it.</p>
+
+  <h2>Beta feedback</h2>
+  <p>If you send feedback from Settings, we store your message, the type you picked, your email (only if you type it), the app version, your phone type, the screen you were on, a random tester ID and basic browser details. We use it only to improve Linger.</p>
+
+  <h2>Services that load parts of the app</h2>
+  <p>The website loads fonts from Google Fonts, the Firebase code from Google, and the text reader from jsDelivr. Like any website, these services see your internet address when they send those files.</p>
+
+  <h2>What we don’t do</h2>
+  <ul>
+    <li>No ads and no advertising trackers.</li>
+    <li>No analytics that follow what you do in the app.</li>
+    <li>We don’t sell or share your data with anyone, except the services named above that make the features work.</li>
+  </ul>
+
+  <h2>Delete your data</h2>
+  <ul>
+    <li><strong>Account:</strong> tap your profile picture, then <strong>Delete account and data</strong>. This deletes your profile, reading setup, learning progress, picture and saved words, and then the account itself.</li>
+    <li><strong>On your device:</strong> deleting the app, or clearing the website’s data in your browser, removes what’s stored there.</li>
+    <li><strong>Feedback or pairing codes:</strong> send a message from <strong>Settings → Send feedback</strong> asking us to delete it, with the email you used if any.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>Linger is made for adults and isn’t meant for children under 13.</p>
+
+  <h2>Changes and questions</h2>
+  <p>Linger is in beta, and this policy may change as features change. We’ll update the date at the top when it does. For questions, use <strong>Settings → Send feedback</strong> in the app.</p>
+</main>
+</body>
+</html>
