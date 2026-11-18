@@ -79,11 +79,16 @@
     { tag: 'Sports', title: 'Black and gold game days', body: 'On Steelers game days, lots of people wear black and gold and bars fill up early. The game is an easy topic for small talk.' },
     { tag: 'Driving', title: 'The “Pittsburgh left”', body: 'Some drivers let the first car turning left go first when the light turns green. It’s a local habit, not a rule, so never assume it.' }
   ];
-  const HOTSPOTS = [
-    { label: '“Inbound” / “Outbound”', where: 'Bus stops, Oakland', n: 218, note: 'Inbound means toward Downtown.' },
-    { label: 'Parking chairs', where: 'Side streets, South Side Slopes', n: 164, note: 'Spots saved after shoveling. Leave them.' },
-    { label: '“Jumbo”', where: 'Deli menus, Bloomfield', n: 121, note: 'It’s bologna, not a size.' },
-    { label: '“Jitney”', where: 'Centre Ave, Hill District', n: 87, note: 'Informal, cash ride service.' }
+  // Local → Mix-ups: everyday English that works differently in the US. Same for every city.
+  const MIXUPS = [
+    { tag: 'Letters', title: 'Dates', no: '03/04 means 3 April', yes: '03/04 means March 4', why: 'In the US the month comes first. Check due dates on bills and letters twice.' },
+    { tag: 'Weather', title: 'Temperature', no: '“It’s 30 degrees, so it’s warm.”', yes: '30°F is below freezing', why: 'The US uses Fahrenheit. 32°F is 0°C, 70°F is a nice day, 100°F is very hot.' },
+    { tag: 'Buildings', title: 'First floor', no: 'The first floor is one level up', yes: 'The first floor is the ground floor', why: 'In the US you enter a building on the first floor. There’s usually no “ground floor.”' },
+    { tag: 'Eating out', title: 'Paying', no: '“Can I have the bill?”', yes: '“Can I get the check?”', why: 'People will understand “bill,” but “check” is what you’ll hear. Tip 18–20% at sit-down places.' },
+    { tag: 'Small talk', title: '“How’s it going?”', no: 'Telling them how your week really went', yes: '“Good, you?”', why: 'It’s a greeting, like “hi.” A short answer is normal and polite.' },
+    { tag: 'School', title: 'Eraser', no: '“Can I borrow a rubber?”', yes: '“Can I borrow an eraser?”', why: 'In the US, “rubber” can mean a condom. Say “eraser.”' },
+    { tag: 'Clothes', title: 'Pants', no: 'Pants means underwear', yes: 'Pants means trousers', why: 'Say “underwear” for what’s underneath.' },
+    { tag: 'Sports', title: 'Football', no: '“Football” means soccer', yes: '“Football” is American football', why: 'Say “soccer” for the game with the round ball. In Pittsburgh, football means the Steelers.' }
   ];
   // Fill in the story: [text, blank answer key, text, ...]. Blanks are the odd items.
   const STORIES = [
@@ -158,7 +163,12 @@
   S.seenToks = new Set(); // hard words already looked at in this text: their dotted underline turns solid
   const fx = (k, v = true) => { FX[k] = v; };
   const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const buzz = (ms = 10) => { try { if (!calm() && navigator.vibrate) navigator.vibrate(ms); } catch {} }; // Android only; iPhones ignore it
+  // A light tap you can feel: the iPhone app plays a real haptic; Android vibrates; Safari has neither.
+  const buzz = (ms = 10) => {
+    if (calm()) return;
+    if (BETA && BETA.native) { BETA.post({ haptic: Array.isArray(ms) ? 'success' : ms >= 15 ? 'medium' : 'light' }); return; }
+    try { if (navigator.vibrate) navigator.vibrate(ms); } catch {}
+  };
   // A small copy of something flies from one element to another along an arc (above everything, then removed).
   function fly(fromEl, toEl, html, cls = '') {
     if (calm() || !fromEl || !toEl || !document.body.animate) return Promise.resolve();
@@ -898,7 +908,7 @@
           <button type="button" class="switch" role="switch" aria-label="Auto-define hard words" aria-checked="${S.autoHard}" data-action="auto"></button></div>
       </div>
       <button type="button" class="act share-card" data-action="lang-open"><span class="ic">🌐</span><span><strong>My language</strong><span class="small" ${S.lang ? langAttrs() : ''}>${esc(langLabel())} · meanings and summaries also show in it</span></span><span class="go">›</span></button>
-      <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">Select text anywhere, tap Share, then “Explain with Linger”</span></span><span class="go">›</span></button>
+      <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">${BETA && BETA.native ? 'Take a screenshot or select text, tap Share, then Linger' : 'Select text anywhere, tap Share, then “Explain with Linger”'}</span></span><span class="go">›</span></button>
       ${BETA ? betaSettings() : ''}
     </div>`;
   }
@@ -1007,11 +1017,6 @@
     return (c.slang || []).map((it) => { if (!D[it.k]) D[it.k] = { word: it.word, kind: 'slang', say: it.say, meaning: it.meaning, ctx: it.meaning, local: it.local, sentence: it.sentence, place: cityName(c), city: true }; return it.k; });
   }
   const cityCustoms = (id) => (id === 'pgh' ? CUSTOMS.map((x) => ({ ...x, ic: PGH_IC[x.tag] || '📌' })) : CITIES[id].customs || []);
-  function cityHotspots(id) {
-    if (id === 'pgh') return HOTSPOTS;
-    const c = CITIES[id];
-    return (c.slang || []).slice(0, 4).map((it, i) => ({ label: '“' + it.word + '”', where: c.name, n: [184, 131, 96, 58][i], note: it.meaning }));
-  }
   const distKm = (a, b, c2, d) => { const r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c2) / 2 * r), y = (c2 - a) * r; return Math.sqrt(x * x + y * y) * 6371; };
   function locateCity() {
     if (!navigator.geolocation) { showToast('Location isn’t available on this device'); return; }
@@ -1031,7 +1036,7 @@
   const locateIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="#FFFFFF"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
   function viewLocal() {
     const c = city(), id = CITIES[S.city] ? S.city : 'pgh';
-    const segs = [['slang', 'Slang'], ['customs', 'Customs'], ['around', 'Transit'], ['hotspots', 'Pause map']];
+    const segs = [['slang', 'Slang'], ['customs', 'Customs'], ['around', 'Transit'], ['mixups', 'Mix-ups']];
     let note = '', items = '';
     if (S.localSeg === 'slang') {
       note = `Words you’ll hear around ${esc(c.name)}.`;
@@ -1049,11 +1054,11 @@
       note = `How people get around ${esc(c.name)}, and the words on the signs.`;
       items = `<article class="loc-item loc-list">${(c.around || []).map((r) => `<div class="loc-row"><span class="loc-title">${esc(r.title)}</span><span class="mean">${esc(r.body)}</span></div>`).join('')}</article>`;
     } else {
-      const hs = cityHotspots(id), max = Math.max(...hs.map((h) => h.n));
-      note = `Words that newcomers in ${esc(c.name)} pause on most. Only the word and the area are shared, never your eye data. Sample data.`;
-      items = hs.map((h) => `<article class="loc-item"><div class="item-head"><span class="loc-title">${esc(h.label)}</span><span class="loc-count">${h.n} paused</span></div>
-          <span class="loc-where">${esc(h.where)}</span><div class="loc-bar"><span style="width: ${Math.round(h.n / max * 100)}%"></span></div>
-          <span class="mean">${esc(h.note)}</span></article>`).join('');
+      note = 'Common mistakes newcomers make with everyday English in the US, and what to say instead.';
+      items = MIXUPS.map((m) => `<article class="loc-item mx-item"><div class="item-head"><span class="loc-title">${esc(m.title)}</span><span class="badge b-loc">${esc(m.tag)}</span></div>
+          <div class="mx-row mx-no"><span class="mx-ic" aria-hidden="true">✕</span><span><span class="sr-only">Not quite: </span><span class="mx-t">${esc(m.no)}</span></span></div>
+          <div class="mx-row mx-yes"><span class="mx-ic" aria-hidden="true">✓</span><span><span class="sr-only">In the US: </span>${esc(m.yes)}</span></div>
+          <span class="mean">${esc(m.why)}</span></article>`).join('');
     }
     const ess = [['🚨', '911', 'Emergencies: police, fire, ambulance'], ['☎️', '311', 'City help: trash, noise, potholes'], ['🚌', 'Transit', c.transit], ['💵', 'Tipping', '18–20% at sit-down restaurants']];
     return `<header class="hero wh lh2 loc-hero">
@@ -1246,7 +1251,7 @@
           <div class="sum-title">Where are you?</div>
           <button type="button" class="btn ghost" data-action="city-locate">◎ Use my location</button>
           <div class="city-list">${Object.entries(CITIES).map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${c.emoji}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>
-          <div class="small">More cities coming. Each guide has slang, customs, getting around and a pause map.</div></div></div>`;
+          <div class="small">More cities coming. Each guide has slang, customs, getting around and common mix-ups.</div></div></div>`;
     }
     if (S.langPick) html += langSheet();
     if (S.shareHelp && BETA && BETA.native) {
@@ -1327,15 +1332,58 @@
   const scroll = document.getElementById('scroll');
   const over = document.getElementById('overlay');
   const screenEl = document.querySelector('.screen');
-  let lastTab = null, lastPanelSig = null, lastToast = '';
+  let lastTab = null, lastPanelSig = null, lastToast = '', lastViewKey = '', justSwitched = '';
+  // Segmented switches (Scan / Upload / Paste, All / Slang / Hard, Slang / Customs / …): the screen is redrawn on every
+  // tap, so the highlight is slid by hand from where it was to the new choice.
+  function segPlaces() {
+    const m = {};
+    scroll.querySelectorAll('.lh-switch').forEach((g) => { const on = g.querySelector('.on'); if (on) m[g.getAttribute('aria-label')] = { x: on.offsetLeft, w: on.offsetWidth }; });
+    return m;
+  }
+  function segSlide(prev) {
+    if (calm()) return;
+    scroll.querySelectorAll('.lh-switch').forEach((g) => {
+      const p = prev[g.getAttribute('aria-label')], on = g.querySelector('.on');
+      if (!p || !on || Math.abs(p.x - on.offsetLeft) < 2 || !on.animate) return;
+      const ghost = document.createElement('span');
+      ghost.className = 'seg-ghost';
+      ghost.style.cssText = `left:${on.offsetLeft}px;top:${on.offsetTop}px;height:${on.offsetHeight}px;width:${on.offsetWidth}px;background:${getComputedStyle(on).backgroundColor}`;
+      g.classList.add('sliding'); g.prepend(ghost);
+      buzz(6);
+      const a = ghost.animate([{ transform: `translateX(${p.x - on.offsetLeft}px)`, width: p.w + 'px' }, { transform: 'none', width: on.offsetWidth + 'px' }], { duration: 280, easing: 'cubic-bezier(.3, 1.25, .5, 1)' });
+      const done = () => { ghost.remove(); g.classList.remove('sliding'); };
+      a.onfinish = done; a.oncancel = done;
+    });
+  }
+  // Settings switches: the knob slides across instead of jumping.
+  function switchFlip() {
+    if (!justSwitched) return;
+    const sw = scroll.querySelector(`.switch[data-action="${justSwitched}"]`);
+    justSwitched = '';
+    if (sw && !calm()) { sw.classList.add('just'); buzz(8); }
+  }
+  // The rings in the header turn very slowly. The header is redrawn on every tap, so each new copy picks up the turn
+  // where the last one was.
+  const ringT0 = performance.now();
+  function ringDrift() { scroll.querySelectorAll('.wh-rings img').forEach((el) => { el.style.animationDelay = -((performance.now() - ringT0) % 90000) + 'ms'; }); }
   function render() {
     const views = { lens: viewLens, words: viewWords, local: viewLocal, review: viewReview, settings: viewSettings };
     const top = scroll.scrollTop;
     const focusQ = document.activeElement && document.activeElement.id === 'q';
     const caret = focusQ ? document.activeElement.selectionStart : 0;
+    const segs = segPlaces();
     scroll.innerHTML = views[S.tab]();
     scroll.scrollTop = lastTab === S.tab ? top : 0;
-    lastTab = S.tab;
+    // A new screen rises in; a new section or filter on the same screen deals its cards in. Other taps redraw in place.
+    const viewKey = [S.tab, S.localSeg, S.wordFilter, S.city, S.activity].join('|');
+    scroll.classList.remove('view-in', 'list-in');
+    if (!calm() && lastTab !== S.tab) scroll.classList.add('view-in');
+    else if (!calm() && viewKey !== lastViewKey) scroll.classList.add('list-in');
+    if (lastTab !== null && lastTab !== S.tab) buzz(8);
+    lastTab = S.tab; lastViewKey = viewKey;
+    segSlide(segs);
+    switchFlip();
+    ringDrift();
     over.innerHTML = overlay();
     // The overlay is redrawn on every tap: a sheet or toast that was already showing stays put instead of sliding in again.
     const panelSig = [S.sheet, S.explain, S.cityPick, S.langPick, S.shareHelp, !!S.feedback, S.installHelp, S.acct, S.onb ? 'onb' + S.onb.step + (S.onb.test ? 't' : '') : '', S.activity, S.coach].join('|');
@@ -1581,6 +1629,7 @@
   document.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-action]');
     if (!b || !actions[b.dataset.action]) return;
+    if (b.classList.contains('switch')) justSwitched = b.dataset.action;
     if (actions[b.dataset.action](b.dataset, b) !== false) render(); // false: the action animates first, then redraws itself
   });
   document.addEventListener('change', async (ev) => {

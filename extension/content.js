@@ -697,7 +697,7 @@
       const r = await send({ type: 'save', key: k, word: { w: raw.toLowerCase(), m: meaning, s: sentence, p: plain !== sentence ? plain : '', place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
       if (!card || cardSpan !== sp) return;
       showSaved(); savedFx(card.querySelector('#save'), cap(raw), r && r.synced);
-      card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Connect your phone in the Linger menu to send words there.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
+      card.querySelector('#note').textContent = r && r.account ? 'Saved to your Linger account. It’s in Words on your phone.' : r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Sign in from the Linger menu to keep it in your account.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
     };
     const wantSyn = !ctx.syns.length && kind !== 'slang';
     const synP = wantSyn ? (api ? send({ type: 'synonyms', word: k }) : directSynonyms(k)) : null;
@@ -923,7 +923,7 @@
       const r = await send({ type: 'save', key, word: { w: text, m, s: fromText || text, p, place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
       if (!card || cardRange !== range) return;
       showSaved(); savedFx(card.querySelector('#save'), text, r && r.synced);
-      card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Connect your phone in the Linger menu to send it there.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
+      card.querySelector('#note').textContent = r && r.account ? 'Saved to your Linger account. It’s in Words on your phone.' : r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Sign in from the Linger menu to keep it in your account.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
     };
     // Look up the hard words Linger doesn't know yet, and find easier synonyms.
     await Promise.all(hard.map(async (x) => {
@@ -1171,7 +1171,7 @@
       if (!isCur()) return;
       card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true');
       savedFx(card.querySelector('#save'), english || text, r && r.synced);
-      card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : 'Saved.';
+      card.querySelector('#note').textContent = r && r.account ? 'Saved to your Linger account.' : r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : 'Saved.';
     };
     // 1. In English (the original English is already right there when Linger translated this page).
     const en = from === 'en' ? { text } : await translate(text, { from, to: 'en' });

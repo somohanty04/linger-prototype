@@ -132,6 +132,100 @@ async function pushWord(code, key, w) {
   const r = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { words: { mapValue: { fields: { [key]: { mapValue: { fields } } } } } } }) });
   if (!r.ok) throw new Error('firestore ' + r.status);
 }
+// ---------- Linger account (the same accounts as the phone app; see ACCOUNTS.md) ----------
+// Firebase Authentication and Firestore over REST, so the extension needs no Firebase SDK. The sign-in is kept in
+// chrome.storage.local as { uid, email, idToken, refreshToken, exp } and the ID token is refreshed when it expires.
+// Saved words go to users/{uid}/words/{key}, the documents the phone app listens to, with the same fields.
+const AUTH = (path) => `https://identitytoolkit.googleapis.com/v1/accounts:${path}?key=${FIREBASE.apiKey}`;
+const FS = `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents`;
+const AUTH_ERR = {
+  EMAIL_EXISTS: 'There’s already an account with this email. Sign in instead.',
+  EMAIL_NOT_FOUND: 'That email or password doesn’t match an account.',
+  INVALID_PASSWORD: 'That email or password doesn’t match an account.',
+  INVALID_LOGIN_CREDENTIALS: 'That email or password doesn’t match an account.',
+  INVALID_EMAIL: 'That doesn’t look like an email address.',
+  MISSING_PASSWORD: 'Type your password.',
+  WEAK_PASSWORD: 'Use a password with at least 6 characters.',
+  USER_DISABLED: 'This account was turned off.',
+  TOO_MANY_ATTEMPTS_TRY_LATER: 'Too many tries. Wait a few minutes and try again.',
+  OPERATION_NOT_ALLOWED: 'Accounts aren’t turned on for Linger yet.'
+};
+class AcctError extends Error {}
+async function authPost(url, body, form) {
+  let r;
+  try {
+    r = await fetch(url, form ? { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body) }
+      : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  } catch { throw new AcctError('Couldn’t reach Linger. Check your internet connection.'); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const code = String((j.error && j.error.message) || '').split(' ')[0]; const e = new AcctError(AUTH_ERR[code] || 'Something went wrong. Try again.'); e.code = code; throw e; }
+  return j;
+}
+const keepSignIn = (j) => ({ uid: j.localId || j.user_id, email: j.email || '', idToken: j.idToken || j.id_token, refreshToken: j.refreshToken || j.refresh_token, exp: Date.now() + Number(j.expiresIn || j.expires_in || 3600) * 1000 });
+async function account() { return (await chrome.storage.local.get({ acct: null })).acct; }
+async function idToken() {
+  const a = await account();
+  if (!a) return null;
+  if (a.exp - Date.now() > 60000) return a;
+  try {
+    const j = await authPost(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE.apiKey}`, { grant_type: 'refresh_token', refresh_token: a.refreshToken }, true);
+    const next = { ...keepSignIn(j), email: a.email };
+    await chrome.storage.local.set({ acct: next });
+    return next;
+  } catch (e) {
+    // The account was deleted, its password changed, or it was turned off: sign out here.
+    if (e.code && /TOKEN_EXPIRED|USER_NOT_FOUND|USER_DISABLED|INVALID_REFRESH_TOKEN/.test(e.code)) await chrome.storage.local.set({ acct: null });
+    throw e;
+  }
+}
+const str = (v) => ({ stringValue: String(v || '') });
+const wordFields = (w) => ({ w: str(w.w), m: str(w.m), s: str(w.s), p: str(w.p), place: str(w.place), date: str(w.date) });
+// onlyIfNew: used when uploading the laptop's list after signing in, so a word already in the account keeps its text
+// (and its learning progress) from the phone.
+async function putAccountWord(key, w, onlyIfNew) {
+  const a = await idToken();
+  if (!a) return false;
+  const url = (q) => `${FS}/users/${a.uid}/words/${encodeURIComponent(key)}?${q}`;
+  const now = { timestampValue: new Date().toISOString() };
+  const call = (q, fields) => fetch(url(q), { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + a.idToken }, body: JSON.stringify({ fields }) });
+  const mask = [...Object.keys(wordFields(w)), 'updatedAt'].map((f) => 'updateMask.fieldPaths=' + f).join('&');
+  // Create it (with createdAt) if it's new…
+  let r = await call('currentDocument.exists=false', { ...wordFields(w), createdAt: now, updatedAt: now });
+  if (r.ok) return true;
+  if (r.status !== 400 && r.status !== 409) throw new Error('firestore ' + r.status);
+  if (onlyIfNew) return true;
+  // …otherwise update just these fields, leaving status, reviews and the rest alone.
+  r = await call(mask, { ...wordFields(w), updatedAt: now });
+  if (!r.ok) throw new Error('firestore ' + r.status);
+  return true;
+}
+async function uploadSaved() {
+  const { saved = [] } = await chrome.storage.local.get({ saved: [] });
+  let n = 0;
+  for (const x of saved) { try { if (x.key && x.w) { await putAccountWord(x.key, x, true); n++; } } catch {} }
+  return n;
+}
+async function startAccount(a, created) {
+  await chrome.storage.local.set({ acct: a });
+  if (created) { // the same profile document the phone app makes
+    const now = { timestampValue: new Date().toISOString() };
+    await fetch(`${FS}/users/${a.uid}?updateMask.fieldPaths=createdAt&updateMask.fieldPaths=schema`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + a.idToken }, body: JSON.stringify({ fields: { createdAt: now, schema: { integerValue: '1' } } }) }).catch(() => {});
+  }
+  const uploaded = await uploadSaved();
+  return { ok: true, email: a.email, uploaded };
+}
+async function acctMessage(msg) {
+  try {
+    if (msg.type === 'acct-state') { const a = await account(); return { ok: true, email: a ? a.email : '' }; }
+    if (msg.type === 'acct-signout') { await chrome.storage.local.set({ acct: null }); return { ok: true }; }
+    const email = String(msg.email || '').trim(), password = String(msg.password || '');
+    if (msg.type === 'acct-reset') { await authPost(AUTH('sendOobCode'), { requestType: 'PASSWORD_RESET', email }); return { ok: true }; }
+    if (msg.type === 'acct-signin') return await startAccount(keepSignIn(await authPost(AUTH('signInWithPassword'), { email, password, returnSecureToken: true })), false);
+    if (msg.type === 'acct-signup') return await startAccount(keepSignIn(await authPost(AUTH('signUp'), { email, password, returnSecureToken: true })), true);
+  } catch (e) { return { ok: false, error: e instanceof AcctError ? e.message : 'Something went wrong. Try again.' }; }
+  return { ok: false };
+}
+
 async function checkCode(code) {
   const r = await fetch(`${DOC(code)}?key=${FIREBASE.apiKey}`);
   return r.ok ? 'found' : r.status === 404 ? 'new' : 'error';
@@ -232,15 +326,17 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg.type === 'ai') return reply(await askAI(msg));
     if (msg.type === 'ai-ask') return reply(await askPage(msg.body || {}));
     if (msg.type === 'save') {
-      const { saved = [], pairCode = '' } = await chrome.storage.local.get({ saved: [], pairCode: '' });
+      const { saved = [], pairCode = '', acct = null } = await chrome.storage.local.get({ saved: [], pairCode: '', acct: null });
       const list = [{ key: msg.key, ...msg.word, at: Date.now() }, ...saved.filter((x) => x.key !== msg.key)].slice(0, 200);
       await chrome.storage.local.set({ saved: list });
-      if (!pairCode) return reply({ ok: true, paired: false });
-      try { await pushWord(pairCode, msg.key, msg.word); reply({ ok: true, synced: true }); }
-      catch { reply({ ok: true, synced: false, error: true }); }
-      return;
+      if (!pairCode && !acct) return reply({ ok: true, paired: false });
+      // To the account (if signed in) and to a paired phone (if any); either one reaching Linger counts.
+      const tries = await Promise.allSettled([acct ? putAccountWord(msg.key, msg.word) : null, pairCode ? pushWord(pairCode, msg.key, msg.word) : null]);
+      const sent = tries.some((t, i) => (i === 0 ? acct : pairCode) && t.status === 'fulfilled');
+      return reply({ ok: true, synced: sent, account: !!acct && tries[0].status === 'fulfilled', error: !sent });
     }
     if (msg.type === 'check-code') return reply({ result: await checkCode(msg.code) });
+    if (msg.type && msg.type.startsWith('acct-')) return reply(await acctMessage(msg));
     // ---------- eye tracking ----------
     if (msg.type === 'eye-on') {
       const { gazeModel } = await chrome.storage.local.get({ gazeModel: null });

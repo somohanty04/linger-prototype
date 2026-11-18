@@ -132,14 +132,30 @@ extension WebModel: WKNavigationDelegate, WKUIDelegate {
     }
 }
 
-/// Messages from the page: { ready: true } once the app has started.
+/// Messages from the page: { ready: true } once the app has started; { haptic: "light" | "medium" | "success" } for a tap you can feel.
 private final class WeakHandler: NSObject, WKScriptMessageHandler {
     weak var model: WebModel?
     init(_ model: WebModel) { self.model = model }
     func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.frameInfo.request.url?.host == WebModel.host,
-              let body = message.body as? [String: Any], body["ready"] as? Bool == true else { return }
-        MainActor.assumeIsolated { model?.pageSaidReady() }
+        guard message.frameInfo.request.url?.host == WebModel.host, let body = message.body as? [String: Any] else { return }
+        MainActor.assumeIsolated {
+            if body["ready"] as? Bool == true { model?.pageSaidReady() }
+            if let kind = body["haptic"] as? String { Haptics.play(kind) }
+        }
+    }
+}
+
+@MainActor
+private enum Haptics {
+    static let light = UIImpactFeedbackGenerator(style: .light)
+    static let medium = UIImpactFeedbackGenerator(style: .medium)
+    static let note = UINotificationFeedbackGenerator()
+    static func play(_ kind: String) {
+        switch kind {
+        case "medium": medium.impactOccurred()
+        case "success": note.notificationOccurred(.success)
+        default: light.impactOccurred(intensity: 0.7)
+        }
     }
 }
 
