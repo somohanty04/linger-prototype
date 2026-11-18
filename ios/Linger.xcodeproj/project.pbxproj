@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		169952413D674CDFF06F1224 /* SpeechListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33BDD95249E440296A4BC1B7 /* SpeechListener.swift */; };
 		462A20CF7A3F0F61C49C23AE /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7E85BF12DBD7091C6CC55F9 /* WebView.swift */; };
 		A2B61220ECEABFEBCD5251EF /* Inbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB80CA1C14652C66F44BA77 /* Inbox.swift */; };
 		A7CA4D5FFCAB1DC6037FD111 /* Inbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB80CA1C14652C66F44BA77 /* Inbox.swift */; };
@@ -42,6 +43,7 @@
 
 /* Begin PBXFileReference section */
 		01C2408BDD380A85EAE37F54 /* LingerShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LingerShare.entitlements; sourceTree = "<group>"; };
+		33BDD95249E440296A4BC1B7 /* SpeechListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechListener.swift; sourceTree = "<group>"; };
 		4B2CDF393FB9A8B5F57FDE7C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4ECEB15E3D89115D59A30BD9 /* Linger.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Linger.entitlements; sourceTree = "<group>"; };
 		5CFDD9E2DB2CF76D8588194E /* Linger.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Linger.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -81,6 +83,7 @@
 				BCD130F1961700488B9A5607 /* Info.plist */,
 				4ECEB15E3D89115D59A30BD9 /* Linger.entitlements */,
 				EF455FE29713EA10C4D2693B /* LingerApp.swift */,
+				33BDD95249E440296A4BC1B7 /* SpeechListener.swift */,
 				E7E85BF12DBD7091C6CC55F9 /* WebView.swift */,
 			);
 			path = Linger;
@@ -201,6 +204,7 @@
 			files = (
 				A2B61220ECEABFEBCD5251EF /* Inbox.swift in Sources */,
 				BBE17CE416AA2E405A3BED88 /* LingerApp.swift in Sources */,
+				169952413D674CDFF06F1224 /* SpeechListener.swift in Sources */,
 				462A20CF7A3F0F61C49C23AE /* WebView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -287,13 +287,13 @@
     document.querySelectorAll('.tok.speaking').forEach((t) => t.classList.remove('speaking'));
     document.querySelectorAll('.read-mark').forEach((m) => m.remove());
   }
-  function speak(id, text, onWord, lang = 'en-US') {
+  function speak(id, text, onWord, lang = 'en-US', rate = 0.9) {
     if (!canSpeak) return;
     const again = S.speaking === id;
     stopSpeaking();
     if (again) { render(); return; } // second tap stops
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang; u.rate = 0.9;
+    u.lang = lang; u.rate = rate;
     if (onWord) u.onboundary = (e) => { if (e.name === 'word' || e.name === undefined) onWord(e.charIndex); };
     u.onend = u.onerror = () => { if (S.speaking === id) { S.speaking = null; document.querySelectorAll('.tok.speaking').forEach((t) => t.classList.remove('speaking')); render(); } };
     S.speaking = id;
@@ -420,9 +420,9 @@
           px[i] = px[i + 1] = px[i + 2] = v;
         }
       }
-      g.putImageData(d, 0, 0); res(c.toDataURL('image/png'));
+      g.putImageData(d, 0, 0); res({ src: c.toDataURL('image/png'), w, h });
     };
-    img.onerror = () => res(src); img.src = src;
+    img.onerror = () => res({ src, w: 0, h: 0 }); img.src = src;
   });
   // Keep only words Tesseract is reasonably sure of (drops most of the made-up words from smudges and edges).
   // conf: how sure it is, on average, of the words it kept.
@@ -435,7 +435,21 @@
   async function readImage(src, onProgress) {
     const w = await getWorker();
     onOcr = onProgress;
-    try { const { data } = await w.recognize(await prepare(src)); const r = sureText(data); return { text: cleanText(r.text), conf: Math.round(r.conf) }; }
+    try {
+      const p = await prepare(src);
+      const { data } = await w.recognize(p.src);
+      const r = sureText(data);
+      // Where each word sits on the picture (as % of its width and height), in the same order as the text, so the
+      // photo itself can be tapped. A word Tesseract read as two (e.g. "rent,|due") shares its box.
+      const words = [];
+      if (p.w && p.h) (data.lines || []).forEach((l) => l.words.filter((x) => x.confidence >= 40).forEach((x) => {
+        const b = x.bbox, box = { x: b.x0 / p.w * 100, y: b.y0 / p.h * 100, w: (b.x1 - b.x0) / p.w * 100, h: (b.y1 - b.y0) / p.h * 100 };
+        cleanText(x.text).split(' ').filter(Boolean).forEach((t) => words.push({ t, box }));
+      }));
+      const kept = words.slice(0, 180);
+      if (kept.length >= 3) return { text: kept.map((x) => x.t).join(' '), conf: Math.round(r.conf), boxes: kept.map((x) => x.box) };
+      return { text: cleanText(r.text), conf: Math.round(r.conf), boxes: null };
+    }
     finally { onOcr = () => {}; }
   }
   const fileToDataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
@@ -526,11 +540,11 @@
     S.lensMode = origin === 'upload' ? 'upload' : 'scan';
     S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0, origin }; render();
     try {
-      const { text, conf } = await readImage(src, (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; const st = document.getElementById('scanStage'); if (st && st.textContent !== scanStage(p)) { st.textContent = scanStage(p); st.classList.remove('swap'); void st.offsetWidth; st.classList.add('swap'); } });
+      const { text, conf, boxes } = await readImage(src, (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; const st = document.getElementById('scanStage'); if (st && st.textContent !== scanStage(p)) { st.textContent = scanStage(p); st.classList.remove('swap'); void st.offsetWidth; st.classList.add('swap'); } });
       if (text.split(' ').length < 3) throw new Error('empty');
       Object.keys(D).forEach((k) => { if (D[k].scanned && !isSaved(k)) delete D[k]; });
       TEXTS.camera = text; SUMMARY.camera = summarize(text);
-      S.scan.status = 'done'; S.scan.conf = conf;
+      S.scan.status = 'done'; S.scan.conf = conf; S.scan.boxes = boxes; S.shotView = boxes ? 'picture' : 'text'; if (boxes) fx('shot', 1);
       S.explain = true; // show the plain-English summary right away
     } catch (e) {
       S.scan.status = 'error';
@@ -844,17 +858,23 @@
       cta = `<button type="button" class="btn primary lh-cta" disabled>Reading…</button>`;
     } else if (done) {
       const active = S.pending || S.sheet, speaking = S.speaking === 'lens';
+      const boxes = sc.img && sc.boxes && sc.boxes.length === tokens().length ? sc.boxes : null;
+      const picture = boxes && S.shotView !== 'text';
       const toks = tokens().map((raw, i) => {
         if (!raw) return '';
         const k = keyOf(raw);
         const hard = k && isHard(k) && !learned(k);
-        return `<button type="button" class="tok${hard ? ' hard' : ''}${hard && S.seenToks.has(k) ? ' seen' : ''}${active && k === active ? ' on' : ''}${FX.ink === i ? ' ink' : ''}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
+        const cls = `tok${hard ? ' hard' : ''}${hard && S.seenToks.has(k) ? ' seen' : ''}${active && k === active ? ' on' : ''}${FX.ink === i ? ' ink' : ''}`;
+        if (!picture) return `<button type="button" class="${cls}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
+        // On the photo: a see-through button over the word itself, a little bigger than the word so it's easy to hit.
+        const b = boxes[i], px = Math.min(0.8, b.h * 0.25), py = b.h * 0.3;
+        return `<button type="button" class="${cls} hot" data-action="word" data-i="${i}" style="--d:${Math.round(b.y * 6)};left:${(b.x - px).toFixed(2)}%;top:${(b.y - py).toFixed(2)}%;width:${(b.w + 2 * px).toFixed(2)}%;height:${(b.h + 2 * py).toFixed(2)}%">${esc(raw)}</button>`;
       }).join('');
       let autos = [];
       if (S.autoHard) { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
       card = `<div class="lh-card lh-result">
-          <div class="lh-rhead"><span>${ORIGIN_LABEL[sc.origin] || 'Your text'} · tap a word</span><button type="button" class="lh-clear" data-action="lens-clear">Clear</button></div>
-          <div class="lh-text">${toks}</div>
+          <div class="lh-rhead"><span>${ORIGIN_LABEL[sc.origin] || 'Your text'} · tap a word</span>${boxes ? `<span class="lh-views" role="group" aria-label="Show as"><button type="button" class="${picture ? 'on' : ''}" data-action="shot-view" data-v="picture" aria-pressed="${!!picture}">Picture</button><button type="button" class="${picture ? '' : 'on'}" data-action="shot-view" data-v="text" aria-pressed="${!picture}">Text</button></span>` : ''}<button type="button" class="lh-clear" data-action="lens-clear">Clear</button></div>
+          ${picture ? `<div class="lh-shot${FX.shot ? ' fresh' : ''}"><img src="${sc.img}" alt="${esc(ORIGIN_LABEL[sc.origin] || 'Your photo')}. The words on it are buttons.">${toks}</div>` : `<div class="lh-text">${toks}</div>`}
           ${sc.conf && sc.conf < 60 ? '<p class="lh-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}
           ${autos.length ? `<p class="lh-sub">Hard words here</p><div class="lh-chips">${autos.map((k) => `<button type="button" class="lh-chip" data-action="open" data-k="${k}">${esc(cap(D[k].word))}</button>`).join('')}</div>` : ''}
         </div>`;
@@ -971,25 +991,87 @@
     return `<span class="kn kn-${e.label.toLowerCase()}${up ? ' kn-up' : ''}" aria-label="${e.label}: about ${pct}% sure you know it. ${why}${e.due ? '. Due for review' : ''}">
       <span class="kn-bar" aria-hidden="true"><span style="width:${Math.max(6, pct)}%${up ? `; --from:${Math.max(6, prev[1])}%` : ''}"></span></span><span class="kn-txt" aria-hidden="true">${up && e.label === 'Known' ? '<span class="kn-tick">✓</span>' : ''}<b>${e.label}</b> · ${why}${e.due ? ' · <i>Review today</i>' : ''}</span></span>`;
   }
+  // ---------- Words calendar ----------
+  // Save dates are kept as "Nov 18" (no year): it's this year, unless that would be in the future.
+  const dayKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  function savedDay(k) {
+    const t = S.savedDates[k]; if (!t) return null;
+    const now = new Date(), d = new Date(`${t}, ${now.getFullYear()}`);
+    if (isNaN(d)) return null;
+    if (d > now) d.setFullYear(now.getFullYear() - 1);
+    return dayKey(d);
+  }
+  const savedOn = () => { const m = {}; S.saved.forEach((k) => { if (!D[k]) return; const d = savedDay(k); if (d) m[d] = (m[d] || 0) + 1; }); return m; };
+  const shownDay = () => (S.calDay ? new Date(...S.calDay.split('-').map((x, i) => (i === 1 ? x - 1 : +x))) : new Date());
+  function weekStrip(counts) {
+    const today = startOfDay(new Date()), sel = S.calDay || dayKey(today);
+    const first = new Date(today); first.setDate(today.getDate() - today.getDay() + (S.calWeek || 0) * 7);
+    const letters = ['S', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
+    const days = letters.map((l, i) => {
+      const d = new Date(first); d.setDate(first.getDate() + i);
+      const key = dayKey(d), n = counts[key] || 0, future = d > today;
+      const label = `${d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}${n ? `, ${n} ${n === 1 ? 'word' : 'words'} saved` : ''}`;
+      return `<button type="button" class="d${key === sel ? ' on' : ''}${key === dayKey(today) ? ' today' : ''}${future ? ' future' : ''}" data-action="cal-day" data-v="${key}" aria-label="${esc(label)}" aria-pressed="${key === sel}" ${future ? 'disabled' : ''}><span class="dl">${l}</span><span class="dn">${d.getDate()}</span>${n ? '<i class="dot" aria-hidden="true"></i>' : ''}</button>`;
+    }).join('');
+    const arrow = (dir, lbl) => `<button type="button" class="wk-arrow" data-action="cal-week" data-v="${dir}" aria-label="${lbl}" ${dir > 0 && (S.calWeek || 0) >= 0 ? 'disabled' : ''}><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"${dir < 0 ? ' style="transform: scaleX(-1)"' : ''}><path d="M8 5v14l11-7z" fill="#FFFFFF"/></svg></button>`;
+    return `<div class="week cal-week${FX.wk ? ' wk-' + FX.wk : ''}" id="calWeek">${arrow(-1, 'Previous week')}<div class="wk-days">${days}</div>${arrow(1, 'Next week')}</div>`;
+  }
+  function monthSheet(counts) {
+    const today = startOfDay(new Date()), m = S.calMonth || { y: today.getFullYear(), m: today.getMonth() };
+    const first = new Date(m.y, m.m, 1), len = new Date(m.y, m.m + 1, 0).getDate(), sel = S.calDay || dayKey(today);
+    const cells = Array(first.getDay()).fill('<span></span>').concat(Array.from({ length: len }, (_, i) => {
+      const d = new Date(m.y, m.m, i + 1), key = dayKey(d), n = counts[key] || 0, future = d > today;
+      return `<button type="button" class="mc${key === sel ? ' on' : ''}${key === dayKey(today) ? ' today' : ''}${n ? ' has' : ''}" data-action="cal-pick" data-v="${key}" ${future ? 'disabled' : ''} aria-label="${esc(d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }))}${n ? `, ${n} saved` : ''}">${i + 1}${n ? `<i>${n}</i>` : ''}</button>`;
+    }));
+    const thisMonth = m.y === today.getFullYear() && m.m === today.getMonth();
+    return `<div class="sheet"><button type="button" class="scrim" aria-label="Close calendar" data-action="cal-close"></button>
+      <div class="panel cal-panel" role="dialog" aria-label="Pick a day"><div class="grab"></div>
+        <div class="mc-head"><button type="button" class="mc-nav" data-action="cal-month" data-v="-1" aria-label="Previous month">‹</button><strong>${esc(first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }))}</strong><button type="button" class="mc-nav" data-action="cal-month" data-v="1" aria-label="Next month" ${thisMonth ? 'disabled' : ''}>›</button></div>
+        <div class="mc-grid">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((x) => `<span class="mc-dow">${x}</span>`).join('')}${cells.join('')}</div>
+        <p class="small mc-note">Numbers show how many words you saved that day.</p>
+        <div class="grid2"><button type="button" class="btn" data-action="cal-all">Show all words</button><button type="button" class="btn primary" data-action="cal-today">Today</button></div></div></div>`;
+  }
+
+  // Show the week that has this day in the strip.
+  function calWeekFor(key) {
+    const [y, m, d] = key.split('-').map(Number), t = startOfDay(new Date());
+    const thisSun = new Date(t); thisSun.setDate(t.getDate() - t.getDay());
+    const day = new Date(y, m - 1, d), sun = new Date(day); sun.setDate(day.getDate() - day.getDay());
+    S.calWeek = Math.round((sun - thisSun) / (7 * 86400000));
+  }
+  // Swipe the week strip left or right to move a week.
+  let wkSwipe = null;
+  document.addEventListener('pointerdown', (e) => { const w = e.target.closest && e.target.closest('#calWeek'); if (w) wkSwipe = { x: e.clientX, y: e.clientY, id: e.pointerId }; });
+  document.addEventListener('pointerup', (e) => {
+    const s = wkSwipe; wkSwipe = null; if (!s || s.id !== e.pointerId) return;
+    const dx = e.clientX - s.x; if (Math.abs(dx) < 45 || Math.abs(e.clientY - s.y) > Math.abs(dx)) return;
+    const dir = dx < 0 ? 1 : -1; if (dir > 0 && (S.calWeek || 0) >= 0) return;
+    S.calWeek = Math.min(0, (S.calWeek || 0) + dir); fx('wk', dir > 0 ? 'next' : 'prev'); buzz(6); swallowClick = true; render();
+  });
+  let swallowClick = false;
+  document.addEventListener('click', (e) => { if (swallowClick) { swallowClick = false; if (e.target.closest && e.target.closest('#calWeek')) { e.stopPropagation(); e.preventDefault(); } } }, true);
+
   function viewWords() {
     const q = S.query.trim().toLowerCase();
+    const counts = savedOn();
     const list = S.saved.filter((k) => D[k])
+      .filter((k) => !S.calDay || savedDay(k) === S.calDay)
       .filter((k) => S.wordFilter === 'all' || (S.wordFilter === 'hard' ? D[k].kind === 'hard' : D[k].kind !== 'hard'))
       .filter((k) => !q || D[k].word.includes(q) || D[k].meaning.toLowerCase().includes(q));
     const n = S.saved.length, known = S.saved.filter((k) => D[k] && know(k).label === 'Known').length;
-    const now = new Date();
+    const now = shownDay();
     const day = now.toLocaleDateString('en-US', { weekday: 'long' });
     const date = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-    const days = ['S', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
+    const onDay = S.calDay ? counts[S.calDay] || 0 : 0;
     const filters = [['all', 'All words'], ['slang', 'Slang/customs'], ['hard', 'Hard words']];
     // Layout from Figma "final draft" (node 28:3330).
-    const arrow = (flip) => `<svg class="arrow" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"${flip ? ' style="transform: scaleX(-1)"' : ''}><path d="M8 5v14l11-7z" fill="#FFFFFF"/></svg>`;
     return `<header class="hero wh">
       <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
       ${logo}${avatarBtn()}
-      <div class="wh-title"><div class="wh-row"><h1>${esc(day)},<br>${esc(date)}</h1><span class="cal" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span></div>
-        <div class="hsub">${n === 1 ? '1 word saved' : n + ' words saved'}${known ? ` · ${known} known` : ''}</div></div>
-      <div class="week">${arrow(true)}${days.map((d, i) => `<span class="d ${i === now.getDay() ? 'on' : ''}">${d}</span>`).join('')}${arrow(false)}</div>
+      <div class="wh-title"><div class="wh-row"><h1>${esc(day)},<br>${esc(date)}</h1><button type="button" class="cal" data-action="cal-open" aria-label="Open the calendar" aria-haspopup="dialog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button></div>
+        <div class="hsub">${S.calDay ? `${onDay ? `${onDay} ${onDay === 1 ? 'word' : 'words'} saved this day` : 'No words saved this day'} · <button type="button" class="hsub-link" data-action="cal-all">Show all</button>` : `${n === 1 ? '1 word saved' : n + ' words saved'}${known ? ` · ${known} known` : ''}`}</div></div>
+      ${weekStrip(counts)}
     </header>
     <div class="body wb">
       <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" aria-label="Search your words"></label>
@@ -999,7 +1081,7 @@
         <span class="mean">${esc(e.meaning)}</span>
         <span class="quote">“${esc(e.sentence)}”</span>
         <span class="meta"><img src="icons/figma/pin.svg" width="12" height="12" alt="">${esc(placeOf(e))}</span>${progress(k)}</button>`; }).join('')
-        : `<div class="empty">${q ? 'No saved words match your search.' : 'Nothing here yet. Words you save from the lens or the local guide show up here.'}</div>`}
+        : `<div class="empty">${q ? 'No saved words match your search.' : S.calDay ? 'You didn’t save any words this day. Days with a dot have words.' : 'Nothing here yet. Words you save from the lens or the local guide show up here.'}</div>`}
       ${syncCard()}</div>
       <div class="start-wrap"><button type="button" class="btn primary start" data-action="play" data-v="story"><img src="icons/figma/sparkle.svg" width="19.534" height="20.078" alt="">Start Activity</button></div>
     </div>`;
@@ -1009,7 +1091,7 @@
   const CITIES = window.LINGER_CITIES || {};
   const PGH_IC = { Winter: '🪑', 'Getting around': '🧭', Celebrations: '🍪', Sports: '🏈', Driving: '🚗' };
   const city = () => CITIES[S.city] || CITIES.pgh;
-  const cityName = (c) => `${c.name}, ${c.state}`;
+  const cityName = (c) => (c.name.includes(c.state.replace(/(.)(.)/, '$1.$2.')) ? c.name : `${c.name}, ${c.state}`); // "Washington, D.C.", not "…, DC"
   // Slang from other cities becomes a normal word entry, so Save and Words work the same everywhere.
   function citySlang(id) {
     if (id === 'pgh') return SLANG;
@@ -1096,9 +1178,30 @@
     <div class="body wb rv-body">
       ${act('story', storyIcon, 'Fill in the story', 'Put your words back into a short story.')}
       ${act('cards', '<i class="ti" style="--ic: url(icons/figma/tab-cards.svg)"></i>', 'Flashcards', due ? `Starts with the ${due === 1 ? 'word' : due + ' words'} you need most, in the sentence where you met ${due === 1 ? 'it' : 'them'}.` : `Go through your ${words}, with the sentence where you met each one.`)}
-      <article class="loc-item rv-soon"><span class="badge b-common">Coming soon</span>
-        <ul><li>Read the notice <span>a short text with your words</span></li><li>Landlord or friend? <span>sort words by how formal they are</span></li><li>Dictionary or local? <span>pick the meaning that fits here</span></li></ul></article>
+      <p class="rv-label">Games</p>
+      ${act('match', gameIcons.match, 'Match up', 'Pair each word with its meaning. Can you clear the board with no mistakes?')}
+      ${act('bubbles', gameIcons.bubbles, 'Bubble catch', 'A meaning appears. Pop the word that fits before it floats away.')}
+      ${act('scramble', gameIcons.scramble, 'Unscramble', 'Rebuild each word from its letters, with the sentence as your clue.')}
+      ${act('say', gameIcons.say, 'Say it', 'Hear each word, then say it. Linger listens and tells you how close you were.')}
+      ${act('cityquiz', gameIcons.city, `${esc(city().name)} quiz`, `How well do you know ${esc(city().name)}? Slang, customs and getting around.`)}
+      <button type="button" class="rv-city" data-action="city-pick">${pin} Quiz a different city</button>
+      ${bestLine()}
     </div>`;
+  }
+  const WORD_GAMES = ['match', 'bubbles', 'scramble', 'say'];
+  const gameIcons = {
+    say: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>',
+    city: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V9l5-3v15M10 21V4l9 4v13"/><path d="M13 10h3M13 14h3"/></svg>',
+    match: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="6" rx="1.5"/><rect x="14" y="14" width="7" height="6" rx="1.5"/><path d="M10 7h2a2 2 0 0 1 2 2v8"/></svg>',
+    bubbles: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="14" r="5"/><circle cx="17" cy="7" r="3"/><circle cx="18.5" cy="16.5" r="1.5"/><path d="M7 12.5a2 2 0 0 1 2-1.5"/></svg>',
+    scramble: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="8" width="6" height="7" rx="1.5" transform="rotate(-8 5.5 11.5)"/><rect x="9" y="7" width="6" height="7" rx="1.5"/><rect x="15.5" y="8" width="6" height="7" rx="1.5" transform="rotate(8 18.5 11.5)"/><path d="M5 19h14"/></svg>'
+  };
+  const best = (g) => { try { return Number(localStorage.getItem('linger.best.' + g) || 0); } catch { return 0; } };
+  const setBest = (g, v) => { const was = best(g); if (v > was) { try { localStorage.setItem('linger.best.' + g, String(v)); } catch {} return true; } return false; };
+  function bestLine() {
+    const m = best('match'), b = best('bubbles'), u = best('scramble'), y = best('say'), c = best('city.' + S.city);
+    if (!m && !b && !u && !y && !c) return '';
+    return `<p class="rv-best">Your best: ${[m && `Match up ${m}★`, b && `Bubble catch ${b} pts`, u && `Unscramble ${u}★`, y && `Say it ${y}★`, c && `${esc(city().name)} quiz ${c}★`].filter(Boolean).join(' · ')}</p>`;
   }
 
 
@@ -1232,11 +1335,335 @@
       <div class="tray">${tray}</div></div>`;
   }
 
+  // ---------- games: any saved words (padded with Linger's own words when there are only a few) ----------
+  const goodEntry = (e) => e && e.word && e.meaning && !/^Looking up/.test(e.meaning) && !e.pending;
+  // The words for a game: the ones picked in the word picker, or (Surprise me) saved words first, padded with
+  // Linger's own words. min: the fewest the game needs; picked lists shorter than that are padded.
+  function gamePool(n, ok = () => true, min = 1) {
+    if (S.gameWords) {
+      const picked = S.gameWords.filter((k) => goodEntry(D[k]) && ok(D[k]));
+      if (picked.length >= min) return shuffle(picked).slice(0, n);
+      const extra = shuffle(Object.keys(D).filter((k) => !picked.includes(k) && goodEntry(D[k]) && ok(D[k])));
+      return [...picked, ...extra].slice(0, Math.max(min, picked.length));
+    }
+    const mine = practiceOrder().filter((k) => goodEntry(D[k]) && ok(D[k]));
+    const more = shuffle(Object.keys(D).filter((k) => !mine.includes(k) && goodEntry(D[k]) && ok(D[k])));
+    // One word per family (remit / remitted), so two answers are never nearly the same.
+    const out = [], stem = (w) => w.toLowerCase().replace(/(ted|ed|ing|es|s)$/, '');
+    for (const k of [...mine, ...more]) { if (out.length >= n) break; const a = stem(D[k].word); if (!out.some((j) => { const b = stem(D[j].word); return a.startsWith(b) || b.startsWith(a); })) out.push(k); }
+    return out;
+  }
+  // A short form of a meaning that fits on a tile.
+  const shortMeaning = (m) => { const t = String(m || '').replace(/\s+/g, ' ').trim().replace(/\.$/, ''); const one = t.split(/[.;]\s/)[0]; return one.length > 64 ? one.slice(0, 62).replace(/[\s,]+\S*$/, '') + '…' : one; };
+  const blankIn = (e) => { const s = e.sentence || ''; const re = new RegExp('\\b' + e.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\w*', 'i'); return re.test(s) ? s.replace(re, '_____') : ''; };
+  const stars = (n) => '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n);
+  const gameTop = (title, right) => `<div class="g-top"><button type="button" class="x" data-action="quit" aria-label="Close ${esc(title)}"><img src="icons/figma/x.svg" width="23" height="23" alt=""></button><span class="g-title">${esc(title)}</span><span class="g-right">${right || ''}</span></div>`;
+  const gameEnd = (cls, title, big, sub, again) => `<div class="full-view game-view ${cls}">${gameTop(title)}
+      <div class="g-end"><div class="g-burst" aria-hidden="true">${'<i></i>'.repeat(12)}</div><div class="g-big">${big}</div><p>${sub}</p></div>
+      <div class="g-acts"><button type="button" class="btn white" data-action="quit">Done</button><button type="button" class="btn primary" data-action="play" data-v="${again}" data-go="1">Play again</button></div></div>`;
+
+  // Match up: words on the left, meanings on the right. Tap one of each; a pair clears, a wrong pair wobbles.
+  function startMatch() {
+    const words = gamePool(6, undefined, 3);
+    S.match = { words, left: shuffle(words), right: shuffle(words), sel: null, done: [], miss: 0, missed: [], t0: Date.now(), t: 0 };
+  }
+  function matchPick(side, k) {
+    const m = S.match; if (!m || m.done.includes(k)) return;
+    if (!m.sel || m.sel.side === side) { m.sel = m.sel && m.sel.side === side && m.sel.k === k ? null : { side, k }; buzz(6); return; }
+    const other = m.sel.k; m.sel = null;
+    if (other === k) {
+      m.done.push(k); fx('mtHit', k); buzz(12); track(k, 'review', !m.missed.includes(k));
+      if (m.done.length === m.words.length) { m.t = Math.round((Date.now() - m.t0) / 1000); m.stars = m.miss === 0 ? 3 : m.miss <= 2 ? 2 : 1; m.best = setBest('match', m.stars); buzz([12, 60, 12]); }
+    } else {
+      m.miss++; fx('mtMiss', [side === 'w' ? k : other, side === 'm' ? k : other]); buzz(20);
+      const w = side === 'w' ? k : other; if (!m.missed.includes(w)) m.missed.push(w);
+    }
+  }
+  function viewMatch() {
+    const m = S.match;
+    if (m.done.length === m.words.length) return gameEnd('match-view', 'Match up', `<span class="g-stars">${stars(m.stars)}</span>`,
+      `${m.words.length} pairs in ${m.t} seconds${m.miss ? `, ${m.miss} ${m.miss === 1 ? 'mix-up' : 'mix-ups'}` : ', no mistakes'}.${m.best ? ' New best!' : ''}`, 'match');
+    const miss = FX.mtMiss || [];
+    const tile = (side, k) => {
+      const e = D[k], done = m.done.includes(k), sel = m.sel && m.sel.side === side && m.sel.k === k;
+      const cls = `mt-tile mt-${side}${sel ? ' sel' : ''}${done ? ' done' : ''}${FX.mtHit === k ? ' hit' : ''}${!done && ((side === 'w' && miss[0] === k) || (side === 'm' && miss[1] === k)) ? ' miss' : ''}`;
+      return `<button type="button" class="${cls}" data-action="mt-pick" data-side="${side}" data-k="${k}" ${done ? 'disabled aria-label="Matched"' : ''}>${side === 'w' ? esc(cap(e.word)) : esc(shortMeaning(e.meaning))}</button>`;
+    };
+    return `<div class="full-view game-view match-view">${gameTop('Match up', `${m.done.length}/${m.words.length}`)}
+      <p class="g-hint">${m.sel ? (m.sel.side === 'w' ? `Now tap what <b>${esc(cap(D[m.sel.k].word))}</b> means.` : 'Now tap the word that means this.') : 'Tap a word, then its meaning.'}</p>
+      <div class="mt-board"><div class="mt-col">${m.left.map((k) => tile('w', k)).join('')}</div><div class="mt-col">${m.right.map((k) => tile('m', k)).join('')}</div></div>
+      <div class="g-foot">${m.miss ? `${m.miss} ${m.miss === 1 ? 'mix-up' : 'mix-ups'}` : 'No mistakes yet'}</div></div>`;
+  }
+
+  // Bubble catch: a meaning at the top, word bubbles float up. Pop the right one before it gets away. Three hearts.
+  // The screen can be redrawn mid-round, so each bubble's animation picks up from the time the round started.
+  let bbTimers = [];
+  const stopBubbles = () => { bbTimers.forEach(clearTimeout); bbTimers = []; };
+  function startBubbles() {
+    const pool = gamePool(12);
+    // Wrong answers can come from any word, so a short pick still has four bubbles.
+    const others = Object.keys(D).filter((k) => !pool.includes(k) && goodEntry(D[k]));
+    S.bubbles = { pool, others, round: 0, rounds: S.gameWords ? Math.min(10, Math.max(pool.length, 4)) : Math.min(10, Math.max(6, pool.length)), score: 0, streak: 0, bestStreak: 0, hearts: 3, r: null, over: false };
+    bubbleRound();
+  }
+  function bubbleRound() {
+    stopBubbles();
+    const b = S.bubbles; if (!b) return;
+    if (b.round >= b.rounds || b.hearts <= 0) { b.over = true; b.best = setBest('bubbles', b.score); return; }
+    const k = b.pool[b.round % b.pool.length];
+    const opts = shuffle([k, ...shuffle(b.pool.filter((x) => x !== k)).concat(shuffle(b.others)).slice(0, 3)]);
+    const dur = Math.max(5.5, 9 - b.round * 0.35), lanes = shuffle([24, 76, 42, 60]);
+    b.r = { k, t0: performance.now(), opts: opts.map((o, i) => ({ k: o, lane: lanes[i], delay: i * 1.05 + Math.random() * 0.25, dur: dur + Math.random() * 0.8 })), gone: [], won: false, lost: false };
+    b.round++;
+    if (calm()) return; // Reduce motion: bubbles sit still and don't get away
+    const mine = b.r, right = mine.opts.find((o) => o.k === k);
+    bbTimers.push(setTimeout(() => { if (S.bubbles !== b || b.r !== mine || mine.won) return; mine.lost = true; b.hearts--; b.streak = 0; track(k, 'review', false); buzz(20); render(); bbTimers.push(setTimeout(() => { bubbleRound(); render(); }, 1500)); }, (right.delay + right.dur) * 1000 - 300));
+  }
+  function bubblePop(k) {
+    const b = S.bubbles; if (!b || !b.r || b.r.won || b.r.lost || b.r.gone.includes(k)) return;
+    if (k === b.r.k) {
+      b.r.won = true; b.streak++; b.bestStreak = Math.max(b.bestStreak, b.streak); b.score += 10 + (b.streak - 1) * 5;
+      fx('bbPop', k); buzz(12); track(k, 'review', true);
+      stopBubbles(); bbTimers.push(setTimeout(() => { bubbleRound(); render(); }, 750));
+    } else {
+      b.r.gone.push(k); b.hearts--; b.streak = 0; fx('bbMiss', k); buzz(20);
+      if (b.hearts <= 0) { stopBubbles(); bbTimers.push(setTimeout(() => { b.over = true; b.best = setBest('bubbles', b.score); render(); }, 700)); }
+    }
+  }
+  function viewBubbles() {
+    const b = S.bubbles;
+    if (b.over) return gameEnd('bubble-view', 'Bubble catch', `${b.score}<small>points</small>`,
+      `${b.hearts > 0 ? 'You made it through!' : 'Out of hearts.'} Best streak: ${b.bestStreak}.${b.best ? ' New best score!' : ''}`, 'bubbles');
+    const r = b.r, el = performance.now() - r.t0, still = calm();
+    const hearts = `<span class="bb-hearts" aria-label="${b.hearts} hearts left">${'<i class="on">♥</i>'.repeat(Math.max(0, b.hearts))}${'<i>♥</i>'.repeat(3 - Math.max(0, b.hearts))}</span>`;
+    const bubbles = r.opts.map((o, i) => {
+      if (r.gone.includes(o.k) && FX.bbMiss !== o.k) return '';
+      if (r.won && o.k === r.k && FX.bbPop !== o.k) return ''; // already popped
+      const st = FX.bbPop === o.k ? ' pop' : FX.bbMiss === o.k ? ' miss' : r.won || r.lost ? (o.k === r.k ? ' show' : ' fade') : '';
+      const style = still ? `left:${o.lane}%;top:${30 + (i % 2) * 22}%` : `left:${o.lane}%;animation-duration:${o.dur}s;animation-delay:${Math.round(o.delay * 1000 - el)}ms`;
+      return `<button type="button" class="bubble${still ? ' still' : ''}${st}" style="${style}" data-action="bb-pop" data-k="${o.k}"><span>${esc(D[o.k].word)}</span></button>`;
+    }).join('');
+    return `<div class="full-view game-view bubble-view">${gameTop('Bubble catch', hearts)}
+      <div class="bb-meaning${FX.bbMiss ? ' shake' : ''}"><span class="bb-n">${b.round} of ${b.rounds}</span>${esc(shortMeaning(D[r.k].meaning))}${r.lost ? `<span class="bb-was">It was <b>${esc(D[r.k].word)}</b></span>` : ''}</div>
+      <div class="bb-sky" aria-label="Word bubbles">${bubbles}</div>
+      <div class="g-foot bb-foot"><span>${b.score} pts</span>${b.streak > 1 ? `<span class="bb-streak">🔥 ${b.streak} in a row</span>` : ''}</div></div>`;
+  }
+
+  // Unscramble: the meaning and the sentence (with a gap) are the clue; tap letters to spell the word.
+  function startScramble() {
+    const words = gamePool(6, (e) => /^[a-z]{3,11}$/i.test(e.word));
+    S.scramble = { words, i: 0, right: 0, hints: 0 };
+    scrambleSetup();
+  }
+  function scrambleSetup() {
+    const u = S.scramble, w = D[u.words[u.i]].word.toLowerCase();
+    let tiles; do { tiles = shuffle(w.split('')); } while (w.length > 2 && tiles.join('') === w);
+    u.tiles = tiles.map((c, id) => ({ c, id })); u.slots = Array(w.length).fill(null); u.state = ''; u.used = 0;
+  }
+  function scrambleTile(id) {
+    const u = S.scramble; if (!u || u.state === 'right') return;
+    const at = u.slots.indexOf(null); if (at < 0 || u.slots.includes(id)) return;
+    u.slots[at] = id; u.state = ''; buzz(5); fx('usLand', at);
+    if (!u.slots.includes(null)) scrambleCheck();
+  }
+  function scrambleSlot(s) {
+    const u = S.scramble; if (!u || u.state === 'right' || u.slots[s] === null || u.locked === s) return;
+    u.slots[s] = null; u.state = ''; buzz(5);
+  }
+  function scrambleCheck() {
+    const u = S.scramble, w = D[u.words[u.i]].word.toLowerCase();
+    const got = u.slots.map((id) => u.tiles[id].c).join('');
+    if (got === w) { u.state = 'right'; u.right += u.used ? 0.5 : 1; track(u.words[u.i], 'review', !u.used); buzz([12, 60, 12]); fx('usWin'); }
+    else { u.state = 'wrong'; buzz(20); fx('usWrong'); }
+  }
+  function scrambleHint() {
+    const u = S.scramble; if (!u || u.state === 'right') return;
+    const w = D[u.words[u.i]].word.toLowerCase();
+    const at = u.slots.findIndex((id, i) => id === null || u.tiles[id].c !== w[i]); if (at < 0) return;
+    if (u.slots[at] !== null) u.slots[at] = null;
+    const id = u.tiles.find((t) => t.c === w[at] && !u.slots.includes(t.id)).id;
+    const from = u.slots.indexOf(id); if (from >= 0) u.slots[from] = null;
+    u.slots[at] = id; u.used++; u.hints++; u.state = ''; fx('usLand', at); buzz(8);
+    if (!u.slots.includes(null)) scrambleCheck();
+  }
+  function scrambleNext() {
+    const u = S.scramble; u.i++;
+    if (u.i >= u.words.length) { u.over = true; u.stars = u.right >= u.words.length - 0.5 ? 3 : u.right >= u.words.length / 2 ? 2 : 1; u.best = setBest('scramble', u.stars); return; }
+    scrambleSetup(); fx('usNew');
+  }
+  function viewScramble() {
+    const u = S.scramble;
+    if (u.over) return gameEnd('scramble-view', 'Unscramble', `<span class="g-stars">${stars(u.stars)}</span>`,
+      `${Math.floor(u.right)} of ${u.words.length} words spelled${u.hints ? `, ${u.hints} ${u.hints === 1 ? 'hint' : 'hints'} used` : ' with no hints'}.${u.best ? ' New best!' : ''}`, 'scramble');
+    const e = D[u.words[u.i]], gap = blankIn(e), done = u.state === 'right';
+    const slots = u.slots.map((id, s) => `<button type="button" class="us-slot${id !== null ? ' full' : ''}${FX.usLand === s ? ' land' : ''}${done ? ' win' : ''}${u.state === 'wrong' ? ' wrong' : ''}" style="--i:${s}" data-action="us-slot" data-s="${s}" aria-label="${id !== null ? 'Letter ' + u.tiles[id].c + ', tap to take it back' : 'Empty'}">${id !== null ? esc(u.tiles[id].c) : ''}</button>`).join('');
+    const tiles = u.tiles.map((t) => { const used = u.slots.includes(t.id); return `<button type="button" class="us-tile${used ? ' used' : ''}" data-action="us-tile" data-t="${t.id}" ${used ? 'tabindex="-1" aria-hidden="true"' : ''}>${esc(t.c)}</button>`; }).join('');
+    return `<div class="full-view game-view scramble-view">${gameTop('Unscramble', `${u.i + 1} of ${u.words.length}`)}
+      <div class="us-clue${FX.usNew ? ' new' : ''}"><span class="badge b-loc">Clue</span><p class="us-mean">${esc(cap(shortMeaning(e.meaning)))}</p>${gap ? `<p class="us-sent">“${esc(gap)}”</p>` : ''}
+        <button type="button" class="us-hear" data-action="us-hear" aria-label="Hear the word">${speaker}</button></div>
+      <div class="us-slots${FX.usWrong ? ' shake' : ''}" style="--n:${u.slots.length}">${slots}</div>
+      <p class="g-hint">${done ? `<b>${esc(cap(e.word))}</b>! ${u.used ? 'Spelled with a hint.' : 'Spelled on your own.'}` : u.state === 'wrong' ? 'Not quite. Tap a letter to take it back.' : 'Tap the letters in order.'}</p>
+      ${done ? '' : `<div class="us-tiles">${tiles}</div>`}
+      <div class="g-acts">${done ? `<button type="button" class="btn primary wide-btn" data-action="us-next">${u.i + 1 < u.words.length ? 'Next word' : 'See results'}</button>` : `<button type="button" class="btn white wide-btn" data-action="us-hint">Hint: next letter</button>`}</div></div>`;
+  }
+
+  // ---------- word picker: choose the words for a game, or Surprise me ----------
+  const pickable = (game) => S.saved.filter((k) => goodEntry(D[k]) && (game !== 'scramble' || /^[a-z]{3,11}$/i.test(D[k].word)));
+  function pickSheet() {
+    const p = S.pick, all = pickable(p.game), names = { match: 'Match up', bubbles: 'Bubble catch', scramble: 'Unscramble', say: 'Say it' };
+    const need = { match: 3, bubbles: 1, scramble: 1, say: 1 }[p.game], n = p.sel.length;
+    return `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="pk-close"></button>
+      <div class="panel pk-panel" role="dialog" aria-labelledby="pkTitle"><div class="grab"></div>
+        <div class="pk-head"><div><div class="sheet-word" id="pkTitle" style="font-size: 24px">${names[p.game]}</div><p class="small">Pick the words to play with, or let Linger choose.</p></div>
+          ${all.length ? `<button type="button" class="link-btn" data-action="pk-all">${n === all.length ? 'Clear' : 'Select all'}</button>` : ''}</div>
+        ${all.length ? `<div class="pk-list">${all.map((k) => { const on = p.sel.includes(k); return `<button type="button" class="pk-chip${on ? ' on' : ''}" data-action="pk-word" data-k="${k}" aria-pressed="${on}"><span class="pk-tick" aria-hidden="true">${on ? '✓' : '+'}</span>${esc(cap(D[k].word))}</button>`; }).join('')}</div>`
+          : '<p class="pk-empty">You haven’t saved any words that fit this game yet. Surprise me uses Linger’s own words.</p>'}
+        ${n && n < need ? `<p class="small pk-note">Pick at least ${need}, or Linger adds a few of its own.</p>` : ''}
+        <div class="grid2"><button type="button" class="btn" data-action="pk-random">🎲 Surprise me</button><button type="button" class="btn primary" data-action="pk-go" ${n ? '' : 'disabled'}>${n ? `Play with ${n}` : 'Pick words'}</button></div></div></div>`;
+  }
+
+  // ---------- Say it: hear the word, say it, Linger checks how close it was ----------
+  // Uses the browser's speech recognition (Chrome, Safari), or the iPhone app's (Apple's speech recognizer).
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const canListen = () => !!((BETA && BETA.native) || SR);
+  let rec = null, listenTimer = null;
+  function stopListening() { clearTimeout(listenTimer); try { if (rec) rec.abort(); } catch {} rec = null; if (BETA && BETA.native && S.say && S.say.listening) BETA.post({ listen: 'stop' }); }
+  function startSay() { S.say = { words: gamePool(6), i: 0, scores: [], tries: 0, heard: null, result: null, listening: false }; }
+  const normWord = (t) => String(t || '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+  function editDist(a, b) {
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+  // How close the best thing heard is to the word: 3 = exactly it, 2 = close, 1 = getting there, 0 = something else.
+  function sayScore(target, heard) {
+    const t = normWord(target), tl = t.replace(/ /g, '');
+    let best = 0, said = heard[0] || '';
+    for (const h of heard) {
+      const n = normWord(h); if (!n) continue;
+      if (n === t || n.split(' ').includes(t) || n.replace(/ /g, '') === tl) return { stars: 3, said: h };
+      // compare with the part of what was heard that's closest in length
+      const ws = n.split(' '), cands = [n.replace(/ /g, ''), ...ws, ...ws.slice(1).map((w, i) => ws[i] + w)];
+      for (const c of cands) { const sim = 1 - editDist(c, tl) / Math.max(c.length, tl.length); const st = sim >= 0.8 ? 2 : sim >= 0.55 ? 1 : 0; if (st > best) { best = st; said = h; } }
+    }
+    return { stars: best, said };
+  }
+  function sayHeard(texts, err) {
+    const g = S.say; if (!g || !g.listening) return;
+    g.listening = false; clearTimeout(listenTimer); rec = null;
+    if (err || !texts || !texts.length) { g.result = { stars: -1, msg: err === 'denied' ? 'Linger needs the microphone. Allow it in Settings, then try again.' : 'Linger didn’t catch that. Tap the mic and say the word clearly.' }; render(); return; }
+    const k = g.words[g.i], r = sayScore(D[k].word, texts);
+    g.tries++; g.result = r; g.heard = r.said;
+    if (r.stars === 3 || g.tries >= 3) { g.scores[g.i] = Math.max(g.scores[g.i] || 0, r.stars); track(k, 'review', r.stars >= 2); }
+    else g.scores[g.i] = Math.max(g.scores[g.i] || 0, r.stars);
+    buzz(r.stars === 3 ? [12, 60, 12] : r.stars >= 2 ? 12 : 20); fx('sayResult');
+    render();
+  }
+  function sayListen() {
+    const g = S.say; if (!g || g.listening) return;
+    stopSpeaking(); g.result = null; g.heard = null; g.listening = true; buzz(8);
+    if (BETA && BETA.native) {
+      BETA.post({ listen: 'start' });
+      listenTimer = setTimeout(() => sayHeard([], 'none'), 9000);
+      return;
+    }
+    if (!SR) { g.listening = false; g.result = { stars: -1, msg: 'This browser can’t listen. Try Chrome or Safari, or the Linger iPhone app.' }; return; }
+    try {
+      rec = new SR(); rec.lang = 'en-US'; rec.maxAlternatives = 5; rec.interimResults = false; rec.continuous = false;
+      rec.onresult = (e) => sayHeard([...e.results[0]].map((a) => a.transcript));
+      rec.onerror = (e) => sayHeard([], e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'denied' : 'none');
+      rec.onend = () => { if (S.say && S.say.listening) sayHeard([], 'none'); };
+      rec.start();
+      listenTimer = setTimeout(() => { try { rec && rec.stop(); } catch {} }, 6000);
+    } catch { sayHeard([], 'none'); }
+  }
+  function sayNext() {
+    const g = S.say; if (g.scores[g.i] === undefined) g.scores[g.i] = 0;
+    g.i++; g.tries = 0; g.result = null; g.heard = null;
+    if (g.i >= g.words.length) { const total = g.scores.reduce((a, b) => a + Math.max(0, b), 0); g.stars = total >= g.words.length * 2.5 ? 3 : total >= g.words.length * 1.5 ? 2 : 1; g.best = setBest('say', g.stars); g.over = true; }
+    else fx('sayNew');
+  }
+  function viewSay() {
+    const g = S.say;
+    if (g.over) return gameEnd('say-view', 'Say it', `<span class="g-stars">${stars(g.stars)}</span>`,
+      `${g.scores.filter((x) => x === 3).length} of ${g.words.length} said just right.${g.best ? ' New best!' : ''}`, 'say');
+    const e = D[g.words[g.i]], r = g.result, done = r && (r.stars === 3 || g.tries >= 3);
+    const say = e.say || '';
+    const verdict = !r ? (g.listening ? 'Listening… say the word now.' : canListen() ? 'Tap the mic, then say the word.' : 'This browser can’t listen. Try Chrome or Safari.')
+      : r.stars < 0 ? esc(r.msg)
+      : r.stars === 3 ? 'Perfect! That’s exactly it.'
+      : r.stars === 2 ? 'So close! Listen once more and try again.'
+      : r.stars === 1 ? 'Getting there. Listen, then say it slowly.'
+      : 'That sounded like a different word. Listen and try again.';
+    return `<div class="full-view game-view say-view">${gameTop('Say it', `${g.i + 1} of ${g.words.length}`)}
+      <div class="say-card${FX.sayNew ? ' new' : ''}">
+        <div class="say-word">${esc(e.word)}</div>${say ? `<div class="say-ph">/${esc(say)}/</div>` : ''}
+        <p class="say-mean">${esc(shortMeaning(e.meaning))}</p>
+        <button type="button" class="btn white say-hear" data-action="say-hear">${speaker} Listen</button></div>
+      <div class="say-stage">
+        <button type="button" class="say-mic${g.listening ? ' on' : ''}" data-action="say-mic" aria-label="${g.listening ? 'Listening' : 'Say the word'}" ${done || !canListen() ? 'disabled' : ''}>
+          <span class="say-ring" aria-hidden="true"></span><span class="say-ring r2" aria-hidden="true"></span>${gameIcons.say}</button>
+        ${r && r.stars >= 0 ? `<div class="say-score${FX.sayResult ? ' pop' : ''}" aria-label="${r.stars} of 3">${stars(r.stars)}</div>` : ''}
+        <p class="say-verdict" role="status">${verdict}</p>
+        ${r && r.stars >= 0 && r.stars < 3 && g.heard ? `<p class="say-heard">Linger heard “${esc(g.heard)}”</p>` : ''}
+      </div>
+      <div class="g-acts">${done || (r && r.stars >= 0) ? `<button type="button" class="btn ${done ? 'primary' : 'white'} wide-btn" data-action="say-next">${g.i + 1 < g.words.length ? (done ? 'Next word' : 'Skip to next word') : 'See results'}</button>` : ''}</div></div>`;
+  }
+
+  // ---------- City quiz: slang, customs and getting around for the city you picked ----------
+  function cityQuestions(id) {
+    const c = CITIES[id] || CITIES.pgh, name = c.name, qs = [];
+    const slang = citySlang(id).filter((k) => D[k]).map((k) => D[k]);
+    const customs = cityCustoms(id), around = c.around || [];
+    const otherSlang = Object.keys(CITIES).filter((x) => x !== id).flatMap((x) => citySlang(x)).filter((k) => D[k]).map((k) => D[k]);
+    const pickOthers = (list, not, n, f) => shuffle(list.filter((x) => f(x) !== f(not))).slice(0, n).map(f);
+    shuffle(slang).slice(0, 3).forEach((e) => qs.push({ q: `In ${name}, what does “${e.word}” mean?`, right: e.meaning, wrong: pickOthers([...slang, ...otherSlang], e, 2, (x) => x.meaning), more: e.local || '' }));
+    if (slang.length && otherSlang.length) { const e = shuffle(slang)[0]; qs.push({ q: `Which word would you most likely hear in ${name}?`, right: e.word, wrong: pickOthers(otherSlang, e, 2, (x) => x.word), more: `“${e.word}”: ${e.meaning}` }); }
+    shuffle(customs).slice(0, 3).forEach((t) => qs.push({ q: `${t.ic || '📌'} ${t.title}. What’s the custom in ${name}?`, right: t.body, wrong: pickOthers(customs, t, 2, (x) => x.body), more: '' }));
+    shuffle(around).slice(0, 2).forEach((t) => qs.push({ q: `${t.ic || '🧭'} Getting around ${name}: “${t.title}”. What does it mean?`, right: t.body, wrong: pickOthers(around, t, 2, (x) => x.body), more: '' }));
+    return shuffle(qs).slice(0, 8).map((q) => ({ ...q, opts: shuffle([q.right, ...q.wrong]) }));
+  }
+  function startCityQuiz() { S.cq = { city: CITIES[S.city] ? S.city : 'pgh', qs: cityQuestions(CITIES[S.city] ? S.city : 'pgh'), i: 0, right: 0, picked: null }; }
+  function cityAnswer(i) {
+    const g = S.cq, q = g.qs[g.i]; if (g.picked !== null) return;
+    g.picked = i; const ok = q.opts[i] === q.right; if (ok) g.right++;
+    buzz(ok ? 12 : 20); fx(ok ? 'cqRight' : 'cqWrong');
+  }
+  function cityNext() {
+    const g = S.cq; g.i++; g.picked = null;
+    if (g.i >= g.qs.length) { g.stars = g.right >= g.qs.length - 1 ? 3 : g.right >= g.qs.length / 2 ? 2 : 1; g.best = setBest('city.' + g.city, g.stars); g.over = true; }
+    else fx('cqNew');
+  }
+  function viewCityQuiz() {
+    const g = S.cq, c = CITIES[g.city] || CITIES.pgh, title = `${c.name} quiz`;
+    if (!g.qs.length) return gameEnd('city-view', title, '🏙️', 'There isn’t enough about this city yet for a quiz. Try another city.', 'cityquiz');
+    if (g.over) return gameEnd('city-view', title, `<span class="g-stars">${stars(g.stars)}</span>`, `${g.right} of ${g.qs.length} right. ${g.stars === 3 ? `You know ${esc(c.name)} like a local!` : 'Read the Local tab and try again.'}${g.best ? ' New best!' : ''}`, 'cityquiz');
+    const q = g.qs[g.i], answered = g.picked !== null;
+    const opts = q.opts.map((o, i) => {
+      const st = !answered ? '' : o === q.right ? ' right' : i === g.picked ? ' wrong' : ' dim';
+      return `<button type="button" class="cq-opt${st}" style="--i:${i}" data-action="cq-answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="cq-l" aria-hidden="true">${'ABC'[i]}</span><span>${esc(o)}</span></button>`;
+    }).join('');
+    const ok = answered && q.opts[g.picked] === q.right;
+    return `<div class="full-view game-view city-view">${gameTop(title, `${g.i + 1} of ${g.qs.length}`)}
+      <div class="cq-progress" aria-hidden="true"><span style="width:${Math.round(g.i / g.qs.length * 100)}%"></span></div>
+      <div class="cq-q${FX.cqNew ? ' new' : ''}"><span class="cq-city">${c.emoji || '📍'} ${esc(cityName(c))}</span>${esc(q.q)}</div>
+      <div class="cq-opts${FX.cqNew ? ' new' : ''}">${opts}</div>
+      ${answered ? `<p class="g-hint cq-verdict${ok ? ' ok' : ''}">${ok ? '✓ Right!' : '✕ Not quite.'}${q.more ? ' ' + esc(q.more) : ''}</p>` : ''}
+      <div class="g-acts">${answered ? `<button type="button" class="btn primary wide-btn" data-action="cq-next">${g.i + 1 < g.qs.length ? 'Next question' : 'See results'}</button>` : ''}</div></div>`;
+  }
+
   function overlay() {
     if (S.onb || S.acct) return (S.onb ? viewOnb() : '') + (S.acct ? acctSheet() : '') + (S.toast ? `<div class="toast" role="status">${esc(S.toast)}</div>` : '');
     if (S.activity === 'cards') return viewCards();
     if (S.activity === 'story') return viewStory();
+    if (S.activity === 'match') return viewMatch();
+    if (S.activity === 'bubbles') return viewBubbles();
+    if (S.activity === 'scramble') return viewScramble();
+    if (S.activity === 'say') return viewSay();
+    if (S.activity === 'cityquiz') return viewCityQuiz();
     let html = '';
+    if (S.pick) html += pickSheet();
     if (S.pending && S.tab === 'lens') {
       const secs = (1.1 + (S.pendingRaw.length % 7) * 0.15).toFixed(1);
       html += `<div class="prompt" role="dialog" aria-label="Linger noticed a pause">
@@ -1250,7 +1677,7 @@
         <div class="panel" role="dialog" aria-label="Choose a city"><div class="grab"></div>
           <div class="sum-title">Where are you?</div>
           <button type="button" class="btn ghost" data-action="city-locate">◎ Use my location</button>
-          <div class="city-list">${Object.entries(CITIES).map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${c.emoji}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>
+          <div class="city-list">${Object.entries(CITIES).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${c.emoji}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>
           <div class="small">More cities coming. Each guide has slang, customs, getting around and common mix-ups.</div></div></div>`;
     }
     if (S.langPick) html += langSheet();
@@ -1296,6 +1723,7 @@
       html += `<div class="coach" role="dialog" aria-label="Set up your account"><span class="coach-arrow" aria-hidden="true"></span>
         <strong>Set up your account now</strong><span>Pick your languages and level, and keep your words on every device.</span>
         <div class="coach-acts"><button type="button" class="link-btn" data-action="coach-later">Later</button><button type="button" class="btn primary small-btn" data-action="acct-open">Set up</button></div></div>`;
+    if (S.calOpen && S.tab === 'words') html += monthSheet(savedOn());
     if (BETA) html += betaOverlay();
     if (S.toast) html += `<div class="toast" role="status">${esc(S.toast)}</div>`;
     if (S.sheet) {
@@ -1375,7 +1803,7 @@
     scroll.innerHTML = views[S.tab]();
     scroll.scrollTop = lastTab === S.tab ? top : 0;
     // A new screen rises in; a new section or filter on the same screen deals its cards in. Other taps redraw in place.
-    const viewKey = [S.tab, S.localSeg, S.wordFilter, S.city, S.activity].join('|');
+    const viewKey = [S.tab, S.localSeg, S.wordFilter, S.city, S.activity, S.calDay].join('|');
     scroll.classList.remove('view-in', 'list-in');
     if (!calm() && lastTab !== S.tab) scroll.classList.add('view-in');
     else if (!calm() && viewKey !== lastViewKey) scroll.classList.add('list-in');
@@ -1386,7 +1814,7 @@
     ringDrift();
     over.innerHTML = overlay();
     // The overlay is redrawn on every tap: a sheet or toast that was already showing stays put instead of sliding in again.
-    const panelSig = [S.sheet, S.explain, S.cityPick, S.langPick, S.shareHelp, !!S.feedback, S.installHelp, S.acct, S.onb ? 'onb' + S.onb.step + (S.onb.test ? 't' : '') : '', S.activity, S.coach].join('|');
+    const panelSig = [S.calOpen, S.sheet, S.explain, S.cityPick, S.langPick, S.shareHelp, !!S.feedback, S.installHelp, S.acct, S.onb ? 'onb' + S.onb.step + (S.onb.test ? 't' : '') : '', S.activity, S.coach].join('|');
     over.classList.toggle('keep-panel', panelSig === lastPanelSig);
     over.classList.toggle('keep-toast', S.toast === lastToast);
     lastPanelSig = panelSig; lastToast = S.toast;
@@ -1557,7 +1985,34 @@
     'city-set': (d) => { stopSpeaking(); setCity(d.v); },
     'city-locate': () => { S.cityPick = false; locateCity(); },
     hear: (d) => { const e = D[d.k]; if (e) speak('hear-' + d.k, `${e.word}. ${e.sentence}`); },
-    play: (d) => { stopSpeaking(); S.sheet = null; S.explain = false; S.activity = d.v; if (d.v === 'story') newGame(0); else S.cards = { idx: 0, revealed: false, order: practiceOrder() }; },
+    play: (d) => {
+      if (WORD_GAMES.includes(d.v) && !d.go) { S.pick = { game: d.v, sel: S.pick && S.pick.game === d.v ? S.pick.sel : [] }; return; }
+      stopSpeaking(); stopBubbles(); stopListening(); S.pick = null; S.sheet = null; S.explain = false; S.activity = d.v;
+      if (d.v === 'story') newGame(0);
+      else if (d.v === 'match') startMatch();
+      else if (d.v === 'bubbles') startBubbles();
+      else if (d.v === 'scramble') startScramble();
+      else if (d.v === 'say') startSay();
+      else if (d.v === 'cityquiz') startCityQuiz();
+      else S.cards = { idx: 0, revealed: false, order: practiceOrder() };
+    },
+    'mt-pick': (d) => matchPick(d.side, d.k),
+    'pk-word': (d) => { const p = S.pick, i = p.sel.indexOf(d.k); if (i >= 0) p.sel.splice(i, 1); else p.sel.push(d.k); buzz(5); },
+    'pk-all': () => { const p = S.pick, all = pickable(p.game); p.sel = p.sel.length === all.length ? [] : all.slice(); },
+    'pk-go': () => { S.gameWords = S.pick.sel.slice(); actions.play({ v: S.pick.game, go: 1 }); },
+    'pk-random': () => { S.gameWords = null; actions.play({ v: S.pick.game, go: 1 }); },
+    'pk-close': () => { S.pick = null; },
+    'say-hear': () => { const g = S.say; if (g) speak('say', D[g.words[g.i]].word, null, 'en-US', 0.75); },
+    'say-mic': () => sayListen(),
+    'say-next': () => sayNext(),
+    'cq-answer': (d) => cityAnswer(Number(d.i)),
+    'cq-next': () => cityNext(),
+    'bb-pop': (d) => bubblePop(d.k),
+    'us-tile': (d) => scrambleTile(Number(d.t)),
+    'us-slot': (d) => scrambleSlot(Number(d.s)),
+    'us-hint': () => scrambleHint(),
+    'us-hear': () => { const u = S.scramble; if (u) speak('word', D[u.words[u.i]].word); },
+    'us-next': () => scrambleNext(),
     'cam-start': () => { startCamera(); },
     'cam-close': () => { closeCamera(); },
     'cam-flip': () => { flipCamera(); },
@@ -1576,6 +2031,15 @@
     rescan: () => { stopSpeaking(); S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pending = null; S.sheet = null; S.explain = false; },
     settings: () => { stopSpeaking(); closeCamera(); S.tab = 'settings'; S.pending = null; S.sheet = null; S.explain = false; },
     'paste-open': () => { stopSpeaking(); closeCamera(); S.tab = 'lens'; S.lensMode = 'paste'; S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pending = null; S.sheet = null; S.explain = false; },
+    'cal-day': (d) => { const same = S.calDay === d.v || (!S.calDay && d.v === dayKey(new Date())); S.calDay = same && S.calDay ? null : d.v; buzz(6); },
+    'cal-week': (d) => { S.calWeek = Math.min(0, (S.calWeek || 0) + Number(d.v)); fx('wk', Number(d.v) > 0 ? 'next' : 'prev'); },
+    'cal-open': () => { const t = shownDay(); S.calMonth = { y: t.getFullYear(), m: t.getMonth() }; S.calOpen = true; },
+    'cal-close': () => { S.calOpen = false; },
+    'cal-month': (d) => { const m = S.calMonth, x = new Date(m.y, m.m + Number(d.v), 1); S.calMonth = { y: x.getFullYear(), m: x.getMonth() }; },
+    'cal-pick': (d) => { S.calDay = d.v; S.calOpen = false; calWeekFor(d.v); },
+    'cal-all': () => { S.calDay = null; S.calOpen = false; },
+    'cal-today': () => { S.calDay = null; S.calWeek = 0; S.calOpen = false; },
+    'shot-view': (d) => { S.shotView = d.v; stopSpeaking(); },
     'paste-go': () => { const t = S.pasteDraft; if (t.trim()) handleText(t, 'paste'); },
     'share-help': () => { S.shareHelp = true; },
     'sync-on': () => { startSync(S.sync.code || LingerSync.newCode()); },
@@ -1598,7 +2062,7 @@
     'beta-close': () => { S.feedback = null; S.installHelp = false; },
     install: async () => { S.installHelp = false; if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; },
     capture: () => { capture(); },
-    quit: () => { S.activity = null; S.game = null; },
+    quit: () => { stopBubbles(); stopListening(); S.activity = null; S.game = null; S.match = null; S.bubbles = null; S.scramble = null; S.say = null; S.cq = null; },
     'card-reveal': () => revealCard(),
     'card-next': (d) => {
       const c = S.cards, deck = [...(c.order || practiceOrder()), ...(c.again || [])], k = deck[c.idx];
@@ -1774,6 +2238,7 @@
   if (S.coach) render();
   // iPhone app (ios/): the Share extension hands over a screenshot or text; the app passes it in here.
   window.LingerNative = {
+    heard(m) { sayHeard((m && m.texts) || [], m && m.error); }, // the iPhone app's speech recognizer (Say it)
     receive(m) {
       if (!m) return;
       S.acct = false; S.onb = null; S.activity = null; S.coach = false; S.installTip = false; S.feedback = null; S.installHelp = false;
