@@ -1,0 +1,458 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		462A20CF7A3F0F61C49C23AE /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7E85BF12DBD7091C6CC55F9 /* WebView.swift */; };
+		A2B61220ECEABFEBCD5251EF /* Inbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB80CA1C14652C66F44BA77 /* Inbox.swift */; };
+		A7CA4D5FFCAB1DC6037FD111 /* Inbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB80CA1C14652C66F44BA77 /* Inbox.swift */; };
+		BBE17CE416AA2E405A3BED88 /* LingerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF455FE29713EA10C4D2693B /* LingerApp.swift */; };
+		DDE823A7D7A2FE8EF805FE67 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77CA5266A83F469A24F6E877 /* ShareViewController.swift */; };
+		EDBD61EE5F806EDE00AA99FE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B2CDF393FB9A8B5F57FDE7C /* Assets.xcassets */; };
+		F1B0DC66630AE4B88F12C10C /* LingerShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8F2D75C627535E5CFC2B598F /* LingerShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8321967815049289AC84D63B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 00BA0B99C752B9E0C2EB8FEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 84ED9EBCC9702CE867BA91FC;
+			remoteInfo = LingerShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C6B1220C1CFB0D6CE3F79B8B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F1B0DC66630AE4B88F12C10C /* LingerShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		01C2408BDD380A85EAE37F54 /* LingerShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LingerShare.entitlements; sourceTree = "<group>"; };
+		4B2CDF393FB9A8B5F57FDE7C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4ECEB15E3D89115D59A30BD9 /* Linger.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Linger.entitlements; sourceTree = "<group>"; };
+		5CFDD9E2DB2CF76D8588194E /* Linger.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Linger.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		676318DE156BA7DD9F43D025 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		6EB80CA1C14652C66F44BA77 /* Inbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Inbox.swift; sourceTree = "<group>"; };
+		77CA5266A83F469A24F6E877 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		8F2D75C627535E5CFC2B598F /* LingerShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = LingerShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		BCD130F1961700488B9A5607 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E7E85BF12DBD7091C6CC55F9 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
+		EF455FE29713EA10C4D2693B /* LingerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LingerApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		00D4D2E856DBD6C22DE0761D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5CFDD9E2DB2CF76D8588194E /* Linger.app */,
+				8F2D75C627535E5CFC2B598F /* LingerShare.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		30A92E715EF0E93EFCF6EC66 = {
+			isa = PBXGroup;
+			children = (
+				51C31437795B9805AAE81FFB /* Linger */,
+				B4863DBAEBEFA2943BEDAFFD /* LingerShare */,
+				5E2CC4D988337618A4B5006B /* Shared */,
+				00D4D2E856DBD6C22DE0761D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		51C31437795B9805AAE81FFB /* Linger */ = {
+			isa = PBXGroup;
+			children = (
+				4B2CDF393FB9A8B5F57FDE7C /* Assets.xcassets */,
+				BCD130F1961700488B9A5607 /* Info.plist */,
+				4ECEB15E3D89115D59A30BD9 /* Linger.entitlements */,
+				EF455FE29713EA10C4D2693B /* LingerApp.swift */,
+				E7E85BF12DBD7091C6CC55F9 /* WebView.swift */,
+			);
+			path = Linger;
+			sourceTree = "<group>";
+		};
+		5E2CC4D988337618A4B5006B /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				6EB80CA1C14652C66F44BA77 /* Inbox.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		B4863DBAEBEFA2943BEDAFFD /* LingerShare */ = {
+			isa = PBXGroup;
+			children = (
+				676318DE156BA7DD9F43D025 /* Info.plist */,
+				01C2408BDD380A85EAE37F54 /* LingerShare.entitlements */,
+				77CA5266A83F469A24F6E877 /* ShareViewController.swift */,
+			);
+			path = LingerShare;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		650AD04C3FD8C2C625921A50 /* Linger */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2FC1482E51A20AD8D7652404 /* Build configuration list for PBXNativeTarget "Linger" */;
+			buildPhases = (
+				171E54628AD20A2CEFFBDB68 /* Sources */,
+				9F8FB76083D9D737DF1B6F6B /* Resources */,
+				C6B1220C1CFB0D6CE3F79B8B /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2B3E04AF860204F2B197C171 /* PBXTargetDependency */,
+			);
+			name = Linger;
+			packageProductDependencies = (
+			);
+			productName = Linger;
+			productReference = 5CFDD9E2DB2CF76D8588194E /* Linger.app */;
+			productType = "com.apple.product-type.application";
+		};
+		84ED9EBCC9702CE867BA91FC /* LingerShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B810091496E923703B87596 /* Build configuration list for PBXNativeTarget "LingerShare" */;
+			buildPhases = (
+				70AD98A60C55C02E3D7212A9 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LingerShare;
+			packageProductDependencies = (
+			);
+			productName = LingerShare;
+			productReference = 8F2D75C627535E5CFC2B598F /* LingerShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		00BA0B99C752B9E0C2EB8FEA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					650AD04C3FD8C2C625921A50 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					84ED9EBCC9702CE867BA91FC = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 2B9C6321CADF7236E2E61B65 /* Build configuration list for PBXProject "Linger" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 30A92E715EF0E93EFCF6EC66;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 00D4D2E856DBD6C22DE0761D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				650AD04C3FD8C2C625921A50 /* Linger */,
+				84ED9EBCC9702CE867BA91FC /* LingerShare */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9F8FB76083D9D737DF1B6F6B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EDBD61EE5F806EDE00AA99FE /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		171E54628AD20A2CEFFBDB68 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A2B61220ECEABFEBCD5251EF /* Inbox.swift in Sources */,
+				BBE17CE416AA2E405A3BED88 /* LingerApp.swift in Sources */,
+				462A20CF7A3F0F61C49C23AE /* WebView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70AD98A60C55C02E3D7212A9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A7CA4D5FFCAB1DC6037FD111 /* Inbox.swift in Sources */,
+				DDE823A7D7A2FE8EF805FE67 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2B3E04AF860204F2B197C171 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 84ED9EBCC9702CE867BA91FC /* LingerShare */;
+			targetProxy = 8321967815049289AC84D63B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0777408285A090A0FBA36682 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		4A45AB81B5DD53E59C9995B3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Linger/Linger.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Linger/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.somohanty.linger;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5CD762FDE822865AE303387A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LingerShare/LingerShare.entitlements;
+				INFOPLIST_FILE = LingerShare/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.somohanty.linger.share;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		64326D05E247DF5FF3C996D0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Linger/Linger.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Linger/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.somohanty.linger;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E4B777AAE29B02D9EAAAB40D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LingerShare/LingerShare.entitlements;
+				INFOPLIST_FILE = LingerShare/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.somohanty.linger.share;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F09DF7FDB2998C7B5275066E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0B810091496E923703B87596 /* Build configuration list for PBXNativeTarget "LingerShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5CD762FDE822865AE303387A /* Debug */,
+				E4B777AAE29B02D9EAAAB40D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		2B9C6321CADF7236E2E61B65 /* Build configuration list for PBXProject "Linger" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0777408285A090A0FBA36682 /* Debug */,
+				F09DF7FDB2998C7B5275066E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		2FC1482E51A20AD8D7652404 /* Build configuration list for PBXNativeTarget "Linger" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A45AB81B5DD53E59C9995B3 /* Debug */,
+				64326D05E247DF5FF3C996D0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 00BA0B99C752B9E0C2EB8FEA /* Project object */;
+}

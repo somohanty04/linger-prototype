@@ -1,0 +1,79 @@
+# Linger for iPhone (TestFlight beta). Generate the Xcode project with:  cd ios && xcodegen
+# The app is a thin native shell around the live beta page (https://somohanty04.github.io/linger-prototype/beta/),
+# so web changes reach testers on the next launch without a new build. Only native changes (this folder) need one.
+name: Linger
+options:
+  bundleIdPrefix: com.somohanty
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""          # your Apple Developer Team ID (set by tools/set-team.sh)
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"   # iPhone
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  Linger:
+    type: application
+    platform: iOS
+    sources: [Linger, Shared]
+    dependencies:
+      - target: LingerShare
+    entitlements:
+      path: Linger/Linger.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.somohanty.linger]
+    info:
+      path: Linger/Info.plist
+      properties:
+        CFBundleDisplayName: Linger
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.education
+        NSCameraUsageDescription: Linger uses the camera to scan letters, signs and bills so it can explain the hard words.
+        NSMicrophoneUsageDescription: Linger only uses the microphone if you choose to talk to it.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIStatusBarStyle: UIStatusBarStyleLightContent
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.somohanty.linger
+            CFBundleURLSchemes: [linger]
+        LingerAppGroup: group.com.somohanty.linger
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.somohanty.linger
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  LingerShare:
+    type: app-extension
+    platform: iOS
+    sources: [LingerShare, Shared]
+    entitlements:
+      path: LingerShare/LingerShare.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.somohanty.linger]
+    info:
+      path: LingerShare/Info.plist
+      properties:
+        CFBundleDisplayName: Linger
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LingerAppGroup: group.com.somohanty.linger
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsImageWithMaxCount: 1
+              NSExtensionActivationSupportsText: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.somohanty.linger.share

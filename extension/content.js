@@ -76,6 +76,7 @@
     @media (prefers-reduced-motion: reduce) { .linger-w { transition: none !important; } }
     .linger-w:focus-visible { outline: 2px solid #1F2AA8 !important; outline-offset: 2px !important; }
     .linger-w:hover, .linger-w.linger-on { background: rgba(255, 217, 138, 0.45) !important; }
+    .linger-w.linger-seen:not(.linger-swapped) { text-decoration-style: solid !important; text-decoration-color: rgba(184, 110, 0, 0.5) !important; }
     .linger-w.linger-swapped { text-decoration: underline solid #1F8A57 2px !important; text-underline-offset: 3px !important; background: rgba(189, 232, 215, 0.35) !important; }
     .linger-nounder .linger-w:not(.linger-swapped) { text-decoration: none !important; cursor: inherit !important; background: none !important; }
     .linger-big .linger-w { font-size: 1.25em !important; padding: 0 2px !important; }
@@ -316,12 +317,83 @@
     li { display: flex; gap: 10px; background: #F6F8FF; border: 1px solid #EAEFFF; border-radius: 12px; padding: 10px; }
     .chips { display: flex; gap: 6px; flex-wrap: wrap; }
     .chip { border-radius: 99px; padding: 4px 10px; background: #F0FFFA; border: 1px solid #BDE8D7; color: #115940; font-size: 12px; font-weight: 700; }
+    /* Microinteractions (Reduce motion turns them off: the rule below, and calm() in the script) */
+    .wc.wc-in { animation: wc-in .2s cubic-bezier(.2, .8, .25, 1); }
+    @keyframes wc-in { from { opacity: 0; transform: scale(.94) translateY(var(--wc-dy, -4px)); } to { opacity: 1; transform: none; } }
+    .wc::before { content: ''; position: absolute; left: var(--tail-x, 24px); width: 12px; height: 12px; margin-left: -6px; transform: rotate(45deg); border-radius: 2px; pointer-events: none; }
+    .wc.wc-below::before { top: -5px; background: #1F2DA8; }
+    .wc.wc-above::before { bottom: -5px; background: #FCFDFF; box-shadow: 1px 1px 0 #E8E8E8; }
+    .wc.wc-missing.wc-below::before { background: #A81F1F; }
+    .wc.wc-missing:not(.wc-ask).wc-above::before { background: #D65252; box-shadow: none; }
+    .ink { position: fixed; z-index: 0; border-radius: 3px; background: rgba(255, 205, 100, .55); mix-blend-mode: multiply; transform-origin: left center; pointer-events: none; animation: ink .34s cubic-bezier(.2, .7, .2, 1) both, ink-out .3s ease-in .55s forwards; }
+    @keyframes ink { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    @keyframes ink-out { to { opacity: 0; } }
+    .selchip { animation: chip-in .18s cubic-bezier(.3, 1.4, .5, 1); }
+    @keyframes chip-in { from { opacity: 0; transform: translateY(4px) scale(.9); } to { opacity: 1; transform: none; } }
+    .wc-chip { transition: background .15s, color .15s; cursor: default; }
+    .wc-chip.on { background: #4451E0; color: #FFFFFF; }
+    .wc-s b.wc-try { animation: wc-try .22s ease-out; background: #FFF0C8; border-radius: 3px; }
+    @keyframes wc-try { from { opacity: 0; } to { opacity: 1; } }
+    .wc-icon.wc-pop { animation: wc-pop .42s cubic-bezier(.3, 1.6, .5, 1); }
+    @keyframes wc-pop { 0% { transform: scale(.8); } 60% { transform: scale(1.2); } 100% { transform: none; } }
+    .wc-saved:not([hidden]) { animation: chip-in .25s ease-out; }
+    .fly-word { position: fixed; left: 0; top: 0; padding: 6px 12px; border-radius: 99px; background: #5362FF; color: #FFFFFF; font: 700 13px/16px 'Linger Figtree', 'Figtree', system-ui, sans-serif; white-space: nowrap; box-shadow: 0 6px 16px rgba(31, 42, 168, .35); pointer-events: none; }
+    .dock { position: fixed; right: 18px; bottom: 72px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: #FFFFFF; color: #1F2AA8; box-shadow: 0 8px 20px rgba(16, 20, 80, .25); pointer-events: none; animation: dock 1.5s ease-in-out forwards; }
+    .dock svg { width: 22px; height: 22px; display: block; }
+    @keyframes dock { 0% { opacity: 0; transform: translateY(8px) scale(.9); } 15% { opacity: 1; transform: none; } 55% { transform: none; } 65% { transform: scale(1.15); } 75% { transform: none; } 88% { opacity: 1; } 100% { opacity: 0; transform: translateY(4px); } }
+    .wc-note.wc-wait, .msg-ai.wait { transition: opacity .18s; }
+    .wc-note.wc-wait.out, .msg-ai.wait.out { opacity: 0; }
+    ::highlight(linger-read) { background-color: #DCE1FF; color: #1F2AA8; }
+    .panel li { animation: rise .32s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(.08s + var(--i, 0) * .06s); }
+    .panel .chip { animation: chip-pop .45s cubic-bezier(.3, 1.45, .5, 1) both; animation-delay: calc(.3s + var(--i, 0) * .08s); }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @keyframes chip-pop { from { opacity: 0; transform: scale(.85); } 60% { opacity: 1; transform: scale(1.05); } to { transform: none; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; } }
   </style><div id="layer"></div>`;
   const layer = root.getElementById('layer');
   const attach = () => { if (!host$.isConnected) document.documentElement.appendChild(host$); };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const asset = (p) => (api ? chrome.runtime.getURL(p) : p);
+  // ---------- microinteractions ----------
+  const calm = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // Highlighter ink sweeps over what was just picked, left to right, then fades into the steady highlight.
+  function ink(rects) {
+    if (calm()) return;
+    [...rects].filter((r) => r.width > 1 && r.height > 1).slice(0, 12).forEach((r, i) => {
+      const d = document.createElement('div'); d.className = 'ink';
+      d.style.cssText = `left:${r.left - 1}px;top:${r.top}px;width:${r.width + 2}px;height:${r.height}px;animation-delay:${i * 60}ms, ${550 + i * 60}ms`;
+      layer.prepend(d); setTimeout(() => d.remove(), 1000 + i * 60);
+    });
+  }
+  // While Linger AI works, the waiting line says what it's doing (stops as soon as anything else is written there).
+  const waitSteps = () => [AI_WAIT, '✦ Finding what it means in this sentence…', '✦ Writing it in simple words…'];
+  function waitCycle(el, steps = waitSteps()) {
+    if (!el) return;
+    let i = 0;
+    el.classList.add('wc-wait');
+    const t = setInterval(() => {
+      if (!el.isConnected || el.textContent !== steps[i] || i >= steps.length - 1) { clearInterval(t); el.classList.remove('out'); return; }
+      el.classList.add('out');
+      setTimeout(() => { if (el.textContent !== steps[i]) return; i += 1; el.textContent = steps[i]; el.classList.remove('out'); }, 180);
+    }, 1800);
+  }
+  // Saved: the bookmark pops; when the word went to the phone, it flies into a phone that shows up in the corner.
+  const PHONE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>';
+  function savedFx(btn, label, synced) {
+    if (!btn) return;
+    btn.classList.remove('wc-pop'); void btn.offsetWidth; btn.classList.add('wc-pop');
+    if (!synced || calm() || !btn.animate) return;
+    const dock = document.createElement('div'); dock.className = 'dock'; dock.setAttribute('aria-hidden', 'true'); dock.innerHTML = PHONE_SVG;
+    layer.appendChild(dock); setTimeout(() => dock.remove(), 1600);
+    const w = document.createElement('div'); w.className = 'fly-word'; w.setAttribute('aria-hidden', 'true');
+    w.textContent = label.length > 28 ? label.slice(0, 27) + '…' : label;
+    layer.appendChild(w);
+    const a = btn.getBoundingClientRect(), b = dock.getBoundingClientRect(), ww = w.offsetWidth, wh = w.offsetHeight;
+    const x0 = a.left + a.width / 2 - ww / 2, y0 = a.top + a.height / 2 - wh / 2, x1 = b.left + b.width / 2 - ww / 2, y1 = b.top + b.height / 2 - wh / 2;
+    w.animate([{ transform: `translate(${x0}px, ${y0}px)`, opacity: 1 }, { transform: `translate(${(x0 + x1) / 2}px, ${Math.min(y0, y1) - 70}px) scale(.9)`, opacity: 1, offset: 0.45 }, { transform: `translate(${x1}px, ${y1}px) scale(.3)`, opacity: 0 }], { duration: 700, delay: 120, easing: 'cubic-bezier(.45,.05,.35,1)', fill: 'both' })
+      .finished.catch(() => {}).then(() => w.remove());
+    setTimeout(() => w.remove(), 1100); // in case animations are paused
+  }
   // Figtree (the Linger app font) for the word card; most websites don't have it.
   let fontsAdded = false;
   function addFonts() {
@@ -356,7 +428,24 @@
     note.innerHTML = '<span><b>Explain this with AI?</b> Linger will send text to Claude (an AI by Anthropic): the text you select and the paragraph around it, and, when you use Ask Linger, translate a page or switch hard words into your language, text from the page (for Ask Linger, also its title and website). Nothing is sent unless you allow it. You can change this later in the Linger menu.</span>'
       + '<span class="wc-consent-btns"><button type="button" class="wc-no">Not now</button><button type="button" class="wc-yes">Allow AI explanations</button></span>';
     note.querySelector('.wc-no').onclick = async () => { await setConsent(false); note.classList.remove('wc-consent'); note.textContent = 'OK. Nothing was sent. Linger will keep using its dictionary. You can turn on AI explanations in the Linger menu.'; };
-    note.querySelector('.wc-yes').onclick = async () => { await setConsent(true); note.classList.remove('wc-consent'); note.textContent = AI_WAIT; onAllow(); };
+    note.querySelector('.wc-yes').onclick = async () => { await setConsent(true); note.classList.remove('wc-consent'); note.textContent = AI_WAIT; waitCycle(note); onAllow(); };
+  }
+  // Read an answer aloud with the word being said highlighted (CSS Custom Highlight: the text itself isn't changed).
+  function speakAlong(el, t, lang = 'en-US') {
+    const node = el && el.firstChild;
+    if (HL) HL.delete('linger-read');
+    if (!HL || !node || node.nodeType !== 3 || node.nodeValue !== t) return speakIt(t, lang);
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(t); u.lang = lang; u.rate = 0.9;
+      u.onboundary = (e) => {
+        if (e.name && e.name !== 'word') return;
+        const a = e.charIndex, sp = t.slice(a).search(/\s/), b = e.charLength ? a + e.charLength : sp < 0 ? t.length : a + sp;
+        try { const r = document.createRange(); r.setStart(node, a); r.setEnd(node, Math.min(b, t.length)); HL.set('linger-read', new Highlight(r)); } catch {}
+      };
+      u.onend = u.onerror = () => HL.delete('linger-read');
+      speechSynthesis.speak(u);
+    } catch {}
   }
   const speakIt = (t, lang = 'en-US') => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = lang; u.rate = 0.9; speechSynthesis.speak(u); } catch {} };
 
@@ -443,7 +532,7 @@
     const back = card && cardOpener && cardOpener.isConnected ? cardOpener : null; cardOpener = null;
     if (card) card.remove(); card = null;
     if (back) back.focus({ preventScroll: true });
-    if (cardSpan) cardSpan.classList.remove('linger-on'); cardSpan = null;
+    if (cardSpan) { cardSpan.classList.remove('linger-on'); if (cardSpan.classList.contains('linger-w')) cardSpan.classList.add('linger-seen'); } cardSpan = null;
     if (cardRange && HL) HL.delete('linger-sel'); cardRange = null;
     window.dispatchEvent(new CustomEvent('linger-card-closed'));
   }
@@ -451,14 +540,27 @@
     const w = el.offsetWidth, h = el.offsetHeight;
     let x = Math.min(Math.max(8, rect.left), innerWidth - w - 8);
     let y = rect.bottom + 8;
-    if (y + h > innerHeight - 8) y = Math.max(8, rect.top - h - 8);
+    const below = !(y + h > innerHeight - 8);
+    if (!below) y = Math.max(8, rect.top - h - 8);
     el.style.left = x + 'px'; el.style.top = y + 'px';
+    if (!el.classList.contains('wc')) return;
+    // The tail points at the word (when the card sits right next to it), and the card grows out of that point.
+    const tail = Math.min(Math.max(18, rect.left + Math.min(rect.width, 160) / 2 - x), w - 18);
+    const near = below ? y - rect.bottom < 14 : rect.top - (y + h) < 14;
+    el.classList.toggle('wc-below', near && below); el.classList.toggle('wc-above', near && !below);
+    el.style.setProperty('--tail-x', tail + 'px');
+    if (!el.dataset.shown) {
+      el.dataset.shown = '1';
+      el.style.transformOrigin = `${tail}px ${below ? 0 : h}px`;
+      el.style.setProperty('--wc-dy', below ? '-6px' : '6px');
+      if (!calm()) el.classList.add('wc-in');
+    }
   }
   // Open the card for an underlined word (or any word picked with a double-click).
   async function openCard(sp, why) {
     if (dead) return;
     attach(); closeCard();
-    cardSpan = sp; sp.classList.add('linger-on');
+    cardSpan = sp; sp.classList.add('linger-on'); ink(sp.getClientRects());
     const raw = sp.dataset.orig || sp.textContent, k = keyOf(raw); // a swapped word opens the original word's card
     const sl = SLANG[k], d = D[k];
     const kind = sl ? 'slang' : sp.dataset.kind || (PLAIN[k] !== undefined ? 'hard' : 'common');
@@ -539,8 +641,22 @@
       </div>`;
     layer.appendChild(card);
     redraw();
+    if (aiOK()) waitCycle(card.querySelector('#ai'));
     addTranslation(() => card && cardSpan === sp, () => sp.getBoundingClientRect(), raw, usable(sentence) ? sentence : '', true);
     card.querySelector('#hear').onclick = () => speakIt(raw);
+    // Try an easier word: point at a synonym and it takes the word's place in the "This word" sentence.
+    const tryWord = (chipEl) => {
+      const b = card && card.querySelector('#ctx .wc-s b');
+      card.querySelectorAll('.wc-chip.on').forEach((c) => c.classList.remove('on'));
+      if (!b) return;
+      if (!b.dataset.orig) b.dataset.orig = b.textContent;
+      const o = b.dataset.orig, w = chipEl ? chipEl.textContent.trim() : o;
+      b.textContent = chipEl ? (/^[A-Z]/.test(o) ? cap(w) : w.toLowerCase()) : o;
+      b.classList.remove('wc-try'); void b.offsetWidth;
+      if (chipEl) { chipEl.classList.add('on'); b.classList.add('wc-try'); }
+    };
+    card.addEventListener('pointerover', (e) => { const c = e.target.closest('.wc-chip'); if (c && !c.classList.contains('on')) tryWord(c); });
+    card.addEventListener('pointerout', (e) => { const c = e.target.closest('.wc-chip'); if (c && !(e.relatedTarget && c.contains(e.relatedTarget))) tryWord(null); });
     // Claude's answer: the meaning in this sentence, and easier words that fit here.
     const useAI = (a) => {
       if (!card || cardSpan !== sp) return;
@@ -580,7 +696,7 @@
     card.querySelector('#save').onclick = async () => {
       const r = await send({ type: 'save', key: k, word: { w: raw.toLowerCase(), m: meaning, s: sentence, p: plain !== sentence ? plain : '', place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
       if (!card || cardSpan !== sp) return;
-      showSaved();
+      showSaved(); savedFx(card.querySelector('#save'), cap(raw), r && r.synced);
       card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Connect your phone in the Linger menu to send words there.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
     };
     const wantSyn = !ctx.syns.length && kind !== 'slang';
@@ -712,6 +828,7 @@
     attach(); closeCard();
     cardRange = range;
     if (HL) HL.set('linger-sel', new Highlight(range));
+    ink(range.getClientRects());
     addFonts();
     const nWords = text.split(' ').length;
     const badge = /[.!?…]["”’)]?$/.test(text) || nWords >= 10 ? 'Sentence' : 'Phrase';
@@ -787,6 +904,7 @@
       </div>`;
     layer.appendChild(card);
     redraw();
+    if (aiOK()) waitCycle(card.querySelector('#ai'));
     addTranslation(() => card && cardRange === range, () => range.getBoundingClientRect(), text, fromText || para.slice(0, 1500), false);
     card.querySelector('#hear').onclick = () => speakIt(text);
     const useAI = (a) => {
@@ -804,7 +922,7 @@
       const p = ai ? ai.plain : changed ? plain : '';
       const r = await send({ type: 'save', key, word: { w: text, m, s: fromText || text, p, place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
       if (!card || cardRange !== range) return;
-      showSaved();
+      showSaved(); savedFx(card.querySelector('#save'), text, r && r.synced);
       card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : r && r.paired === false ? 'Saved here. Connect your phone in the Linger menu to send it there.' : r && r.error ? 'Saved here. Couldn’t reach your phone right now.' : 'Saved.';
     };
     // Look up the hard words Linger doesn't know yet, and find easier synonyms.
@@ -1022,6 +1140,7 @@
     attach(); closeCard(); hideChip();
     cardRange = range;
     if (HL) HL.set('linger-sel', new Highlight(range));
+    ink(range.getClientRects());
     addFonts();
     const isCur = () => card && cardRange === range;
     const orig = pageTr ? [...new Set([range.startContainer, range.endContainer].map((n) => pageTr.orig.get(n)).filter(Boolean))].map((x) => x.trim()).join(' … ') : '';
@@ -1051,6 +1170,7 @@
       const r = await send({ type: 'save', key: 'phrase-' + (english || text).toLowerCase().replace(/[^\p{L}0-9]+/gu, '-').slice(0, 60), word: { w: english || text, m: meaning || text, s: orig || text, p: '', place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
       if (!isCur()) return;
       card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true');
+      savedFx(card.querySelector('#save'), english || text, r && r.synced);
       card.querySelector('#note').textContent = r && r.synced ? 'Saved. Sent to the Linger app on your phone.' : 'Saved.';
     };
     // 1. In English (the original English is already right there when Linger translated this page).
@@ -1190,8 +1310,8 @@
     panel = document.createElement('div');
     panel.className = 'panel'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'What this page wants from you');
     panel.innerHTML = `<div class="phead"><strong>✦ What this ${sel.split(' ').length > 5 ? 'text' : 'page'} wants from you</strong><button class="x" aria-label="Close">✕</button></div>
-      <div class="pbody">${points.length ? `<ul>${points.map(([ic, t]) => `<li><span>${ic}</span><span>${esc(t)}</span></li>`).join('')}</ul>` : '<div>Linger couldn’t find instructions on this page.</div>'}
-        ${dates.length ? `<div class="lbl">Key dates and amounts</div><div class="chips">${dates.map((d) => `<span class="chip">${esc(d)}</span>`).join('')}</div>` : ''}
+      <div class="pbody">${points.length ? `<ul>${points.map(([ic, t], i) => `<li style="--i:${i}"><span>${ic}</span><span>${esc(t)}</span></li>`).join('')}</ul>` : '<div>Linger couldn’t find instructions on this page.</div>'}
+        ${dates.length ? `<div class="lbl">Key dates and amounts</div><div class="chips">${dates.map((d, i) => `<span class="chip" style="--i:${i}">${esc(d)}</span>`).join('')}</div>` : ''}
         <div class="row"><button class="btn" id="read">🔊 Read aloud</button></div>
         <div class="note">Made by swapping formal words for plain ones in the important sentences. Select some text first to explain just that part.</div></div>`;
     layer.appendChild(panel);
@@ -1304,8 +1424,9 @@
       <div class="ask-sugg">${SUGGEST.map((s) => `<button type="button">${esc(T(s))}</button>`).join('')}</div>`;
     log.innerHTML = intro + msgs + (pending ? `<div class="msg-me">${esc(pending)}</div>${err ? '' : `<div class="msg-ai wait">${esc(T('Reading the page…'))}</div>`}` : '') + (err ? `<div class="msg-ai err">${esc(err)}</div>` : '');
     log.querySelectorAll('.ask-sugg button').forEach((b) => { b.onclick = () => ask(b.textContent); });
-    log.querySelectorAll('.ask-hear').forEach((b) => { b.onclick = () => { const t = askHist[+b.dataset.i]; speakIt(t.a, t.lang || 'en-US'); }; });
+    log.querySelectorAll('.ask-hear').forEach((b) => { b.onclick = () => { const t = askHist[+b.dataset.i]; speakAlong(b.parentElement, t.a, t.lang || 'en-US'); }; });
     log.scrollTop = log.scrollHeight;
+    if (pending && !err && !uiLang) waitCycle(log.querySelector('.msg-ai.wait'), ['Reading the page…', 'Finding the answer…', 'Writing it in simple words…']);
   }
   async function ask(raw) {
     const q = String(raw || '').trim();

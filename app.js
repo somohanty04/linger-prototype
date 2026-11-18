@@ -46,7 +46,7 @@
   const PHRASES = [[/remit (the )?payment/gi, 'pay'], [/failure to (\w+) (may|will|could) result in/gi, 'if you don’t $1, it could lead to'], [/failure to/gi, 'if you don’t'], [/may result in/gi, 'could lead to'], [/termination of (your )?service/gi, 'your service being cut off'], [/for your records/gi, 'so you have it later'], [/prior written consent/gi, 'written permission first'], [/in full/gi, 'completely'], [/no later than/gi, 'by'], [/in accordance with/gi, 'following'], [/you are hereby notified that/gi, 'this letter tells you that'], [/is hereby/gi, 'is'], [/are hereby/gi, 'are']];
   const SCAN_PLACE = 'Camera scan';
   const ORIGIN_LABEL = { camera: 'Your scan', upload: 'Your photo', share: 'Shared from another app', paste: 'Pasted text' };
-  const SHARE_URL = 'https://somohanty04.github.io/linger-prototype/';
+  const SHARE_URL = 'https://somohanty04.github.io/linger-prototype/' + (window.LINGER_BETA ? 'beta/' : '');
   const SHARE_SAMPLE = 'Your water bill has a past due balance of $86.40. Payment must be received no later than November 18 to avoid a late fee. Failure to pay may result in termination of service.';
   TEXTS.camera = '';
   const D = {
@@ -150,6 +150,35 @@
   const BETA = window.LINGER_BETA && window.LingerBeta ? window.LingerBeta : null; // beta/index.html only
   const logo = '<img class="logo" src="icons/figma/logo.svg" width="33" height="33.48" alt="Linger">' + (BETA ? '<span class="beta-tag" aria-label="Beta version">Beta</span>' : '');
   const isSaved = (k) => S.saved.includes(k);
+  const calIcon = '<svg class="date-ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
+  // ---------- microinteractions ----------
+  // FX: one-shot effects for the next render only (a word just placed, a card just flipped). The screen is redrawn on
+  // every tap, so an effect that lived in the state would replay each time; FX is cleared after each render.
+  const FX = {};
+  S.seenToks = new Set(); // hard words already looked at in this text: their dotted underline turns solid
+  const fx = (k, v = true) => { FX[k] = v; };
+  const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const buzz = (ms = 10) => { try { if (!calm() && navigator.vibrate) navigator.vibrate(ms); } catch {} }; // Android only; iPhones ignore it
+  // A small copy of something flies from one element to another along an arc (above everything, then removed).
+  function fly(fromEl, toEl, html, cls = '') {
+    if (calm() || !fromEl || !toEl || !document.body.animate) return Promise.resolve();
+    const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
+    if (!a.width || !b.width) return Promise.resolve();
+    const el = document.createElement('div');
+    el.className = 'fly ' + cls; el.setAttribute('aria-hidden', 'true'); el.innerHTML = html;
+    document.body.appendChild(el);
+    const w = el.offsetWidth, h = el.offsetHeight;
+    const x0 = a.left + a.width / 2 - w / 2, y0 = a.top + a.height / 2 - h / 2;
+    const x1 = b.left + b.width / 2 - w / 2, y1 = b.top + b.height / 2 - h / 2;
+    const mx = (x0 + x1) / 2, my = Math.min(y0, y1) - 60;
+    const anim = el.animate([
+      { transform: `translate(${x0}px, ${y0}px) scale(1)`, opacity: 1 },
+      { transform: `translate(${mx}px, ${my}px) scale(0.9)`, opacity: 1, offset: 0.45 },
+      { transform: `translate(${x1}px, ${y1}px) scale(0.35)`, opacity: 0.2 }
+    ], { duration: 620, easing: 'cubic-bezier(.45,.05,.35,1)' });
+    return Promise.race([anim.finished.catch(() => {}), new Promise((r) => setTimeout(r, 900))]).then(() => el.remove());
+  }
+  function bump(el) { if (!el || calm()) return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); el.addEventListener('animationend', () => el.classList.remove('bump'), { once: true }); }
   function toggleSave(k) {
     const i = S.saved.indexOf(k);
     if (i >= 0) { S.saved.splice(i, 1); track(k, 'unsave'); }
@@ -246,6 +275,7 @@
     if (canSpeak) window.speechSynthesis.cancel();
     S.speaking = null;
     document.querySelectorAll('.tok.speaking').forEach((t) => t.classList.remove('speaking'));
+    document.querySelectorAll('.read-mark').forEach((m) => m.remove());
   }
   function speak(id, text, onWord, lang = 'en-US') {
     if (!canSpeak) return;
@@ -268,8 +298,17 @@
       let i = 0; while (i + 1 < starts.length && starts[i + 1] <= ci) i++;
       document.querySelectorAll('.tok.speaking').forEach((t) => t.classList.remove('speaking'));
       const el = document.querySelector(`.tok[data-i="${i}"]`);
-      if (el) el.classList.add('speaking');
+      if (el) { el.classList.add('speaking'); markTok(el); }
     });
+  }
+  // Reading along: one soft highlight glides from word to word (instead of jumping), and the text scrolls with it.
+  function markTok(el) {
+    const box = el.parentElement; if (!box) return;
+    let m = box.querySelector(':scope > .read-mark');
+    const place = () => { m.style.transform = `translate(${el.offsetLeft - 2}px, ${el.offsetTop}px)`; m.style.width = el.offsetWidth + 4 + 'px'; m.style.height = el.offsetHeight + 'px'; };
+    if (!m) { m = document.createElement('span'); m.className = 'read-mark'; m.setAttribute('aria-hidden', 'true'); box.prepend(m); place(); void m.offsetWidth; m.classList.add('on'); }
+    else place();
+    try { el.scrollIntoView({ block: 'nearest', behavior: calm() ? 'auto' : 'smooth' }); } catch {}
   }
   const summaryText = (s) => [s.title + '.', ...s.points.map((p) => p[1].replace(/<[^>]+>/g, ''))].join(' ');
 
@@ -426,6 +465,12 @@
   function stopCamera() { if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; } }
   function closeCamera() { stopCamera(); if (S.scan.status === 'live') S.scan.status = 'idle'; }
   // Keep only the part of the picture inside the on-screen frame (the video is shown with object-fit: cover).
+  function shutterFlash(card) {
+    buzz(15);
+    if (!card || calm()) return;
+    const fl = document.createElement('div'); fl.className = 'lh-flash'; fl.setAttribute('aria-hidden', 'true');
+    card.appendChild(fl); fl.addEventListener('animationend', () => fl.remove(), { once: true });
+  }
   async function capture() {
     const v = document.getElementById('cam'), f = document.getElementById('camFrame'); if (!v || !v.videoWidth || !f) return;
     const vr = v.getBoundingClientRect(), f0 = f.getBoundingClientRect();
@@ -438,6 +483,7 @@
     const sw = Math.min(v.videoWidth - sx, fr.width / k), sh = Math.min(v.videoHeight - sy, fr.height / k);
     // Tapping shakes the phone, so take a few frames over half a second and keep the sharpest.
     if (capture.busy) return; capture.busy = true;
+    shutterFlash(f.closest('.lh-card'));
     let best = null, bestScore = -1;
     for (let i = 0; i < 6; i++) {
       if (i) await new Promise((r) => setTimeout(r, 90));
@@ -462,6 +508,7 @@
     }
     return s;
   }
+  const scanStage = (p) => (p < 30 ? 'Finding the words…' : p < 70 ? 'Reading each line…' : p < 95 ? 'Checking the hard words…' : 'Almost there…');
   async function scanImage(src, origin = 'camera') {
     closeCamera(); stopSpeaking();
     S.tab = 'lens'; S.source = 'camera';
@@ -469,7 +516,7 @@
     S.lensMode = origin === 'upload' ? 'upload' : 'scan';
     S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0, origin }; render();
     try {
-      const { text, conf } = await readImage(src, (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; });
+      const { text, conf } = await readImage(src, (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; const st = document.getElementById('scanStage'); if (st && st.textContent !== scanStage(p)) { st.textContent = scanStage(p); st.classList.remove('swap'); void st.offsetWidth; st.classList.add('swap'); } });
       if (text.split(' ').length < 3) throw new Error('empty');
       Object.keys(D).forEach((k) => { if (D[k].scanned && !isSaved(k)) delete D[k]; });
       TEXTS.camera = text; SUMMARY.camera = summarize(text);
@@ -783,14 +830,15 @@
     const reading = sc.status === 'reading', done = sc.status === 'done' && !!TEXTS.camera;
     let card, cta;
     if (reading) {
-      card = `<div class="lh-card lh-reading"><img class="lh-photo" src="${sc.img}" alt="Your photo"><p class="lh-hint">Reading text <span id="scanPct">${sc.progress}%</span></p></div>`;
+      card = `<div class="lh-card lh-reading"><img class="lh-photo" src="${sc.img}" alt="Your photo"><span class="lh-scanline" aria-hidden="true"></span><p class="lh-hint"><span id="scanStage">${scanStage(sc.progress)}</span> <span id="scanPct">${sc.progress}%</span></p></div>`;
       cta = `<button type="button" class="btn primary lh-cta" disabled>Reading…</button>`;
     } else if (done) {
       const active = S.pending || S.sheet, speaking = S.speaking === 'lens';
       const toks = tokens().map((raw, i) => {
         if (!raw) return '';
         const k = keyOf(raw);
-        return `<button type="button" class="tok${k && isHard(k) && !learned(k) ? ' hard' : ''}${active && k === active ? ' on' : ''}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
+        const hard = k && isHard(k) && !learned(k);
+        return `<button type="button" class="tok${hard ? ' hard' : ''}${hard && S.seenToks.has(k) ? ' seen' : ''}${active && k === active ? ' on' : ''}${FX.ink === i ? ' ink' : ''}" data-action="word" data-i="${i}">${esc(raw)}</button>`;
       }).join('');
       let autos = [];
       if (S.autoHard) { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
@@ -855,12 +903,19 @@
     </div>`;
   }
   // ---------- beta ----------
+  const planeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>';
+  // Feedback sent: a paper plane takes off across the top of the screen.
+  function paperPlane() {
+    if (calm()) return;
+    const p = document.createElement('div'); p.className = 'plane-fly'; p.setAttribute('aria-hidden', 'true'); p.innerHTML = planeIcon;
+    screenEl.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true });
+  }
   function betaSettings() {
     const queued = BETA.pending();
     return `<div class="beta-sec"><div class="label">Beta</div>
       <button type="button" class="act share-card" data-action="beta-feedback"><span class="ic">💬</span><span><strong>Send feedback</strong><span class="small">Tell us what broke, what was confusing, or what you wish Linger did</span></span><span class="go">›</span></button>
       ${BETA.standalone() ? '' : `<button type="button" class="act share-card" data-action="beta-install"><span class="ic">📲</span><span><strong>Add Linger to your Home Screen</strong><span class="small">Then it opens full screen, like an app</span></span><span class="go">›</span></button>`}
-      <p class="small beta-ver">Linger Beta ${esc(BETA.version)} · ${esc(BETA.date)}${BETA.standalone() ? ' · installed' : ''}${queued ? ` · ${queued} feedback ${queued === 1 ? 'message' : 'messages'} waiting to send` : ''}</p></div>`;
+      <p class="small beta-ver">Linger Beta ${esc(BETA.version)} · ${esc(BETA.date)}${BETA.standalone() ? ' · installed' : ''}${queued ? ` · <span class="plane-wait" aria-hidden="true">${planeIcon}</span>${queued} feedback ${queued === 1 ? 'message' : 'messages'} waiting to send` : ''}</p></div>`;
   }
   function betaOverlay() {
     let html = '';
@@ -893,11 +948,18 @@
   }
 
   // How well they know a saved word: a short meter, the label, and why.
+  // The level each word showed last time, so a word that moved up (Learning → Almost → Known) gets a small moment the
+  // first time it's seen again: its bar fills from where it was, and Known gets a tick.
+  const KN_KEY = 'linger.kn.shown', KN_RANK = { Learning: 0, Almost: 1, Known: 2 };
+  const knShown = (() => { try { return JSON.parse(localStorage.getItem(KN_KEY) || '{}') || {}; } catch { return {}; } })();
+  let knSaveT = null;
   function progress(k) {
     const e = know(k), pct = Math.round(e.p * 100);
     const why = !e.seen ? 'Not practiced yet' : e.right || e.wrong ? `${e.right} right · ${e.wrong} missed` : e.lookups ? `Looked up ${e.lookups === 1 ? 'once' : e.lookups + ' times'}` : 'Saved';
-    return `<span class="kn kn-${e.label.toLowerCase()}" aria-label="${e.label}: about ${pct}% sure you know it. ${why}${e.due ? '. Due for review' : ''}">
-      <span class="kn-bar" aria-hidden="true"><span style="width:${Math.max(6, pct)}%"></span></span><span class="kn-txt" aria-hidden="true"><b>${e.label}</b> · ${why}${e.due ? ' · <i>Review today</i>' : ''}</span></span>`;
+    const prev = knShown[k], up = prev && KN_RANK[e.label] > KN_RANK[prev[0]];
+    if (!prev || prev[0] !== e.label || prev[1] !== pct) { knShown[k] = [e.label, pct]; clearTimeout(knSaveT); knSaveT = setTimeout(() => { try { localStorage.setItem(KN_KEY, JSON.stringify(knShown)); } catch {} }, 300); }
+    return `<span class="kn kn-${e.label.toLowerCase()}${up ? ' kn-up' : ''}" aria-label="${e.label}: about ${pct}% sure you know it. ${why}${e.due ? '. Due for review' : ''}">
+      <span class="kn-bar" aria-hidden="true"><span style="width:${Math.max(6, pct)}%${up ? `; --from:${Math.max(6, prev[1])}%` : ''}"></span></span><span class="kn-txt" aria-hidden="true">${up && e.label === 'Known' ? '<span class="kn-tick">✓</span>' : ''}<b>${e.label}</b> · ${why}${e.due ? ' · <i>Review today</i>' : ''}</span></span>`;
   }
   function viewWords() {
     const q = S.query.trim().toLowerCase();
@@ -1055,13 +1117,58 @@
       <div class="fc-rings fc-r2" aria-hidden="true"><img src="icons/figma/rings-card-top.svg" width="351.387" height="351.387" alt=""></div>
       <div class="fc-top"><button type="button" class="x" data-action="quit" aria-label="Close flashcards"><img src="icons/figma/x.svg" width="23" height="23" alt=""></button><span class="n">${Math.min(c.idx + 1, deck.length)} of ${deck.length}</span></div>
       <div class="fc-stack">
-        <div class="fc-card">
+        <div class="fc-card${FX.flip ? ' flip-in' : ''}${FX.deal ? ' deal-in' : ''}">
           <div class="fc-head"><div class="fc-row">${badge(e.kind)}${flag}</div><div class="fc-word">${esc(cap(e.word))}</div></div>
           <div class="fc-body"><p class="fc-q">“${q}”</p>${c.revealed ? `<p class="fc-ans">${esc(e.meaning)}</p>` : ''}<div class="fc-meta"><img src="icons/figma/pin-16.svg" width="16" height="16" alt="">${esc(placeOf(e))}</div></div>
         </div>
         ${c.revealed ? '<div class="fc-answer"><button type="button" class="btn fc-btn white" data-action="card-next" data-v="again">Still learning</button><button type="button" class="btn fc-btn primary" data-action="card-next" data-v="knew">I knew it</button></div>' : '<button type="button" class="btn fc-btn primary" data-action="card-reveal">Show meaning</button>'}
       </div></div>`;
   }
+
+  // Show meaning: the card turns edge-on, the meaning is drawn, and it turns back (the second half is CSS: .flip-in).
+  function revealCard(from) {
+    const el = document.querySelector('.fc-card');
+    const done = () => { if (!S.cards || S.cards.revealed) return; S.cards.revealed = true; fx('flip'); buzz(8); render(); };
+    if (calm() || !el || !el.animate) { done(); return false; }
+    el.animate([{ transform: from || 'none' }, { transform: 'perspective(900px) rotateY(90deg)' }], { duration: 150, easing: 'ease-in', fill: 'forwards' }).finished.then(done, done);
+    setTimeout(done, 400); // animations can be paused (a background tab): never leave the card stuck edge-on
+    return false;
+  }
+  // Flashcards can be pulled: drag the front a little and let go to turn it over; once the meaning shows, drag right
+  // for "I knew it" or left for "Still learning". A short drag springs back.
+  let fcDrag = null;
+  document.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest && e.target.closest('.fc-card');
+    if (!c || S.activity !== 'cards' || e.target.closest('button')) return;
+    fcDrag = { c, id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, on: false };
+  });
+  document.addEventListener('pointermove', (e) => {
+    const d = fcDrag; if (!d || e.pointerId !== d.id) return;
+    d.dx = e.clientX - d.x0;
+    if (!d.on) { if (Math.abs(d.dx) < 8 || Math.abs(e.clientY - d.y0) > Math.abs(d.dx)) return; d.on = true; try { d.c.setPointerCapture(e.pointerId); } catch {} d.c.style.transition = 'none'; }
+    const t = Math.sign(d.dx) * Math.min(Math.abs(d.dx), 160) * (S.cards.revealed ? 0.8 : 0.45); // the front resists: it's a peek
+    d.c.style.transform = `translateX(${t}px) rotate(${t / 22}deg)`;
+    d.c.classList.toggle('lean-yes', S.cards.revealed && t > 50); d.c.classList.toggle('lean-no', S.cards.revealed && t < -50);
+  });
+  const fcEnd = (e) => {
+    const d = fcDrag; if (!d || e.pointerId !== d.id) return; fcDrag = null;
+    if (!d.on) return;
+    const c = d.c, far = Math.abs(d.dx) > 80;
+    if (far && !S.cards.revealed) { revealCard(c.style.transform); return; }
+    if (far && S.cards.revealed && c.animate && !calm()) {
+      const out = d.dx > 0 ? 1 : -1;
+      let moved = false;
+      const next = () => { if (moved) return; moved = true; actions['card-next']({ v: out > 0 ? 'knew' : 'again' }); render(); };
+      c.animate([{ transform: c.style.transform, opacity: 1 }, { transform: `translateX(${out * 420}px) rotate(${out * 14}deg)`, opacity: 0 }], { duration: 220, easing: 'ease-in', fill: 'forwards' })
+        .finished.then(next, next);
+      setTimeout(next, 450);
+      return;
+    }
+    if (far && S.cards.revealed) { actions['card-next']({ v: d.dx > 0 ? 'knew' : 'again' }); render(); return; }
+    c.style.transition = 'transform .35s cubic-bezier(.3,1.6,.5,1)'; c.style.transform = ''; c.classList.remove('lean-yes', 'lean-no');
+  };
+  document.addEventListener('pointerup', fcEnd);
+  document.addEventListener('pointercancel', fcEnd);
 
   function newGame(storyIdx) {
     const st = STORIES[storyIdx];
@@ -1080,10 +1187,15 @@
       b++;
       const w = g.placed[b];
       let cls = 'blank';
-      if (g.checked) cls += w === answers[b] ? ' right' : ' wrong';
+      const ok = w === answers[b];
+      if (g.checked) cls += ok ? ' right' : ' wrong';
       else if (w) cls += ' filled';
       else if (g.sel) cls += ' target';
-      return `<span class="bw"><button type="button" class="${cls}" data-action="blank" data-b="${b}" aria-label="${w ? 'Blank filled with ' + esc(D[w].word) : 'Empty blank ' + (b + 1)}">${w ? esc(D[w].word) : ''}</button>${esc(punct(i))}</span>`;
+      if (FX.land === b) cls += ' land'; // a word just dropped in
+      if (FX.checked) cls += ok ? ' settle' : ' nudge'; // just checked: right words settle, wrong ones shake gently
+      // A wrong word shows the right one faintly beside it (no red X).
+      const ans = g.checked && !ok && !g.fixed ? `<span class="blank-ans" aria-label="Right word: ${esc(D[answers[b]].word)}">${esc(D[answers[b]].word)}</span>` : '';
+      return `<span class="bw"><button type="button" class="${cls}" style="--i:${b}" data-action="blank" data-b="${b}" aria-label="${w ? 'Blank filled with ' + esc(D[w].word) : 'Empty blank ' + (b + 1)}">${w ? esc(D[w].word) : ''}</button>${ans}${esc(punct(i))}</span>`;
     }).join('');
     const left = g.placed.filter((x) => !x).length;
     let tray;
@@ -1137,7 +1249,14 @@
           <div class="small">More cities coming. Each guide has slang, customs, getting around and a pause map.</div></div></div>`;
     }
     if (S.langPick) html += langSheet();
-    if (S.shareHelp) {
+    if (S.shareHelp && BETA && BETA.native) {
+      html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
+        <div class="panel" role="dialog" aria-label="Use Linger in any app"><div class="grab"></div>
+          <div class="sum-title">Use Linger in any app</div>
+          <ol class="beta-steps"><li>Take a screenshot, or select text in any app.</li><li>Tap <b>Share</b>.</li><li>Tap <b>Linger</b>. If you don't see it, scroll the app row to the end, tap <b>More</b>, and turn Linger on.</li></ol>
+          <div class="small">Linger opens with the text read and explained.</div>
+          <div class="grid2"><button type="button" class="btn" data-action="close">Close</button><button type="button" class="btn primary" data-action="share-try">Try a sample</button></div></div></div>`;
+    } else if (S.shareHelp) {
       html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
         <div class="panel" role="dialog" aria-label="Use Linger in any app"><div class="grab"></div>
           <div class="sum-title">Use Linger in any app</div>
@@ -1162,9 +1281,9 @@
         <div class="panel" role="dialog" aria-label="${esc(s.title)}"><div class="grab"></div>
           <div class="item-head" style="align-items: flex-start"><div class="sum-title">${esc(s.title)}</div>
             <button type="button" class="speak ${on ? 'on' : ''}" data-action="speak-summary" aria-label="${on ? 'Stop reading' : 'Read summary aloud'}" ${canSpeak ? '' : 'disabled'}>${speaker}</button></div>
-          <ul class="points">${s.points.map(([ic, t]) => { const x = tr(t.replace(/<[^>]+>/g, '')); return `<li><span class="pi" aria-hidden="true">${ic}</span><span>${t}${x ? `<span class="tr-line" ${langAttrs()}>${x.status === 'ok' ? esc(x.t) : x.status === 'wait' ? 'Translating…' : ''}</span>` : ''}</span></li>`; }).join('')}</ul>
+          <ul class="points">${s.points.map(([ic, t], pi) => { const x = tr(t.replace(/<[^>]+>/g, '')); return `<li style="--i:${pi}"><span class="pi" aria-hidden="true">${ic}</span><span>${t}${x ? `<span class="tr-line" ${langAttrs()}>${x.status === 'ok' ? esc(x.t) : x.status === 'wait' ? 'Translating…' : ''}</span>` : ''}</span></li>`; }).join('')}</ul>
           ${S.lang ? `<div class="small">🌐 Also in ${esc(langLabel())}. <button type="button" class="link-btn" data-action="lang-open">Change</button></div>` : ''}
-          ${s.dates.length ? `<div style="display: flex; flex-direction: column; gap: 6px"><div class="label" style="color: var(--muted)">Key dates</div><div class="dates">${s.dates.map((d) => `<span class="date">${esc(d)}</span>`).join('')}</div></div>` : ''}
+          ${s.dates.length ? `<div style="display: flex; flex-direction: column; gap: 6px"><div class="label" style="color: var(--muted)">Key dates</div><div class="dates" style="--n:${s.points.length}">${s.dates.map((d, di) => `<span class="date" style="--i:${di}">${/^\s*\$/.test(d) ? '' : calIcon}${esc(d)}</span>`).join('')}</div></div>` : ''}
           <div class="small">${esc(s.note)} ${n} words on this page are underlined. Tap one for its meaning.</div>
           <button type="button" class="btn primary" data-action="close">Got it</button></div></div>`;
     }
@@ -1187,7 +1306,7 @@
           <div style="display: flex; flex-direction: column; gap: 4px"><div class="label" style="color: var(--muted)">In this sentence</div><div>${esc(e.ctx)}</div><div class="ctx">“${esc(e.sentence)}”</div></div>
           ${e.local ? `<div class="local"><div class="label">${pin}Around here</div><div style="font-size: 14px">${esc(e.local)}</div></div>` : ''}
           <div class="small" style="font-size: 12px">Seen at ${esc(placeOf(e))}</div>
-          <div class="grid2"><button type="button" class="btn" data-action="close">Close</button><button type="button" class="btn ${s ? 'saved' : 'primary'}" data-action="save" data-k="${S.sheet}">${s ? 'Saved ✓' : 'Save to Words'}</button></div>`;
+          <div class="grid2"><button type="button" class="btn" data-action="close">Close</button><button type="button" class="btn ${s ? 'saved' : 'primary'}${FX.saved === S.sheet ? ' pop' : ''}" data-action="save" data-k="${S.sheet}">${s ? 'Saved ✓' : 'Save to Words'}</button></div>`;
       } else {
         const sentence = TEXTS[S.source].split(/(?<=[.!?])\s/).find((x) => x.includes(S.sheetRaw)) || '';
         inner = `<div class="item-head"><div style="display: flex; align-items: center; gap: 10px"><div class="sheet-word">${esc(S.sheetRaw)}</div>${spk}</div>${badge('common')}</div>
@@ -1208,7 +1327,7 @@
   const scroll = document.getElementById('scroll');
   const over = document.getElementById('overlay');
   const screenEl = document.querySelector('.screen');
-  let lastTab = null;
+  let lastTab = null, lastPanelSig = null, lastToast = '';
   function render() {
     const views = { lens: viewLens, words: viewWords, local: viewLocal, review: viewReview, settings: viewSettings };
     const top = scroll.scrollTop;
@@ -1218,6 +1337,12 @@
     scroll.scrollTop = lastTab === S.tab ? top : 0;
     lastTab = S.tab;
     over.innerHTML = overlay();
+    // The overlay is redrawn on every tap: a sheet or toast that was already showing stays put instead of sliding in again.
+    const panelSig = [S.sheet, S.explain, S.cityPick, S.langPick, S.shareHelp, !!S.feedback, S.installHelp, S.acct, S.onb ? 'onb' + S.onb.step + (S.onb.test ? 't' : '') : '', S.activity, S.coach].join('|');
+    over.classList.toggle('keep-panel', panelSig === lastPanelSig);
+    over.classList.toggle('keep-toast', S.toast === lastToast);
+    lastPanelSig = panelSig; lastToast = S.toast;
+    for (const k in FX) delete FX[k];
     screenEl.classList.toggle('full', !!S.activity);
     screenEl.classList.toggle('on-lens', S.tab === 'lens');
     const camEl = document.getElementById('cam');
@@ -1313,16 +1438,17 @@
   const actions = {
     tab: (d) => { stopSpeaking(); closeCamera(); S.tab = d.tab; S.pending = null; S.sheet = null; S.explain = false; },
     word: (d) => {
+      fx('ink', Number(d.i));
       const raw = tokens()[Number(d.i)];
       const k = keyOf(raw);
       if (k && S.source === 'camera') makeEntry(k, TEXTS.camera, SCAN_PLACE);
       if (!k) return;
       const clean = raw.replace(/[.,!?;:]+$/, '');
       if (S.askFirst) { S.pending = k; S.pendingRaw = clean; S.sheet = null; }
-      else { S.sheet = k; S.sheetRaw = clean; S.pending = null; track(k, 'lookup'); }
+      else { S.sheet = k; S.sheetRaw = clean; S.pending = null; track(k, 'lookup'); S.seenToks.add(k); }
     },
-    open: (d) => { S.sheet = d.k; S.sheetRaw = d.k; S.pending = null; track(d.k, 'lookup'); },
-    accept: () => { S.sheet = S.pending; S.sheetRaw = S.pendingRaw; S.pending = null; track(S.sheet, 'lookup'); },
+    open: (d) => { S.sheet = d.k; S.sheetRaw = d.k; S.pending = null; track(d.k, 'lookup'); S.seenToks.add(d.k); },
+    accept: () => { S.sheet = S.pending; S.sheetRaw = S.pendingRaw; S.pending = null; track(S.sheet, 'lookup'); S.seenToks.add(S.sheet); },
     dismiss: () => { track(S.pending, 'dismiss'); S.pending = null; },
     'acct-open': () => { S.acct = true; S.coach = false; S.sheet = null; S.pending = null; },
     'coach-later': () => { S.coach = false; try { localStorage.setItem('linger.coach.later', String(Date.now())); } catch {} },
@@ -1369,7 +1495,14 @@
     },
     'speak-tr': (d) => { speak('tr', d.t, null, d.l || S.lang); },
     auto: () => { S.autoHard = !S.autoHard; },
-    save: (d) => { toggleSave(d.k); },
+    save: (d, el) => {
+      const adding = !isSaved(d.k);
+      toggleSave(d.k);
+      if (!adding) return;
+      fx('saved', d.k); buzz(12);
+      const tab = document.querySelector('.tabbar [data-tab="words"]'), w = D[d.k] ? D[d.k].word : d.k;
+      fly(el, tab, esc(cap(w)), 'fly-word').then(() => bump(tab));
+    },
     filter: (d) => { S.wordFilter = d.v; },
     seg: (d) => { S.localSeg = d.v; },
     'city-pick': () => { S.cityPick = true; },
@@ -1409,6 +1542,7 @@
       const r = await BETA.sendFeedback(f.text, { kind: f.kind, screen: f.screen, email: f.email });
       S.feedback = null;
       showToast(r === 'sent' ? 'Thanks! Your feedback was sent.' : 'Saved on this phone. Linger will send it later.');
+      if (r === 'sent') paperPlane();
       render();
     },
     'beta-install': () => { S.installHelp = true; S.installTip = false; betaTipLater(); },
@@ -1417,25 +1551,27 @@
     install: async () => { S.installHelp = false; if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; },
     capture: () => { capture(); },
     quit: () => { S.activity = null; S.game = null; },
-    'card-reveal': () => { S.cards.revealed = true; },
+    'card-reveal': () => revealCard(),
     'card-next': (d) => {
       const c = S.cards, deck = [...(c.order || practiceOrder()), ...(c.again || [])], k = deck[c.idx];
       if (k && d.v) track(k, 'review', d.v === 'knew'); // their answer feeds the learning model
       if ((c.flag || d.v === 'again') && k && !(c.again || []).includes(k)) c.again = [...(c.again || []), k];
-      c.idx += 1; c.revealed = false; c.flag = false;
+      c.idx += 1; c.revealed = false; c.flag = false; fx('deal');
+      if (d.v === 'knew') buzz(12);
     },
     'card-flag': () => { S.cards.flag = !S.cards.flag; },
     pick: (d) => { const g = S.game; g.sel = g.sel === d.k ? null : d.k; },
     blank: (d) => {
       const g = S.game, b = Number(d.b);
       if (g.checked) return;
-      if (g.sel) { const prev = g.placed.indexOf(g.sel); if (prev >= 0) g.placed[prev] = null; g.placed[b] = g.sel; g.sel = null; }
+      if (g.sel) { const prev = g.placed.indexOf(g.sel); if (prev >= 0) g.placed[prev] = null; g.placed[b] = g.sel; g.sel = null; fx('land', b); buzz(8); }
       else if (g.placed[b]) { g.placed[b] = null; } // tap a filled blank to send the word back
     },
     check: () => {
       const g = S.game;
       if (g.placed.includes(null)) return;
-      g.checked = true; g.missIdx = 0;
+      g.checked = true; g.missIdx = 0; fx('checked');
+      buzz(g.placed.every((w, i) => w === STORIES[g.story].parts[i * 2 + 1]) ? [12, 60, 12] : 20);
       STORIES[g.story].parts.filter((_, i) => i % 2 === 1).forEach((a, i) => track(a, 'review', g.placed[i] === a));
     },
     'miss-next': () => { S.game.missIdx += 1; },
@@ -1445,8 +1581,7 @@
   document.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-action]');
     if (!b || !actions[b.dataset.action]) return;
-    actions[b.dataset.action](b.dataset);
-    render();
+    if (actions[b.dataset.action](b.dataset, b) !== false) render(); // false: the action animates first, then redraws itself
   });
   document.addEventListener('change', async (ev) => {
     if (ev.target.id === 'acctPhoto') {
@@ -1588,6 +1723,15 @@
   const COACH_KEY = 'linger.coach.later';
   S.coach = !S.prefs.done && !shared && !params.get('import') && (() => { try { return Date.now() - Number(localStorage.getItem(COACH_KEY) || 0) > 86400000; } catch { return true; } })();
   if (S.coach) render();
+  // iPhone app (ios/): the Share extension hands over a screenshot or text; the app passes it in here.
+  window.LingerNative = {
+    receive(m) {
+      if (!m) return;
+      S.acct = false; S.onb = null; S.activity = null; S.coach = false; S.installTip = false; S.feedback = null; S.installHelp = false;
+      if (m.type === 'image' && m.data) scanImage(m.data, 'upload');
+      else if (m.type === 'text' && m.text) { handleText(m.text, 'share'); render(); }
+    }
+  };
   // Beta: offer the Home Screen once on a phone (not again for a week after "Later").
   const TIP_KEY = 'linger.beta.installtip';
   function betaTipLater() { try { localStorage.setItem(TIP_KEY, String(Date.now())); } catch {} }
@@ -1595,4 +1739,5 @@
     S.installTip = (() => { try { return Date.now() - Number(localStorage.getItem(TIP_KEY) || 0) > 7 * 86400000; } catch { return false; } })();
 
   render();
+  if (BETA && BETA.native) BETA.post({ ready: true }); // the iPhone app sends anything waiting from the Share menu
 })();

@@ -16,7 +16,10 @@
   const ua = navigator.userAgent || '';
   const platform = /Android/.test(ua) ? 'android'
     : /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : 'other'; // iPadOS says it's a Mac
-  const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  // Inside the iPhone app (ios/), the page runs in a WKWebView with a "linger" message handler.
+  const bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.linger;
+  const native = !!bridge;
+  const standalone = () => native || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   // A random ID per phone, so feedback from one tester can be grouped without knowing who they are.
   const tester = () => { let t = read(TESTER, ''); if (!t) { t = Math.random().toString(36).slice(2, 10); write(TESTER, t); } return t; };
 
@@ -40,7 +43,9 @@
   window.LingerBeta = {
     version: B.version,
     date: B.date,
-    platform,
+    platform: native ? 'ios-app' : platform,
+    native,
+    post: (m) => { try { bridge.postMessage(m); } catch {} },
     standalone,
     pending: () => read(QUEUE, []).length,
     // text: what the tester wrote. ctx: { kind: 'bug' | 'idea' | 'other', screen, email? }
@@ -52,7 +57,7 @@
         screen: String(ctx.screen || '').slice(0, 40),
         email: String(ctx.email || '').slice(0, 200),
         version: B.version,
-        platform,
+        platform: native ? 'ios-app' : platform,
         installed: standalone(),
         tester: tester(),
         ua: ua.slice(0, 300),
