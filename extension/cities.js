@@ -1,5 +1,5 @@
 // City guides for the Local tab. Pittsburgh's slang and customs live in app.js (they are also used by the Lens);
-// the other cities are written here. Add a city by copying one entry. Pause-map numbers are sample data.
+// the other cities are written here. Add a city by copying one entry.
 window.LINGER_CITIES = {
   pgh: {
     name: 'Pittsburgh', state: 'PA', nick: 'The Steel City', lat: 40.4406, lon: -79.9959, emoji: '🌉',
@@ -154,6 +154,255 @@ window.LINGER_CITIES = {
       { ic: '💳', title: 'TAP', body: 'Pay for Metro trains and buses with a TAP card or the TAP app.' },
       { ic: '🛣️', title: 'Freeways', body: '“The 10”, “the 101”: freeways are the main way around. Rush hour is roughly 7–10 a.m. and 3–7 p.m.' },
       { ic: '🚇', title: 'Metro lines', body: 'Metro Rail lines have letters and colors (like the B Line, red). They connect downtown, Hollywood, the beach and more.' }
+    ]
+  },
+  mia: {
+    name: 'Miami', state: 'FL', nick: 'The Magic City', lat: 25.7617, lon: -80.1918, emoji: '🌊',
+    transit: 'EASY Card or EASY Pay app · Metrorail, Metrobus and the free Metromover',
+    talk: 'Ask about the Heat or the Dolphins, or where to get the best cafecito.',
+    slang: [
+      { k: 'dale', word: 'dale', say: 'DAH-leh', meaning: 'OK, let’s go, or sounds good.', sentence: 'Dale, I’ll see you at six.', local: 'Spanish, but people use it in English sentences too. Very common and friendly.' },
+      { k: 'quebola', word: 'qué bola', say: 'keh BOH-lah', meaning: 'What’s up? How’s it going?', sentence: 'Qué bola, man! How was your trip?', local: 'A Cuban greeting. Casual, for friends.' },
+      { k: 'cafecito', word: 'cafecito', say: 'kah-feh-SEE-toh', meaning: 'A small cup of strong, sweet Cuban coffee.', sentence: 'Let’s take a cafecito break.', local: 'Part of daily life in Miami, at home and at work.' },
+      { k: 'ventanita', word: 'ventanita', say: 'ven-tah-NEE-tah', meaning: 'A walk-up window where you order coffee and snacks.', sentence: 'Meet me at the ventanita on the corner.', local: 'Spanish for “little window”. People stand and chat there.' },
+      { k: 'pastelito', word: 'pastelito', say: 'pahs-teh-LEE-toh', meaning: 'A flaky Cuban pastry, filled with guava, cheese or meat.', sentence: 'I brought pastelitos for the office.', local: 'Bringing a box of pastelitos to work is a kind gesture.' },
+      { k: 'calleocho', word: 'Calle Ocho', say: 'KAH-yeh OH-choh', meaning: 'SW 8th Street, the main street of Little Havana.', sentence: 'We had dinner on Calle Ocho.', local: 'Known for Cuban food, music and domino games in the park.' }
+    ],
+    customs: [
+      { ic: '🗣️', tag: 'Language', title: 'Spanish is everywhere', body: 'Many people speak Spanish first. It’s fine to start in English; people will switch if they can.' },
+      { ic: '☕', tag: 'Work', title: 'The 3:05 coffee break', body: 'Many people take a cafecito break around 3:05 p.m. The time is a nod to Miami’s 305 area code.' },
+      { ic: '🌀', tag: 'Weather', title: 'Hurricane season', body: 'From June to November, keep water, food and flashlights ready. Follow county alerts when a storm is coming.' },
+      { ic: '😘', tag: 'Greetings', title: 'A kiss on the cheek', body: 'Friends and family often greet with one kiss on the cheek. At work, a handshake is fine.' }
+    ],
+    around: [
+      { ic: '💳', title: 'EASY Card', body: 'Pay for Metrorail and Metrobus with an EASY Card or the EASY Pay app.' },
+      { ic: '🚝', title: 'Metromover', body: 'A free, small automated train that loops around downtown and Brickell.' },
+      { ic: '🚆', title: 'Tri-Rail and Brightline', body: 'Tri-Rail trains go north to Fort Lauderdale and West Palm Beach. Brightline is a faster train that also goes to Orlando.' },
+      { ic: '🧭', title: 'The address grid', body: 'Streets run east to west and avenues run north to south. Addresses start with NW, NE, SW or SE, so always check which one.' }
+    ]
+  },
+  atl: {
+    name: 'Atlanta', state: 'GA', nick: 'The A', lat: 33.749, lon: -84.388, emoji: '🍑',
+    transit: 'Breeze card or Breeze Mobile app · MARTA trains and buses',
+    talk: 'Ask about the Braves or the Falcons, or whether someone lives inside or outside the Perimeter.',
+    slang: [
+      { k: 'thea', word: 'the A', say: 'the ay', meaning: 'Atlanta.', sentence: 'I’ve lived in the A for ten years.', local: 'Also “ATL”. Casual and proud.' },
+      { k: 'itp', word: 'ITP', say: 'eye-tee-pee', meaning: 'Inside the Perimeter: the area inside the I-285 freeway loop.', sentence: 'They moved ITP to be closer to work.', local: '“OTP” means outside the Perimeter, in the suburbs.' },
+      { k: 'spaghettijunction', word: 'Spaghetti Junction', say: 'spuh-GET-ee JUNK-shun', meaning: 'The huge, twisting interchange where I-85 meets I-285.', sentence: 'Traffic was stuck at Spaghetti Junction again.', local: 'You’ll hear it on traffic reports.' },
+      { k: 'blessyourheart', word: 'bless your heart', say: 'bless your heart', meaning: 'A kind phrase of sympathy, but sometimes a polite way to say someone is foolish.', sentence: 'You drove all that way for nothing? Bless your heart.', local: 'Southern. Listen to the tone: it can be sweet or a little rude.' },
+      { k: 'mightcould', word: 'might could', say: 'mite kood', meaning: 'Might be able to.', sentence: 'I might could help you move on Saturday.', local: 'Southern grammar. Casual and common.' }
+    ],
+    customs: [
+      { ic: '🙏', tag: 'Manners', title: 'Southern politeness', body: 'People hold doors and say “yes ma’am” or “yes sir”. It’s polite, not formal.' },
+      { ic: '🌼', tag: 'Spring', title: 'Pollen season', body: 'In spring, yellow pollen covers cars and sidewalks. If you have allergies, be ready.' },
+      { ic: '❄️', tag: 'Winter', title: 'A little snow stops the city', body: 'Snow and ice are rare, so even a small storm can close schools and roads.' },
+      { ic: '🍗', tag: 'Food', title: 'Lemon pepper wings', body: 'Chicken wings with lemon pepper are an Atlanta favorite. Many places sell them.' }
+    ],
+    around: [
+      { ic: '💳', title: 'Breeze', body: 'Pay for MARTA trains and buses with a Breeze card or the Breeze Mobile app.' },
+      { ic: '🚇', title: 'MARTA rail', body: 'There are four lines: Red, Gold, Blue and Green. The Red and Gold lines go to the airport.' },
+      { ic: '🛣️', title: 'The Perimeter', body: 'I-285 circles the city and is called the Perimeter. Rush hour traffic is heavy.' },
+      { ic: '🍑', title: 'So many Peachtrees', body: 'Dozens of streets have “Peachtree” in the name. Check the full street name before you go.' }
+    ]
+  },
+  sea: {
+    name: 'Seattle', state: 'WA', nick: 'The Emerald City', lat: 47.6062, lon: -122.3321, emoji: '🌲',
+    transit: 'ORCA card or myORCA app · Link light rail, buses and ferries',
+    talk: 'Ask about the Mariners or the Seahawks, a favorite hike, or a favorite coffee shop.',
+    slang: [
+      { k: 'mountainisout', word: 'the mountain is out', say: 'the MOUN-tin is out', meaning: 'The sky is clear and you can see Mount Rainier.', sentence: 'Look, the mountain is out today!', local: 'Clouds often hide it, so locals are happy when they can see it.' },
+      { k: 'sunbreak', word: 'sunbreak', say: 'SUN-brake', meaning: 'A short time when the sun comes out between clouds.', sentence: 'Let’s walk during the next sunbreak.', local: 'Even weather reports use this word here.' },
+      { k: 'spendy', word: 'spendy', say: 'SPEN-dee', meaning: 'Expensive.', sentence: 'That restaurant is a little spendy.', local: 'Common in the Pacific Northwest. Casual.' },
+      { k: 'thesound', word: 'the Sound', say: 'the sound', meaning: 'Puget Sound, the big body of salt water next to Seattle.', sentence: 'We took the ferry across the Sound.', local: 'You’ll hear “South Sound” and “North Sound” for areas too.' },
+      { k: 'theeastside', word: 'the Eastside', say: 'the EEST-side', meaning: 'The cities east of Lake Washington, like Bellevue, Redmond and Kirkland.', sentence: 'She works on the Eastside.', local: 'Many tech jobs are there.' },
+      { k: 'seattlefreeze', word: 'Seattle Freeze', say: 'see-AT-ul freez', meaning: 'The idea that people here are polite but hard to make close friends with.', sentence: 'Joining a club helped me beat the Seattle Freeze.', local: 'Locals joke about it. Clubs and classes are good ways to meet people.' }
+    ],
+    customs: [
+      { ic: '☔', tag: 'Weather', title: 'Rain jackets, not umbrellas', body: 'It rains often but lightly. Many locals wear a jacket with a hood instead of carrying an umbrella.' },
+      { ic: '♻️', tag: 'Home', title: 'Sort your trash', body: 'Seattle has separate bins for garbage, recycling and compost. Food scraps go in the compost.' },
+      { ic: '🛍️', tag: 'Shopping', title: 'Bring a bag', body: 'Stores don’t give thin plastic bags. Paper bags cost a small fee, so many people bring their own.' },
+      { ic: '🌙', tag: 'Winter', title: 'Short, dark days', body: 'In winter it gets dark before 5 p.m. Many people plan indoor activities and get outside when it’s bright.' }
+    ],
+    around: [
+      { ic: '💳', title: 'ORCA', body: 'One ORCA card or the myORCA app works on Link, buses, Sounder trains and water taxis. Riders 18 and under ride free.' },
+      { ic: '🚈', title: 'Link light rail', body: 'The 1 Line runs from the airport (SeaTac) through downtown and north.' },
+      { ic: '⛴️', title: 'Ferries', body: 'Washington State Ferries leave downtown for Bainbridge Island and Bremerton. Many people ride them to work.' },
+      { ic: '🧭', title: 'Avenues and streets', body: 'Avenues usually run north to south and streets run east to west. Addresses often include a direction, like NE 45th St.' }
+    ]
+  },
+  sf: {
+    name: 'San Francisco', state: 'CA', nick: 'The City by the Bay', lat: 37.7749, lon: -122.4194, emoji: '🌁',
+    transit: 'Clipper card or app · Muni, BART, cable cars and ferries',
+    talk: 'Ask about the Giants or the Warriors, the fog, or a favorite burrito place in the Mission.',
+    slang: [
+      { k: 'hella', word: 'hella', say: 'HEL-uh', meaning: 'Very, or a lot of.', sentence: 'That line is hella long.', local: 'Northern California slang. Casual.' },
+      { k: 'karl', word: 'Karl', say: 'karl', meaning: 'A nickname for San Francisco’s fog.', sentence: 'Karl is rolling in, bring a jacket.', local: 'A local joke. People talk about the fog like a person.' },
+      { k: 'muni', word: 'Muni', say: 'MYOO-nee', meaning: 'The city’s buses, streetcars, light rail and cable cars.', sentence: 'I take Muni to work.', local: 'Short for San Francisco Municipal Railway.' },
+      { k: 'bart', word: 'BART', say: 'bart', meaning: 'The train that connects San Francisco to the East Bay and the airport.', sentence: 'Take BART to Oakland.', local: 'Short for Bay Area Rapid Transit.' },
+      { k: 'theeastbay', word: 'the East Bay', say: 'the eest bay', meaning: 'Oakland, Berkeley and nearby cities across the bay.', sentence: 'Rent is cheaper in the East Bay.', local: '“The Peninsula” and “the South Bay” name other parts of the Bay Area.' },
+      { k: 'missionburrito', word: 'Mission burrito', say: 'MISH-un bur-EE-toh', meaning: 'A very big burrito with rice, beans and meat, wrapped in foil.', sentence: 'One Mission burrito can be lunch and dinner.', local: 'Named after the Mission District, where the style started.' }
+    ],
+    customs: [
+      { ic: '🧥', tag: 'Weather', title: 'Always bring layers', body: 'Summer can be cold and foggy. The weather changes between neighborhoods, so carry a jacket.' },
+      { ic: '🏷️', tag: 'Talk', title: 'Don’t say “Frisco”', body: 'Locals say “SF” or “the City”. “Frisco” and “San Fran” sound like a tourist.' },
+      { ic: '🚗', tag: 'Safety', title: 'Empty your car', body: 'Car break-ins are common. Don’t leave bags or anything visible inside your parked car.' },
+      { ic: '🧾', tag: 'Restaurants', title: 'Read the bill', body: 'Some restaurants add an extra service or health fee to the bill. Check it before you tip.' }
+    ],
+    around: [
+      { ic: '💳', title: 'Clipper', body: 'One Clipper card or the Clipper app works on Muni, BART, Caltrain and many ferries.' },
+      { ic: '🚇', title: 'BART and Muni', body: 'BART goes between cities and to SFO airport. Muni gets you around inside San Francisco.' },
+      { ic: '🚋', title: 'Cable cars', body: 'The historic cable cars are a Muni ride, but most riders are visitors. Lines can be long.' },
+      { ic: '⛰️', title: 'Curb your wheels', body: 'On a hill, turn your front wheels toward the curb facing downhill, and away from it facing uphill. It’s the law.' }
+    ]
+  },
+  dc: {
+    name: 'Washington, D.C.', state: 'DC', nick: 'The District', lat: 38.9072, lon: -77.0369, emoji: '🏛️',
+    transit: 'SmarTrip card or phone wallet · Metrorail and Metrobus',
+    talk: 'People often ask “What do you do?” early. You can also ask about the Commanders or the Nationals.',
+    slang: [
+      { k: 'thedistrict', word: 'the District', say: 'the DIS-trikt', meaning: 'Washington, D.C.', sentence: 'I moved to the District last year.', local: 'Locals rarely call it “Washington”. That can mean the state.' },
+      { k: 'dmv', word: 'the DMV', say: 'dee-em-vee', meaning: 'D.C., Maryland and Virginia, as one area.', sentence: 'She grew up in the DMV.', local: 'Elsewhere it means the Department of Motor Vehicles. Here, it’s usually the region.' },
+      { k: 'insidethebeltway', word: 'inside the Beltway', say: 'in-SIDE the BELT-way', meaning: 'Focused on politics and government, like D.C. insiders.', sentence: 'That story only matters inside the Beltway.', local: 'The Beltway is the I-495 freeway that circles the area.' },
+      { k: 'mumbosauce', word: 'mumbo sauce', say: 'MUM-boh sauce', meaning: 'A sweet and tangy red sauce, often put on fried chicken wings.', sentence: 'Can I get extra mumbo sauce?', local: 'A D.C. carryout classic.' },
+      { k: 'halfsmoke', word: 'half-smoke', say: 'HAF-smoke', meaning: 'A spicy sausage, often served with chili and onions.', sentence: 'I had a half-smoke on U Street.', local: 'D.C.’s own street food.' },
+      { k: 'gogo', word: 'go-go', say: 'GOH-goh', meaning: 'A style of funk music with nonstop drums, born in D.C.', sentence: 'There’s a go-go band playing tonight.', local: 'It’s the official music of D.C.' }
+    ],
+    customs: [
+      { ic: '🛗', tag: 'Metro', title: 'Stand right, walk left', body: 'On Metro escalators, stand on the right so people can walk up on the left.' },
+      { ic: '💼', tag: 'Talk', title: '“What do you do?”', body: 'People often ask about your job soon after they meet you. It’s normal here, not rude.' },
+      { ic: '🌸', tag: 'Spring', title: 'Cherry blossoms', body: 'In late March or early April, cherry trees bloom near the Tidal Basin. Go early to avoid crowds.' },
+      { ic: '🏛️', tag: 'Free fun', title: 'Free museums', body: 'The Smithsonian museums and the National Zoo are free to enter.' }
+    ],
+    around: [
+      { ic: '💳', title: 'SmarTrip', body: 'Pay for Metrorail and Metrobus with a SmarTrip card, or add SmarTrip to your phone’s wallet.' },
+      { ic: '🚇', title: 'Metro lines', body: 'Six color lines: Red, Orange, Blue, Silver, Green and Yellow. The Silver Line goes to Dulles Airport.' },
+      { ic: '🧭', title: 'Four quadrants', body: 'The city is split into NW, NE, SW and SE around the Capitol. The same address can exist in two quadrants, so always include it.' },
+      { ic: '🔤', title: 'Letters and numbers', body: 'Numbered streets run north to south. Lettered streets run east to west. There is no J Street.' }
+    ]
+  },
+  dal: {
+    name: 'Dallas', state: 'TX', nick: 'Big D', lat: 32.7767, lon: -96.797, emoji: '⭐',
+    transit: 'GoPass app or card · DART light rail, buses and the TRE train',
+    talk: 'Ask about the Cowboys, high school football, or someone’s favorite Tex-Mex place.',
+    slang: [
+      { k: 'bigd', word: 'Big D', say: 'big dee', meaning: 'Dallas.', sentence: 'Welcome to Big D!', local: 'A proud, friendly nickname.' },
+      { k: 'metroplex', word: 'the Metroplex', say: 'the MET-roh-plex', meaning: 'The whole Dallas–Fort Worth area and its many cities.', sentence: 'There are great jobs all over the Metroplex.', local: 'You’ll also hear “DFW” for the same area.' },
+      { k: 'dfw', word: 'DFW', say: 'dee-eff-dub-yuh', meaning: 'The Dallas–Fort Worth area, or its big airport.', sentence: 'My flight leaves from DFW.', local: 'Dallas also has a smaller airport, Love Field.' },
+      { k: 'allyall', word: 'all y’all', say: 'awl yawl', meaning: 'Every one of you; a bigger group than “y’all”.', sentence: 'Thanks, all y’all, for coming.', local: 'Texas grammar. Friendly and casual.' },
+      { k: 'serviceroad', word: 'service road', say: 'SER-vis road', meaning: 'The road that runs beside a highway, where many stores are.', sentence: 'The bank is on the service road.', local: 'Houston calls it the “feeder road”.' },
+      { k: 'howdy', word: 'howdy', say: 'HOW-dee', meaning: 'Hello.', sentence: 'Howdy, how are you doing?', local: 'A friendly Texas greeting. People of all ages use it.' }
+    ],
+    customs: [
+      { ic: '🌪️', tag: 'Weather', title: 'Spring storms', body: 'Spring brings hail and tornadoes. When sirens sound, go to a room with no windows on the lowest floor.' },
+      { ic: '🥵', tag: 'Weather', title: 'Summer heat', body: 'Summer days can pass 100°F. Drink water and park in the shade when you can.' },
+      { ic: '🏈', tag: 'Sports', title: 'Football is big', body: 'Friday night high school games and Sunday Cowboys games bring people together.' },
+      { ic: '🌮', tag: 'Food', title: 'Free chips and salsa', body: 'Many Tex-Mex restaurants bring chips and salsa to the table for free.' }
+    ],
+    around: [
+      { ic: '💳', title: 'GoPass', body: 'Pay for DART trains and buses with the GoPass app or a GoPass card.' },
+      { ic: '🚈', title: 'DART light rail', body: 'Color lines connect downtown with nearby cities. The Orange Line goes to DFW Airport.' },
+      { ic: '🚆', title: 'The TRE', body: 'The Trinity Railway Express is a train between downtown Dallas and Fort Worth.' },
+      { ic: '🛣️', title: 'Toll roads', body: 'Many highways charge tolls. A TollTag makes it cheaper; without one, the bill comes in the mail.' }
+    ]
+  },
+  det: {
+    name: 'Detroit', state: 'MI', nick: 'Motor City', lat: 42.3314, lon: -83.0458, emoji: '🚗',
+    transit: 'Dart pass or app · DDOT and SMART buses, the QLine and the People Mover',
+    talk: 'Ask about the Lions, or which Coney Island restaurant someone likes best.',
+    slang: [
+      { k: 'thed', word: 'the D', say: 'the dee', meaning: 'Detroit.', sentence: 'I was born and raised in the D.', local: 'Casual and proud.' },
+      { k: 'coney', word: 'Coney', say: 'KOH-nee', meaning: 'A hot dog with chili, mustard and onions, or a diner that serves them.', sentence: 'Let’s get lunch at the Coney.', local: 'Lafayette and American Coney Island are next door to each other. People pick sides.' },
+      { k: 'partystore', word: 'party store', say: 'PAR-tee store', meaning: 'A corner store that sells drinks, beer and snacks.', sentence: 'Stop at the party store for ice.', local: 'A Michigan word. There may be no party at all.' },
+      { k: 'michiganleft', word: 'Michigan left', say: 'MISH-ih-gun left', meaning: 'Making a left turn by going past the street, making a U-turn, then turning right.', sentence: 'You can’t turn here, do a Michigan left.', local: 'Very common on big roads with a middle strip.' },
+      { k: 'upnorth', word: 'up north', say: 'up north', meaning: 'Northern Michigan, where people go for lakes, cabins and vacations.', sentence: 'We’re going up north for the weekend.', local: 'A summer tradition for many families.' },
+      { k: 'thelodge', word: 'the Lodge', say: 'the lodj', meaning: 'The John C. Lodge Freeway (M-10).', sentence: 'Take the Lodge downtown.', local: 'Detroit freeways have names that locals use more than numbers.' }
+    ],
+    customs: [
+      { ic: '🖐️', tag: 'Talk', title: 'The hand map', body: 'Michigan is shaped like a mitten. People hold up a hand and point to show where they’re from.' },
+      { ic: '🍩', tag: 'Food', title: 'Pączki Day', body: 'On Fat Tuesday, people line up for pączki (POONCH-kee), rich Polish doughnuts, especially in Hamtramck.' },
+      { ic: '🦁', tag: 'Holidays', title: 'Lions on Thanksgiving', body: 'The Lions play every Thanksgiving Day. Many families watch together after the big meal.' },
+      { ic: '❄️', tag: 'Winter', title: 'Snow and ice', body: 'Winters are cold and snowy. Keep an ice scraper and a warm blanket in your car.' }
+    ],
+    around: [
+      { ic: '🚗', title: 'A car city', body: 'Most people drive. Freeways have names, like the Lodge (M-10) and the Edsel Ford (I-94).' },
+      { ic: '🚋', title: 'QLine and People Mover', body: 'The QLine streetcar runs up Woodward Avenue. The People Mover is a small elevated train that loops around downtown.' },
+      { ic: '🚌', title: 'Buses and Dart', body: 'DDOT buses serve the city and SMART buses serve the suburbs. One Dart pass works on both.' },
+      { ic: '🛣️', title: 'Mile roads', body: 'North of downtown, roads are named by distance, like 8 Mile and 10 Mile. 8 Mile Road is the city’s north edge.' }
+    ]
+  },
+  msp: {
+    name: 'Minneapolis', state: 'MN', nick: 'The City of Lakes', lat: 44.9778, lon: -93.265, emoji: '❄️',
+    transit: 'Go-To card or Metro Transit app · light rail and buses',
+    talk: 'Ask about the weather, a favorite lake, or the Vikings. Minnesotans love to talk about winter.',
+    slang: [
+      { k: 'ope', word: 'ope', say: 'ohp', meaning: 'A small sound you make when you bump into someone or make a tiny mistake.', sentence: 'Ope, let me just squeeze past you.', local: 'Very Midwest. Polite and friendly.' },
+      { k: 'uffda', word: 'uff da', say: 'OOF-dah', meaning: 'Wow, or oh no; said when surprised or tired.', sentence: 'Uff da, that was a lot of snow.', local: 'From Norwegian. Often said with a smile.' },
+      { k: 'hotdish', word: 'hotdish', say: 'HOT-dish', meaning: 'A baked casserole, often with meat, vegetables and tater tots on top.', sentence: 'I’m bringing hotdish to the potluck.', local: 'A Minnesota comfort food at church and family meals.' },
+      { k: 'minnesotanice', word: 'Minnesota nice', say: 'min-uh-SOH-tuh nice', meaning: 'Being very polite and avoiding conflict, sometimes without saying what you really think.', sentence: 'She said it was “interesting”. That’s Minnesota nice.', local: 'Listen carefully: “interesting” may mean they don’t like it.' },
+      { k: 'twincities', word: 'the Twin Cities', say: 'the twin SIT-eez', meaning: 'Minneapolis and St. Paul together.', sentence: 'The Twin Cities have great parks.', local: 'Locals also just say “the Cities”.' },
+      { k: 'duckduckgrayduck', word: 'Duck, Duck, Gray Duck', say: 'duk duk gray duk', meaning: 'The Minnesota version of the children’s game “Duck, Duck, Goose”.', sentence: 'The kids played Duck, Duck, Gray Duck at recess.', local: 'A fun local debate. Minnesotans defend it.' }
+    ],
+    customs: [
+      { ic: '🥶', tag: 'Winter', title: 'Real cold', body: 'Winter can go below 0°F. Good boots, a hat, gloves and a warm coat matter.' },
+      { ic: '👋', tag: 'Manners', title: 'The long goodbye', body: 'Leaving a visit can take a long time. People keep talking at the door. It’s normal.' },
+      { ic: '🍲', tag: 'Food', title: 'Potlucks', body: 'At many gatherings, everyone brings a dish to share. Hotdish and bars (dessert squares) are popular.' },
+      { ic: '🎡', tag: 'Events', title: 'The State Fair', body: 'In late August, the Minnesota State Fair draws huge crowds. Many foods come on a stick.' }
+    ],
+    around: [
+      { ic: '💳', title: 'Go-To card', body: 'Pay for light rail and buses with a Go-To card or the Metro Transit app.' },
+      { ic: '🚈', title: 'Blue and Green Lines', body: 'The Blue Line goes to the airport and the Mall of America. The Green Line connects downtown Minneapolis and St. Paul.' },
+      { ic: '🌉', title: 'Skyways', body: 'Downtown buildings are linked by indoor bridges on the second floor. You can walk many blocks without going outside.' },
+      { ic: '🚨', title: 'Snow emergencies', body: 'After big snow, the city declares a snow emergency. Follow the parking rules or your car may be towed.' }
+    ]
+  },
+  den: {
+    name: 'Denver', state: 'CO', nick: 'The Mile High City', lat: 39.7392, lon: -104.9903, emoji: '🏔️',
+    transit: 'MyRide card or RTD app · light rail, commuter trains and buses',
+    talk: 'Ask about hiking or skiing, or about the Broncos or the Nuggets.',
+    slang: [
+      { k: 'milehigh', word: 'Mile High', say: 'mile high', meaning: 'Denver, which sits about one mile (5,280 feet) above sea level.', sentence: 'The game is at Mile High tonight.', local: 'Also used for the Broncos’ stadium.' },
+      { k: 'fourteener', word: 'fourteener', say: 'for-TEEN-er', meaning: 'A mountain over 14,000 feet tall.', sentence: 'We climbed our first fourteener this summer.', local: 'Colorado has more than fifty. Locals like to count how many they’ve done.' },
+      { k: 'thefrontrange', word: 'the Front Range', say: 'the frunt raynj', meaning: 'The first mountains west of Denver, and the cities along them.', sentence: 'Snow is coming to the Front Range tonight.', local: 'Weather reports use this a lot.' },
+      { k: 'bluebirdday', word: 'bluebird day', say: 'BLOO-burd day', meaning: 'A clear, sunny day with blue sky, often after a snowstorm.', sentence: 'Fresh snow and a bluebird day, let’s ski!', local: 'Skier talk, but everyone uses it.' },
+      { k: 'gaper', word: 'gaper', say: 'GAY-per', meaning: 'A new or clueless skier, often a tourist.', sentence: 'That gaper stopped in the middle of the run.', local: 'A little rude. Use it as a joke with friends only.' },
+      { k: 'greenchile', word: 'green chile', say: 'green CHIL-ee', meaning: 'A spicy stew made with green peppers, often poured over burritos.', sentence: 'I’ll have my burrito smothered in green chile.', local: '“Smothered” means covered in the sauce.' }
+    ],
+    customs: [
+      { ic: '💧', tag: 'Health', title: 'Drink more water', body: 'The air is high and dry. Drink extra water, wear sunscreen, and know that alcohol feels stronger here.' },
+      { ic: '🌦️', tag: 'Weather', title: 'Weather changes fast', body: 'It can snow one day and be warm the next. Dress in layers.' },
+      { ic: '🥾', tag: 'Outdoors', title: 'Trail manners', body: 'On narrow trails, hikers going uphill have the right of way. Pack out all your trash.' },
+      { ic: '🛍️', tag: 'Shopping', title: 'Bring a bag', body: 'Stores don’t give plastic bags. Paper bags cost a small fee, so many people bring their own.' }
+    ],
+    around: [
+      { ic: '💳', title: 'MyRide', body: 'Pay for RTD trains and buses with a MyRide card or the RTD app.' },
+      { ic: '✈️', title: 'The A Line', body: 'The A Line train runs between Union Station downtown and Denver International Airport.' },
+      { ic: '🧭', title: 'The mountains are west', body: 'If you can see the Rocky Mountains, you’re facing west. Locals use them for directions.' },
+      { ic: '🔢', title: 'Streets and avenues', body: 'Streets run north to south and avenues run east to west. Broadway and Ellsworth Avenue are the zero lines for addresses.' }
+    ]
+  },
+  nola: {
+    name: 'New Orleans', state: 'LA', nick: 'The Big Easy', lat: 29.9511, lon: -90.0715, emoji: '🎷',
+    transit: 'Le Pass app · RTA streetcars, buses and ferries',
+    talk: 'Ask about the Saints, Mardi Gras, or who makes the best po-boy or gumbo.',
+    slang: [
+      { k: 'whereyat', word: 'where y’at', say: 'WAIR yat', meaning: 'Hi, how are you?', sentence: 'Hey, where y’at? Long time no see.', local: 'A classic local greeting. Answer “all right” or “fine”, not your location.' },
+      { k: 'makegroceries', word: 'make groceries', say: 'make GROH-sreez', meaning: 'To go grocery shopping.', sentence: 'I need to make groceries after work.', local: 'From French. Very New Orleans.' },
+      { k: 'neutralground', word: 'neutral ground', say: 'NOO-trul ground', meaning: 'The grassy strip in the middle of a wide street (a median).', sentence: 'Park on the street, not on the neutral ground.', local: 'Streetcars often run on the neutral ground.' },
+      { k: 'lagniappe', word: 'lagniappe', say: 'LAN-yap', meaning: 'A little something extra, for free.', sentence: 'The baker added a cookie as lagniappe.', local: 'A Louisiana word from French and Spanish.' },
+      { k: 'krewe', word: 'krewe', say: 'kroo', meaning: 'A club that puts on a Mardi Gras parade or ball.', sentence: 'His krewe rides on Saturday night.', local: 'Each krewe has its own floats, costumes and throws.' },
+      { k: 'poboy', word: 'po-boy', say: 'POH-boy', meaning: 'A sandwich on crispy French bread, often with fried shrimp or roast beef.', sentence: 'I’ll have a shrimp po-boy, dressed.', local: '“Dressed” means with lettuce, tomato, pickles and mayo.' }
+    ],
+    customs: [
+      { ic: '🎭', tag: 'Mardi Gras', title: 'Parade season', body: 'Parades run for weeks before Fat Tuesday. Catching beads and other throws is part of the fun.' },
+      { ic: '🥤', tag: 'Rules', title: 'Go-cups', body: 'You can walk outside with a drink in many areas, but it must be in a plastic cup, not glass.' },
+      { ic: '🌧️', tag: 'Weather', title: 'Street flooding', body: 'Heavy rain can flood streets fast. Never drive through deep water. Hurricane season is June to November.' },
+      { ic: '🦞', tag: 'Food', title: 'Crawfish boils', body: 'In spring, friends gather to eat boiled crawfish with their hands. Twist off the tail and peel it.' }
+    ],
+    around: [
+      { ic: '🚋', title: 'Streetcars', body: 'The St. Charles line is one of the oldest streetcar lines in the world. Canal Street has streetcars too.' },
+      { ic: '💳', title: 'Le Pass', body: 'Buy rides in the Le Pass app, or pay with exact cash when you get on.' },
+      { ic: '🧭', title: 'River and lake', body: 'The river curves, so locals say uptown, downtown, riverside and lakeside instead of north or south.' },
+      { ic: '⛴️', title: 'The ferry', body: 'A ferry crosses the Mississippi River from the foot of Canal Street to Algiers.' }
     ]
   }
 };

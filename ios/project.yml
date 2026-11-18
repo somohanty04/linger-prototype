@@ -37,7 +37,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         LSApplicationCategoryType: public.app-category.education
         NSCameraUsageDescription: Linger uses the camera to scan letters, signs and bills so it can explain the hard words.
-        NSMicrophoneUsageDescription: Linger only uses the microphone if you choose to talk to it.
+        NSMicrophoneUsageDescription: Linger listens when you tap the microphone in Say it, to check how you pronounce a word.
+        NSSpeechRecognitionUsageDescription: Linger turns what you say into text to check your pronunciation in Say it. Apple processes the audio.
         UILaunchScreen:
           UIColorName: LaunchBackground
         UIStatusBarStyle: UIStatusBarStyleLightContent

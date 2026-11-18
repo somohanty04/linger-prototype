@@ -70,6 +70,17 @@ final class WebModel: NSObject, ObservableObject {
         webView.evaluateJavaScript("window.LingerNative && LingerNative.receive(\(arg))")
     }
 
+    /// Say it: listen for one word and hand the page what was heard.
+    private let listener = SpeechListener()
+    fileprivate func listen(_ start: Bool) {
+        guard start else { listener.stop(); return }
+        listener.start { [weak self] texts, error in
+            guard let self, let json = try? JSONSerialization.data(withJSONObject: ["texts": texts, "error": error ?? NSNull()] as [String: Any]),
+                  let arg = String(data: json, encoding: .utf8) else { return }
+            self.webView.evaluateJavaScript("window.LingerNative && LingerNative.heard(\(arg))")
+        }
+    }
+
     fileprivate func pageSaidReady() {
         pageReady = true
         if let item = waiting { waiting = nil; deliver(item) } else { checkInbox() }
@@ -141,6 +152,7 @@ private final class WeakHandler: NSObject, WKScriptMessageHandler {
         MainActor.assumeIsolated {
             if body["ready"] as? Bool == true { model?.pageSaidReady() }
             if let kind = body["haptic"] as? String { Haptics.play(kind) }
+            if let listen = body["listen"] as? String { model?.listen(listen == "start") }
         }
     }
 }
