@@ -4,7 +4,20 @@ Sign in with email and password, and your saved words are kept in your account a
 device you sign in on. No pairing code needed. Pairing codes keep working for people without an account (and alongside
 one). Built on the same Firebase project (`linger-f41a7`) and the same Firestore connection as the pairing sync.
 
-**In this milestone:** the phone app (`index.html`). **Next:** the Chrome extension and the laptop Reader (they still use pairing codes).
+**Where:** the phone app (`index.html`, `beta/`) and the Chrome extension (since 0.8.2). **Next:** the laptop Reader (it still uses pairing codes).
+
+## Chrome extension
+
+The Linger menu has a **Your Linger account** section: sign in or create an account with the same email and password as
+the phone app. `extension/background.js` talks to Firebase over REST (no SDK): Identity Toolkit for sign-in, Secure
+Token to refresh the ID token, and Firestore for `users/{uid}/words/{key}`, with the same fields as the phone app.
+
+- **Signing in** uploads the extension's saved list. A word already in the account keeps the account's text and progress.
+- **Saving a word** (the bookmark on a card) writes it to the account. Saving it again updates `w, m, s, p, place, date`
+  and `updatedAt` only, so `status` and learning progress from the phone stay.
+- A pairing code still works alongside an account.
+- If the account is deleted or its password changed, the next save signs the extension out.
+- Test against the emulators: `node tests/extension-account.test.mjs` (see Testing locally).
 
 ## Files
 

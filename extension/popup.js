@@ -164,6 +164,32 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
   };
   $('unpair').onclick = async () => { await chrome.storage.local.set({ pairCode: '' }); showPair(''); };
 
+  // Linger account: the same email and password as the phone app (background.js does the signing in).
+  const acctMsg = (t) => { $('acctMsg').textContent = t ? L(t) : ''; };
+  const showAcct = (email) => { $('acctOn').hidden = !email; $('acctForm').hidden = !!email; $('acctHint').hidden = !!email; $('acctShow').textContent = email || ''; };
+  showAcct((await chrome.runtime.sendMessage({ type: 'acct-state' }) || {}).email);
+  const acctGo = async (type) => {
+    const email = $('acctEmail').value.trim(), password = $('acctPw').value;
+    if (!email || !password) { acctMsg('Type your email and password.'); return; }
+    $('acctIn').disabled = $('acctUp').disabled = true;
+    acctMsg(type === 'acct-signup' ? 'Creating your account…' : 'Signing in…');
+    const r = await chrome.runtime.sendMessage({ type, email, password }) || {};
+    $('acctIn').disabled = $('acctUp').disabled = false;
+    if (!r.ok) { acctMsg(r.error || 'Something went wrong. Try again.'); return; }
+    $('acctPw').value = '';
+    showAcct(r.email);
+    acctMsg(r.uploaded ? `Done. ${r.uploaded} saved ${r.uploaded === 1 ? 'word is' : 'words are'} now in your account.` : '');
+  };
+  $('acctForm').onsubmit = (e) => { e.preventDefault(); acctGo('acct-signin'); };
+  $('acctUp').onclick = () => { if ($('acctForm').reportValidity()) acctGo('acct-signup'); };
+  $('acctReset').onclick = async () => {
+    const email = $('acctEmail').value.trim();
+    if (!email) { acctMsg('Type your email first, then tap Forgot password.'); $('acctEmail').focus(); return; }
+    const r = await chrome.runtime.sendMessage({ type: 'acct-reset', email }) || {};
+    acctMsg(r.ok ? 'Check your email for a link to set a new password.' : r.error);
+  };
+  $('acctOut').onclick = async () => { await chrome.runtime.sendMessage({ type: 'acct-signout' }); showAcct(''); acctMsg('Signed out. Words you saved stay in your account.'); };
+
   // Translation: "My language" for the cards, and the whole page on request.
   const { transLang } = await chrome.storage.local.get({ transLang: '' });
   $('transLang').insertAdjacentHTML('beforeend', self.LINGER_LANGS.map((l) => `<option value="${l.code}">${esc(l.own === l.name ? l.name : `${l.own} · ${l.name}`)}</option>`).join(''));

@@ -57,7 +57,7 @@ The beta's files are `beta/index.html`, `beta/manifest.webmanifest` and `beta.js
 - Pick **My language** in the Linger menu to see an "In your language" box on every card. You can also translate the whole page.
 - Turn on **Underline hard words** to mark hard words on any page. Click one to see what it means in that sentence.
 - Click the ✦ button in the corner to ask questions about the page.
-- Click the bookmark on a card to save the word to the phone app.
+- Sign in under **Your Linger account** in the Linger menu (the same account as the phone app). Then click the bookmark on a card, and the word shows up in Words on your phone.
 - **Eye tracking (optional):** turn on **Offer help when I pause**. After a short setup, Linger uses the webcam to notice when you pause on a line, and asks if you want help.
 - **Hand gestures (optional):** turn on **Use hand gestures** and try them on the practice page. Point at a word and hold to get asked if you want help, swipe an open hand right or left to answer, swipe up or down to scroll, and pinch, hold and move up or down to zoom.
 
@@ -76,8 +76,7 @@ The beta's files are `beta/index.html`, `beta/manifest.webmanifest` and `beta.js
 - **Eye tracking on the phone:** tapping a word stands in for it.
 - **Reading inside other apps:** iPhone doesn't let Linger read inside apps like Instagram, so share, paste or screenshot the text instead.
 - **Letter summaries in the phone app** are made by simple rules, not AI.
-- **Sample content:** it's set in Pittsburgh, and the Pause map in Local uses made-up data.
-- **Laptop to phone:** the extension connects to the phone with a pairing code, not your account yet.
+- **Sample content:** it's set in Pittsburgh.
 - **Learning model and English check:** they work, but they haven't been tested with real learners yet.
 
 **Known issues:**

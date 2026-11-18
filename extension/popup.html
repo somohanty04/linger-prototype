@@ -73,9 +73,24 @@
     <button type="button" class="btn wide" id="handPractice">Practice hand gestures</button>
   </section>
 
+  <section id="acctSec">
+    <div class="head">
+      <h2>Your Linger account</h2>
+      <p class="hint" id="acctHint"><span>Sign in with the same account as the phone app, and every word you save here shows up in Words on your phone.</span></p>
+    </div>
+    <form id="acctForm" class="acct-form">
+      <input id="acctEmail" type="email" autocomplete="email" placeholder="Email" aria-label="Email" required>
+      <input id="acctPw" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" aria-label="Password" required minlength="6">
+      <div class="acct-btns"><button type="submit" class="btn primary" id="acctIn">Sign in</button><button type="button" class="btn white" id="acctUp">Create account</button></div>
+      <button type="button" class="link" id="acctReset">Forgot password?</button>
+    </form>
+    <p class="hint msg" id="acctMsg" role="status"></p>
+    <div id="acctOn" class="paired" hidden><p class="ok"><span class="dot"></span><span>Saving to <span id="acctShow" translate="no"></span></span></p><button type="button" class="link" id="acctOut">Sign out</button></div>
+  </section>
+
   <section>
     <div class="head">
-      <h2>Your phone</h2>
+      <h2>Or connect with a code</h2>
       <p class="hint" id="pairHint">In the Linger app, open <span>Words → Turn on live sync and type the code here.</span></p>
       <p class="hint" id="pairShare"><span>Your saved words, meanings, and example sentences will sync between devices, along with the website and date you saved each one. Anyone with the code can see them.</span></p>
     </div>
