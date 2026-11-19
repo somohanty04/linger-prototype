@@ -156,6 +156,30 @@ window.LINGER_CITIES = {
       { ic: '🚇', title: 'Metro lines', body: 'Metro Rail lines have letters and colors (like the B Line, red). They connect downtown, Hollywood, the beach and more.' }
     ]
   },
+  sd: {
+    name: 'San Diego', state: 'CA', nick: 'America’s Finest City', lat: 32.7157, lon: -117.1611, emoji: '🌊',
+    transit: 'PRONTO card or app · MTS Trolley and buses, and the COASTER train',
+    talk: 'Ask about the Padres, a favorite beach, or where to get the best tacos.',
+    slang: [
+      { k: 'stoked', word: 'stoked', say: 'stohkt', meaning: 'Very happy or excited about something.', sentence: 'I’m so stoked for the beach this weekend.', local: 'Surfer slang you hear all over Southern California. Casual and friendly.' },
+      { k: 'gnarly', word: 'gnarly', say: 'NAR-lee', meaning: 'Extreme. It can mean very good or very bad.', sentence: 'The waves were gnarly this morning.', local: 'Also from surf culture. The tone tells you if it’s good or bad.' },
+      { k: 'pb', word: 'PB', say: 'pee-bee', meaning: 'Pacific Beach, a busy beach neighborhood with bars and a boardwalk.', sentence: 'We’re meeting at PB for sunset.', local: 'Locals shorten neighborhood names: PB, OB (Ocean Beach) and North Park.' },
+      { k: 'caliburrito', word: 'California burrito', say: 'kal-ih-FOR-nyuh buh-REE-toh', meaning: 'A big burrito with carne asada (grilled beef) and French fries inside.', sentence: 'Let’s get California burritos after the game.', local: 'A San Diego favorite, sold at taco shops that are often open late.' },
+      { k: 'tj', word: 'TJ', say: 'tee-jay', meaning: 'Tijuana, the city in Mexico just south of San Diego.', sentence: 'My cousins live in TJ, so we visit often.', local: 'Many people live on one side of the border and work or have family on the other.' }
+    ],
+    customs: [
+      { ic: '🏖️', tag: 'Beaches', title: 'Swim near a lifeguard', body: 'Rip currents are common. Swim in front of a lifeguard tower. Alcohol isn’t allowed on most city beaches.' },
+      { ic: '🩴', tag: 'Dress', title: 'Very casual', body: 'Shorts and sandals are normal almost everywhere, even at many offices and restaurants.' },
+      { ic: '🛂', tag: 'Border', title: 'Crossing into Mexico', body: 'You need a passport or other approved document to come back into the U.S. If you aren’t a citizen, check how your visa or status affects travel before you go.' },
+      { ic: '🌮', tag: 'Food', title: 'Taco shops', body: 'Small taco shops are everywhere. Order at the counter and wait for your name or number. Tipping is optional there.' }
+    ],
+    around: [
+      { ic: '🚋', title: 'The Trolley', body: 'The MTS Trolley has color lines. The Blue Line runs from the Mexico border at San Ysidro up to UC San Diego.' },
+      { ic: '💳', title: 'PRONTO', body: 'Pay with a PRONTO card or the PRONTO app. Tap the card reader on the platform before you get on the Trolley.' },
+      { ic: '🛣️', title: 'Freeways', body: 'People say “the 5”, “the 8” and “the 15” for freeways. Traffic is heavy at rush hour.' },
+      { ic: '🚆', title: 'The COASTER', body: 'A commuter train that runs along the coast from Downtown north to Oceanside, with ocean views.' }
+    ]
+  },
   mia: {
     name: 'Miami', state: 'FL', nick: 'The Magic City', lat: 25.7617, lon: -80.1918, emoji: '🌊',
     transit: 'EASY Card or EASY Pay app · Metrorail, Metrobus and the free Metromover',
