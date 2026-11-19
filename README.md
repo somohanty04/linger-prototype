@@ -24,11 +24,13 @@ There are two parts: a phone web app and a Chrome extension.
 
 - **Set up:** tap the profile picture at the top right. Linger asks what you read, your languages and your English level. If you're not sure of your level, take the four-minute English check. You can skip any question.
 - **Account:** sign in from the same place to keep your words on every device. You can also delete your account and data there.
-- **Lens:** scan with the camera, upload a photo, or paste text. Hard words for your level get a dotted underline. Tap one to see what it means. On a photo or screenshot, you tap the words right on the picture (switch to **Text** to see it as plain text).
+- **Lens:** scan with the camera, upload a photo, or paste text. Tap any word for its meaning, what it means in that sentence, easier words and an example (Linger AI); press and drag across words to explain a whole phrase. Switch the card, or the whole text, into your language. On a photo or screenshot you tap the words right on the picture (switch to **Text** for plain text).
 - **Explain this letter:** a plain-English summary of what the letter wants from you, with key dates. It can read the summary out loud.
 - **Words:** the words you save, each marked Learning, Almost or Known. The week at the top works like a calendar: swipe it or use the arrows to move between weeks, tap a day to see the words you saved that day (days with a dot have words), or tap the calendar icon for a month view.
-- **Local:** a city guide with slang, customs, getting around and common mix-ups, for 17 U.S. cities (Atlanta, Boston, Chicago, Dallas, Denver, Detroit, Houston, Los Angeles, Miami, Minneapolis, New Orleans, New York, Philadelphia, Pittsburgh, San Francisco, Seattle and Washington, D.C.).
-- **Review:** practice with Fill in the story and Flashcards, or play a game. Before a word game, pick the words to play with or tap **Surprise me**: **Match up** (pair words and meanings), **Bubble catch** (pop the word that fits the meaning before it floats away), **Unscramble** (spell the word from its letters) and **Say it** (hear the word, say it, and Linger checks how close you were). The **city quiz** tests slang, customs and getting around for the city you pick. Your answers tell Linger which words you know.
+- **Local:** a city guide with slang, customs, getting around and common mix-ups for 18 U.S. cities, including San Diego. Search for any other U.S. city and Linger AI writes a guide for it.
+- **Profile** (the picture at the top right): your progress toward the next level, words known/almost/learning, your streak and best scores, your account, and connecting the Chrome extension (it syncs by itself when you're signed in to the same account; a code is the backup).
+- **Settings:** text size, display zoom, light/dark mode, high contrast, color filters and reduce motion.
+- **Review:** Flashcards, then games: Fill in the story, Match up, Bubble catch, Unscramble, Say it (pronunciation) and a quiz on your city. Before a word game, pick the words or tap **Surprise me**.
 
 ## Phone beta (for testers)
 

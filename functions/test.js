@@ -76,3 +76,20 @@ assert.ok(buildRequest(sw).messages[0].content.includes('easier, more common Eng
 assert.ok(buildRequest(readInput({ mode: 'swap-many', lang: 'hi', langName: 'Hindi', items: [{ w: 'remit', s: 'Remit payment.' }] })).messages[0].content.includes('translated into Hindi'));
 assert.deepEqual(readResult(text({ swaps: ['never seen before'] })), { swaps: ['never seen before'] });
 console.log('swap-many ok');
+
+// City guides (phone app, Local → search any city)
+{
+  assert.ok(readInput({ mode: 'city', text: '  ' }).error);
+  assert.deepEqual(readInput({ mode: 'city', text: 'Boise <b>' }), { mode: 'city', text: 'Boise b' });
+  const req = buildRequest(readInput({ mode: 'city', text: 'Boise' }));
+  assert.equal(req.output_config.format.schema.required.includes('customs'), true);
+  assert.ok(req.messages[0].content.includes('<city>Boise</city>'));
+  const out = readResult({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ found: true, name: 'Boise', state: 'id', nick: 'City of Trees', emoji: '🌲', lat: 43.6, lon: -116.2, transit: 'ValleyRide buses', talk: 'Ask about the Broncos.',
+    slang: [{ word: 'the Greenbelt', say: 'green-belt', meaning: 'A riverside path.', sentence: 'Let’s bike the Greenbelt.', local: 'Everyone says it.' }],
+    customs: [{ ic: '🌲', tag: 'Outdoors', title: 'Float the river', body: 'In summer people float the Boise River.' }],
+    around: [{ ic: '🚌', title: 'ValleyRide', body: 'Buses run on main roads.' }] }) }] });
+  assert.equal(out.city.state, 'ID');
+  assert.equal(out.city.slang[0].k, 'cthegreenbelt');
+  assert.equal(readResult({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ found: false, name: '', state: '', nick: '', emoji: '', lat: 0, lon: 0, transit: '', talk: '', slang: [], customs: [], around: [] }) }] }).city, null);
+}
+console.log('city tests passed');
