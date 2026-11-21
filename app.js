@@ -482,7 +482,7 @@
     stopSpeaking(); warmUp();
     S.pending = null; S.sheet = null; S.explain = false;
     try {
-      camStream = await openStream(facing, false);
+      if (camLive()) resumeCamera(); else camStream = await openStream(facing, false); // reuse the stream: no new permission prompt
       countCameras();
       S.tab = 'lens'; S.source = 'camera';
       S.scan = { status: 'live', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' };
@@ -512,6 +512,14 @@
     render();
   }
   function stopCamera() { if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; } }
+  // After a photo (or switching to Upload / Paste) the camera is paused, not closed: asking for it again would show the
+  // browser's permission prompt again. It's closed for real when you leave Lens or the app goes to the background.
+  const camLive = () => !!camStream && camStream.getVideoTracks().some((t) => t.readyState === 'live');
+  function pauseCamera() { if (camStream) camStream.getVideoTracks().forEach((t) => { t.enabled = false; }); if (S.scan.status === 'live') S.scan.status = 'idle'; }
+  function resumeCamera() { if (camStream) camStream.getVideoTracks().forEach((t) => { t.enabled = true; }); }
+  // Back to the camera after Clear (or the Scan tab): straight to the live view when the camera is still open.
+  function backToCamera() { if (camLive()) { resumeCamera(); S.source = 'camera'; S.lensMode = 'scan'; S.scan = { status: 'live', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; } }
+  document.addEventListener('visibilitychange', () => { if (document.hidden && camStream && S.scan.status !== 'live') stopCamera(); });
   function closeCamera() { stopCamera(); if (S.scan.status === 'live') S.scan.status = 'idle'; }
   // Keep only the part of the picture inside the on-screen frame (the video is shown with object-fit: cover).
   function shutterFlash(card) {
@@ -559,7 +567,7 @@
   }
   const scanStage = (p) => (p < 30 ? 'Finding the words…' : p < 70 ? 'Reading each line…' : p < 95 ? 'Checking the hard words…' : 'Almost there…');
   async function scanImage(src, origin = 'camera') {
-    closeCamera(); stopSpeaking();
+    pauseCamera(); stopSpeaking(); lensExpand(false);
     S.tab = 'lens'; S.source = 'camera';
     S.pending = null; S.sheet = null; S.explain = false;
     S.lensMode = origin === 'upload' ? 'upload' : 'scan';
@@ -571,6 +579,7 @@
       TEXTS.camera = text; SUMMARY.camera = summarize(text);
       S.scan.status = 'done'; S.scan.conf = conf; S.scan.boxes = boxes; S.shotView = boxes ? 'picture' : 'text'; if (boxes) fx('shot', 1);
       S.explain = true; // show the plain-English summary right away
+      if (src) setTimeout(() => { if (S.tab === 'lens' && S.scan.status === 'done') sheetTo(true); }, 0);
     } catch (e) {
       S.scan.status = 'error';
       S.scan.msg = e.message === 'empty' ? 'Linger couldn’t find readable text. Try again closer, flatter and in better light.' : 'Couldn’t read the photo. Check your internet connection and try again.';
@@ -970,9 +979,8 @@
   // the same header as Words (gradient, rings, logo, 36px title, subtitle), then the switch on the white sheet.
   const lensHero = () => `<header class="hero wh lh2">
       <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
-      ${logo}${avatarBtn()}
-      <div class="wh-title"><div class="wh-row"><h1>Lens</h1><span class="lh-tools"><button type="button" class="lh-lang" data-action="lang-open" aria-label="Your language: ${esc(langLabel())}. Change it">🌐 <span ${S.lang ? langAttrs() : ''}>${esc(S.lang ? langLabel() : 'Language')}</span></button><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button></span></div>
-        <div class="hsub">Point or upload any text to understand</div></div>
+      ${logo}<div class="lh-topbar"><button type="button" class="lh-lang" data-action="lang-open" aria-label="Your language: ${esc(langLabel())}. Change it">🌐 <span ${S.lang ? langAttrs() : ''}>${esc(S.lang ? langLabel() : 'Language')}</span></button><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button>${avatarBtn()}</div>
+      <div class="wh-title"><div class="wh-row"><h1>Lens</h1></div></div>
     </header>`;
   const lensSwitch = (mode) => `<div class="lh-switch" role="group" aria-label="How to read something">
         ${[['scan', 'Scan'], ['upload', 'Upload a photo'], ['paste', 'Paste text']].map(([m, l]) => `<button type="button" class="lh-seg ${mode === m ? 'on' : ''}" data-action="lens-mode" data-v="${m}" aria-pressed="${mode === m}">${l}</button>`).join('')}
@@ -1007,10 +1015,9 @@
       let autos = [];
       if (S.autoHard) { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
       card = `<div class="lh-card lh-result">
-          <div class="lh-rhead"><span>${ORIGIN_LABEL[sc.origin] || 'Your text'}</span><button type="button" class="lh-trbtn${S.textTr && S.lang ? ' on' : ''}" data-action="text-tr" aria-pressed="${!!(S.textTr && S.lang)}">🌐 ${S.lang ? esc(langOf(S.lang).own) : 'Translate'}</button>${boxes ? `<span class="lh-views" role="group" aria-label="Show as"><button type="button" class="${picture ? 'on' : ''}" data-action="shot-view" data-v="picture" aria-pressed="${!!picture}">Picture</button><button type="button" class="${picture ? '' : 'on'}" data-action="shot-view" data-v="text" aria-pressed="${!picture}">Text</button></span>` : ''}<button type="button" class="lh-clear" data-action="lens-clear">Clear</button></div>
+          <div class="lh-rhead"><span>${ORIGIN_LABEL[sc.origin] || 'Your text'}</span><span class="lh-rspace"></span>${boxes ? `<span class="lh-views" role="group" aria-label="Show as"><button type="button" class="${picture ? 'on' : ''}" data-action="shot-view" data-v="picture" aria-pressed="${!!picture}">Picture</button><button type="button" class="${picture ? '' : 'on'}" data-action="shot-view" data-v="text" aria-pressed="${!picture}">Text</button></span>` : ''}<button type="button" class="lh-clear" data-action="lens-clear">Clear</button></div>
           <p class="lh-tip">Tap a word. Press and drag across words to explain a phrase.</p>
           ${picture ? `<div class="lh-shot${FX.shot ? ' fresh' : ''}"><img src="${sc.img}" alt="${esc(ORIGIN_LABEL[sc.origin] || 'Your photo')}. The words on it are buttons.">${toks}</div>` : `<div class="lh-text">${toks}</div>`}
-          ${S.textTr && S.lang ? textTrBox() : ''}
           ${sc.conf && sc.conf < 60 ? '<p class="lh-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}
           ${autos.length ? `<p class="lh-sub">Hard words here</p><div class="lh-chips">${autos.map((k) => `<button type="button" class="lh-chip" data-action="open" data-k="${k}">${esc(cap(D[k].word))}</button>`).join('')}</div>` : ''}
         </div>`;
@@ -1034,18 +1041,18 @@
     } else {
       const live = sc.status === 'live', corners = '<i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i>';
       const err = sc.status === 'error' && sc.origin !== 'upload';
-      const hint = live ? 'Fit the whole page inside the frame' : err ? 'Camera is off' : 'Tap Turn on camera to start';
+      const hint = live ? 'Fit the whole page inside the frame' : err ? 'Camera is off' : '';
       card = `<div class="lh-card">
           ${live ? '<video id="cam" playsinline muted autoplay></video>' : `<div class="lh-empty">${err ? `<p>${esc(sc.msg)}</p>` : '<p>Linger reads it and explains the hard words.</p>'}</div>`}
           <div class="lh-frame" id="camFrame">${corners}</div>
-          <p class="lh-hint">${hint}</p>
+          ${hint ? `<p class="lh-hint">${hint}</p>` : ''}
           ${camCount !== 1 ? `<button type="button" class="lh-flip" data-action="cam-flip" aria-label="Switch to the ${facing === 'environment' ? 'front' : 'back'} camera">${flipIcon}</button>` : ''}
         </div>`;
       cta = `<button type="button" class="btn primary lh-cta" data-action="shutter">${camIcon}${live ? 'Take photo' : err ? 'Try again' : 'Turn on camera'}</button>`;
     }
     const shown = done || reading ? (sc.origin === 'upload' ? 'upload' : sc.origin === 'paste' || sc.origin === 'share' ? 'paste' : 'scan') : mode;
     return `<div class="lens-home lh2-home">${lensHero()}
-      <div class="body wb lb">
+      <div class="body wb lb${done ? ' lb-result' : ''}">
         ${lensSwitch(shown)}
         ${card}
         ${cta}
@@ -2133,6 +2140,7 @@
     return safeTop;
   };
   const sheetIsUp = () => !!(S.sheetUp && S.sheetUp[S.tab]);
+  const lensExpand = (up) => { S.sheetUp = { ...(S.sheetUp || {}), lens: up }; };
   function sheetSetup() {
     // A freshly drawn screen takes its sheet position at once (no animation when switching tabs).
     screenEl.classList.add('sheet-drag');
@@ -2141,6 +2149,7 @@
     screenEl.classList.remove('sheet-drag');
     const body = scroll.querySelector('.hero + .body');
     if (!body || body.querySelector(':scope > .sheet-grab')) return;
+    if (S.tab === 'lens' && !body.classList.contains('lb-result')) return; // no handle on the camera / upload / paste screen
     body.insertAdjacentHTML('afterbegin', `<button type="button" class="sheet-grab" aria-expanded="${sheetIsUp()}" aria-label="${sheetIsUp() ? 'Show the header again' : 'Pull the sheet up to fill the screen'}"></button>`);
   }
   // Animate the header to a height, then hand control back to CSS.
@@ -2322,13 +2331,19 @@
     shutter: () => { if (S.scan.status === 'live') capture(); else startCamera(); },
     // The Lens switch: picking a mode clears what was read and shows that mode's card.
     'lens-mode': (d) => {
-      stopSpeaking(); S.pending = null; S.sheet = null; S.explain = false;
-      if (d.v !== 'scan') closeCamera();
+      stopSpeaking(); S.pending = null; S.sheet = null; S.explain = false; lensExpand(false);
+      if (d.v !== 'scan') pauseCamera();
       const busy = S.scan.status === 'reading';
       if (!busy) S.scan = { status: S.scan.status === 'live' && d.v === 'scan' ? 'live' : 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' };
       S.lensMode = d.v;
+      if (!busy && d.v === 'scan') backToCamera();
     },
-    'lens-clear': () => { stopSpeaking(); S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pasteDraft = ''; S.pending = null; S.sheet = null; S.explain = false; },
+    'lens-clear': () => {
+      stopSpeaking(); lensExpand(false);
+      const wasPhoto = S.scan.origin === 'camera';
+      S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pasteDraft = ''; S.pending = null; S.sheet = null; S.explain = false;
+      if (wasPhoto && S.lensMode === 'scan') backToCamera(); // ready for the next photo, no new permission prompt
+    },
     'paste-clip': async () => { try { const t = await navigator.clipboard.readText(); if (t) { S.pasteDraft = t; render(); } } catch { const b = document.getElementById('pasteText'); if (b) b.focus(); } },
     rescan: () => { stopSpeaking(); S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pending = null; S.sheet = null; S.explain = false; },
     settings: () => { stopSpeaking(); closeCamera(); S.tab = 'settings'; S.pending = null; S.sheet = null; S.explain = false; },

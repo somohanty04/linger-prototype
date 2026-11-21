@@ -509,7 +509,16 @@ a.share-card { text-decoration: none; color: inherit; }
 /* ---------- Lens v2 (Figma "final draft · Lens home v2 (Words style)", node 257:545) ---------- */
 .lens-home.lh2-home { background: var(--surface); padding-bottom: 0; }
 .hero.wh.lh2 { flex: none; height: calc(200px + var(--sa)); }
-.hero.wh .lh-gear { width: 44px; height: 44px; margin: -10px -10px -10px 0; }
+.hero.wh .lh-gear { width: 44px; height: 44px; margin: 0; }
+/* Lens header: Language, Settings and Account in one row at the top right, level with the logo */
+.hero.wh.lh2 { height: calc(150px + var(--sa)); }
+.hero.wh .lh-topbar { right: 12px; top: calc(14px + var(--sa)); z-index: 2; display: flex; align-items: center; gap: 2px; }
+.hero.wh .lh-topbar .av-btn { position: relative; right: auto; top: auto; }
+.hero.wh .lh-topbar .lh-lang { margin-right: 4px; }
+.hero.wh.lh2 .wh-title { top: calc(80px + var(--sa)); }
+/* Lens: no pull-up handle on the camera, upload or paste screen; a result has one to bring the header back */
+.body.wb.lb:not(.lb-result)::before { display: none; }
+.lh-rspace { margin-left: auto; }
 .body.wb.lb { flex: 1; min-height: 0; padding: 32px 16px calc(115px + env(safe-area-inset-bottom, 0px)); }
 .body.wb.lens-results { padding-top: 32px; }
 .body.wb .lh-switch { flex: none; margin: 0; background: #EAEFFF; }
