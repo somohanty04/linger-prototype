@@ -149,6 +149,18 @@
   const placeOf = (e) => e.place || PLACES[e.src] || 'the lens';
   const badge = (kind) => { const b = BADGES[kind] || BADGES.common; return `<span class="badge ${b[1]}">${b[0]}</span>`; };
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  // Line icons for list cards (instead of emojis), in the design system's blue.
+  const ICO = {
+    globe: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+    share: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
+    update: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16V8M8 12l4-4 4 4"/></svg>',
+    chat: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/></svg>',
+    phone: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>',
+    lock: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>',
+    pin: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    spark: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9z"/><path d="M19 17v4M17 19h4"/></svg>',
+    info: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>'
+  };
   const pin = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const speaker = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   const xIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
@@ -259,7 +271,7 @@
       const mine = {}; S.saved.forEach((k) => { if (!map[k]) mine[k] = wordData(k); });
       syncConn.putMany(mine);
     }
-    if (n) { persist(); showToast(`💻 → 📱 ${n} ${n === 1 ? 'word' : 'words'} arrived from your laptop`); }
+    if (n) { persist(); showToast(`${n} ${n === 1 ? 'word' : 'words'} arrived from your laptop`); }
     render();
   }
   function showToast(t, act) { S.toast = t; S.toastAct = act || null; clearTimeout(showToast.t); showToast.t = setTimeout(() => { S.toast = ''; S.toastAct = null; render(); }, act ? 6000 : 3500); }
@@ -284,7 +296,7 @@
       <div class="sync-acts"><button type="button" class="link-btn" data-action="sync-copy">Copy Reader link</button><button type="button" class="link-btn" data-action="sync-off">Turn off</button></div>
       <span hidden id="readerUrl">${esc(readerUrl + '?pair=' + sy.code)}</span></div>`;
     if (sy.status === 'connecting') return '<div class="sync-card"><strong>Connecting…</strong></div>';
-    return `<div class="sync-card"><div class="sync-h">🔗 <strong>Connect with a code</strong></div>
+    return `<div class="sync-card"><div class="sync-h"><strong>Connect with a code</strong></div>
       <div class="small">${sy.status === 'error' ? esc(sy.msg) : 'Get a code here, then type it in the Linger Chrome extension menu (or Linger Reader). Words saved there show up here.'}</div>
       <button type="button" class="btn primary small-btn" data-action="sync-on">${sy.status === 'error' ? 'Try again' : 'Get a code'}</button></div>`;
   }
@@ -561,7 +573,7 @@
   const IMPORTANT_RE = /\b(evict(ion|ed)?|notice to (quit|vacate)|court|summons|hearing|lawsuit|judg(e)?ment|penalt(y|ies)|late fees?|past due|overdue|final notice|shut ?off|disconnect(ion|ed)?|terminat(e|ion|ed)|deadline|must (pay|respond|reply|appear|submit)|failure to|collections?|garnish|IRS|immigration|USCIS|deport(ation)?|benefits|SNAP|Medicaid|Medicare)\b/i;
   const isImportant = (text) => IMPORTANT_RE.test(text || '');
   function importantCard(dates) {
-    return `<div class="imp-card" role="note"><div class="imp-h"><span aria-hidden="true">⚠️</span><strong>This looks important</strong></div>
+    return `<div class="imp-card" role="note"><div class="imp-h"><span class="imp-ic" aria-hidden="true">${ICO.info}</span><strong>This looks important</strong></div>
       <span>It mentions a deadline, money or a legal step. Read it carefully and don’t wait until the last day.</span>
       ${dates && dates.length ? `<div class="dates">${dates.map((d) => `<span class="date">${esc(d)}</span>`).join('')}</div>` : ''}
       <span class="small">Linger isn’t legal advice. If you’re not sure what to do, free help is available:</span>
@@ -782,7 +794,7 @@
       ${w && w.sentence ? `<div class="ctx" ${A}>“${esc(w.sentence)}”</div>` : ''}
       ${w && w.note ? `<div class="small" ${A}>${esc(w.note)}</div>` : ''}
       ${waiting ? '<div class="small">Translating…</div>' : ''}`;
-    return `<div class="tr-box"><div class="label">🌐 In ${esc(L.own)}</div>${body}</div>`;
+    return `<div class="tr-box"><div class="label">In ${esc(L.own)}</div>${body}</div>`;
   }
   function langSheet() {
     const q = S.langQuery.trim().toLowerCase();
@@ -864,13 +876,15 @@
     const acct = acctState(), canSignIn = !!(window.LingerAccount && LingerAccount.available() && acct && acct.auth === 'out');
     return `<header class="set-head prof-head"><button type="button" class="set-back" data-action="profile-back" aria-label="Back">‹</button><h1>Profile</h1></header>
     <div class="body set-body prof-body">
-      ${!S.prefs.done || !S.prefs.level ? '<button type="button" class="setup-strip" data-action="onb-first"><span class="setup-ic" aria-hidden="true">✨</span><span class="setup-txt"><strong>Finish setting up Linger</strong><span>3 quick questions</span></span><span class="setup-go">Set up ›</span></button>' : ''}
+      ${!S.prefs.done || !S.prefs.level ? '<button type="button" class="setup-strip" data-action="onb-first"><span class="setup-ic" aria-hidden="true">' + ICO.spark + '</span><span class="setup-txt"><strong>Finish setting up Linger</strong><span>3 quick questions</span></span><span class="setup-go">Set up ›</span></button>' : ''}
       <div class="prof-top">
         <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
         <div class="prof-who"><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Guest User'}</div>${email ? `<div class="small">${esc(email)}</div>` : canSignIn ? '<div class="small prof-cta">Sign in to back up your words and see them on your laptop too.</div>' : ''}
           ${lvl && lvl[0] !== 'unsure' ? `<span class="prof-level">${esc(LEVEL_NAME[lvl[0]])}</span>` : ''}</div>
-        ${!email && canSignIn ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
+        ${!email && canSignIn && !acct.formOpen ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
       </div>
+      ${email || (acct && acct.formOpen) ? `<p class="rv-label rv-first">Account</p>
+      ${LingerAccount.card({ inSheet: true })}` : ''}
 
       <p class="rv-label">Your progress</p>
       <div class="card db-level">
@@ -883,17 +897,15 @@
       <div class="db-tiles">${tile(st.total, 'saved')}${tile(st.known, 'known', 'k')}${tile(st.almost, 'almost', 'a')}${tile(st.learning, 'learning', 'l')}</div>
       <div class="db-split" aria-hidden="true">${st.total ? `<span class="k" style="flex:${st.known}"></span><span class="a" style="flex:${st.almost}"></span><span class="l" style="flex:${st.learning}"></span>` : '<span class="e"></span>'}</div>
       <div class="card db-week">
-        <div class="db-wh"><strong>🔥 ${st.streak}-day streak</strong><span class="small">Words saved, last 7 days</span></div>
+        <div class="db-wh"><strong>${st.streak}-day streak</strong><span class="small">Words saved, last 7 days</span></div>
         <div class="db-bars">${week.map((w) => `<div class="db-col${w.on ? ' on' : ''}"><span class="db-n">${w.n || ''}</span><span class="db-b" style="height:${Math.round(w.n / peak * 100)}%"></span><span class="db-d">${'SMTWTFS'[w.d.getDay()]}</span></div>`).join('')}</div>
         <div class="small">${st.right + st.wrong ? `Practice: ${st.right} right, ${st.wrong} to try again (${acc}%). ` : ''}Days with a dot under them are days you used Linger.</div>
       </div>
       ${bests.length ? `<div class="card db-best"><strong>Best scores</strong>${bests.map(([n, v, u]) => `<div class="acct-row"><span>${esc(n)}</span><span>${v}${u}</span></div>`).join('')}</div>` : ''}
 
-      ${email || (acct && acct.formOpen) ? `<p class="rv-label">Account</p>
-      ${LingerAccount.card({ inSheet: true })}` : ''}
 
       <p class="rv-label">Chrome extension and laptop</p>
-      <div class="card prof-ext"><strong>${email ? '✓ Syncs with your account' : 'Sign in to sync'}</strong>
+      <div class="card prof-ext"><strong>${email ? 'Syncs with your account' : 'Sign in to sync'}</strong>
         <span class="small">${email ? 'Sign in to the Linger Chrome extension with this same account, and words you save there show up here by themselves. No code needed.' : 'Sign in here and in the Linger Chrome extension with the same account, and your words sync by themselves.'}</span>
         <span class="small">Not working? Connect with a code instead:</span></div>
       ${syncCard()}
@@ -903,8 +915,9 @@
           <div class="acct-setup-h"><strong>Reading setup</strong><button type="button" class="link-btn" data-action="onb-edit">Change</button></div>
           ${row('Reading', readsLabel() || 'Not set yet')}
           ${row(S.langs.length > 1 ? 'Languages' : 'Language', S.langs.length ? langsLabel() + ' + English' : 'Simple English')}
-          ${row('English level', lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : 'Not set yet')}</div>`}
-      <button type="button" class="act share-card" data-action="tab" data-tab="settings"><span class="ic">⚙️</span><span><strong>Settings</strong><span class="small">Text size, dark mode, high contrast, color filters, motion</span></span><span class="go">›</span></button>
+          ${row('English level', lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : 'Not set yet')}
+          <button type="button" class="link-btn acct-test" data-action="level-test">${S.prefs.test ? 'Retake the English check' : 'Not sure? Take the English check'}</button></div>`}
+      <button type="button" class="act share-card" data-action="tab" data-tab="settings"><span class="ic">${gear}</span><span><strong>Settings</strong><span class="small">Text size, dark mode, high contrast, color filters, motion</span></span><span class="go">›</span></button>
     </div>`;
   }
 
@@ -968,7 +981,7 @@
   };
   const backIcon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
   const onbOpt = (on, ic, title, sub, action, v, multi, attrs = '') => `<button type="button" class="onb-opt${on ? ' on' : ''}" role="${multi ? 'checkbox' : 'radio'}" aria-checked="${on}" data-action="${action}" data-v="${esc(v)}">
-      <span class="onb-ic" aria-hidden="true">${ic}</span><span class="onb-txt"><strong ${attrs}>${esc(title)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="onb-check${multi ? ' box' : ''}" aria-hidden="true"></span></button>`;
+      ${ic ? `<span class="onb-ic" aria-hidden="true">${ic}</span>` : ''}<span class="onb-txt"><strong ${attrs}>${esc(title)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="onb-check${multi ? ' box' : ''}" aria-hidden="true"></span></button>`;
   // The page: header (title, progress), white sheet (body), and the buttons at the bottom.
   const onbFrame = ({ title, sub, kicker = '', dots, top, body, foot, label }) => `<div class="onb" role="dialog" aria-modal="true" aria-labelledby="onbT">
       <header class="onb-hero">
@@ -987,7 +1000,7 @@
     let title, sub, body, can = true;
     if (step === 0) {
       title = 'What do you need help reading?'; sub = 'Pick all that apply.';
-      body = `<div class="onb-list" role="group" aria-labelledby="onbT">${READS.map((r) => onbOpt(o.reads.includes(r[0]), r[1], r[2], r[0] === 'all' ? 'A bit of everything' : '', 'onb-read', r[0], true)).join('')}</div>
+      body = `<div class="onb-list" role="group" aria-labelledby="onbT">${READS.map((r) => onbOpt(o.reads.includes(r[0]), '', r[2], r[0] === 'all' ? 'A bit of everything' : '', 'onb-read', r[0], true)).join('')}</div>
         ${o.reads.includes('other') ? `<label class="onb-field"><span>What do you read?</span><input id="onbOther" type="text" maxlength="80" placeholder="For example: school notes, recipes, contracts" value="${esc(o.other)}" autocomplete="off"></label>` : ''}`;
       can = o.reads.length > 0 && (!o.reads.includes('other') || !!o.other.trim());
       const st = acctState();
@@ -1006,15 +1019,19 @@
         <div class="onb-chips">${chips || '<span class="onb-none">None picked: Linger explains in <b>Simple English</b>.</span>'}</div>
         ${o.langs.length > 1 ? '<p class="onb-hint">Summaries use the first one. Word meanings show in each.</p>' : ''}`;
     } else {
-      title = 'Your English level'; sub = 'A rough guess is fine. It sets which words Linger underlines.';
-      body = `${o.suggested ? `<p class="onb-hint">The check suggested <b>${esc(levelName(o.suggested))}</b>. Pick the one that fits you.</p>` : ''}
-        <div class="onb-list" role="radiogroup" aria-labelledby="onbT">${LEVELS.map((l) => onbOpt(o.level === l[0], l[1], l[2], l[3], 'onb-level', l[0], false)).join('')}</div>
-        ${o.level === 'unsure' ? `<div class="onb-test-card"><strong>Let Linger check</strong><span>About 4 minutes: quick “do you know this word?” taps, then 10 meaning questions. Linger suggests a level and you decide.</span>
-          <button type="button" class="btn primary small-btn" data-action="test-start">Take the English check</button></div>` : ''}`;
-      can = !!o.level;
+      title = 'Your English level'; sub = 'It sets which words Linger underlines. You can change it anytime.';
+      // The English check comes first, as its own card with a button, so people who don't know their level find it.
+      const picked = o.level && o.level !== 'unsure' ? o.level : '';
+      body = `<div class="onb-test-card onb-test-top"><strong>Not sure? Take the English check</strong>
+          <span>About 4 minutes: tap whether you know some words, then answer 10 questions about meanings. Linger suggests a level, and you decide.</span>
+          <button type="button" class="btn primary small-btn" data-action="test-start">Take the English check</button></div>
+        ${o.suggested ? `<p class="onb-hint">The check suggested <b>${esc(levelName(o.suggested))}</b>. Pick the one that fits you.</p>` : ''}
+        <p class="onb-or" id="onbLvl">Or choose your level</p>
+        <div class="onb-list" role="radiogroup" aria-labelledby="onbLvl">${LEVELS.filter((l) => l[0] !== 'unsure').map((l) => onbOpt(picked === l[0], l[1], l[2], l[3], 'onb-level', l[0], false)).join('')}</div>`;
+      can = !!picked;
     }
     const foot = `${step > 0 ? `<button type="button" class="lh-round onb-back" data-action="onb-back" aria-label="Back">${backIcon}</button>` : ''}
-      <button type="button" class="btn primary lh-cta" data-action="onb-next" ${can ? '' : 'disabled'}>${step < 2 ? 'Continue' : o.level === 'unsure' ? 'Skip the check' : o.edit ? 'Save' : 'Start reading'}</button>`;
+      <button type="button" class="btn primary lh-cta" data-action="onb-next" ${can ? '' : 'disabled'}>${step < 2 ? 'Continue' : o.edit ? 'Save' : 'Start reading'}</button>`;
     return onbFrame({ title: esc(title), sub, kicker: step === 0 && !o.edit ? 'Welcome to Linger' : '', dots, top: `<button type="button" class="onb-skip" data-action="onb-skip">${o.edit ? 'Cancel' : 'Skip'}</button>`, body, foot });
   }
   // The English check (entest.js): part 1 "Do you know this word?" taps, part 2 meaning questions, then the suggested
@@ -1068,7 +1085,7 @@
   // the same header as Words (gradient, rings, logo, 36px title, subtitle), then the switch on the white sheet.
   const lensHero = () => `<header class="hero wh lh2">
       <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
-      ${logo}<div class="lh-topbar"><button type="button" class="lh-lang" data-action="lang-open" aria-label="Your language: ${esc(langLabel())}. Change it">🌐 <span ${S.lang ? langAttrs() : ''}>${esc(S.lang ? langLabel() : 'Language')}</span></button><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button>${avatarBtn()}</div>
+      ${logo}<div class="lh-topbar"><button type="button" class="lh-lang" data-action="lang-open" aria-label="Your language: ${esc(langLabel())}. Change it">${ICO.globe}<span ${S.lang ? langAttrs() : ''}>${esc(S.lang ? langLabel() : 'Language')}</span></button><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button>${avatarBtn()}</div>
       <div class="wh-title"><div class="wh-row"><h1>Lens</h1></div></div>
     </header>`;
   const lensSwitch = (mode) => `<div class="lh-switch" role="group" aria-label="How to read something">
@@ -1183,12 +1200,12 @@
         <div class="switch-row"><div><strong>AI explanations</strong><span class="small">What a word means in its sentence, from Claude (an AI by Anthropic). Sends the word or highlight and its sentence to Linger’s server. Also used to translate when your phone can’t, and to make new city guides.</span></div>
           <button type="button" class="switch" role="switch" aria-label="AI explanations" aria-checked="${aiOK()}" data-action="ai-toggle"></button></div>
       </div>
-      <button type="button" class="act share-card" data-action="lang-open"><span class="ic">🌐</span><span><strong>My language</strong><span class="small" ${S.lang ? langAttrs() : ''}>${esc(langLabel())} · meanings and summaries also show in it</span></span><span class="go">›</span></button>
-      <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">${BETA && BETA.native ? 'Take a screenshot or select text, tap Share, then Linger' : 'Select text anywhere, tap Share, then “Explain with Linger”'}</span></span><span class="go">›</span></button>
+      <button type="button" class="act share-card" data-action="lang-open"><span class="ic">${ICO.globe}</span><span><strong>My language</strong><span class="small" ${S.lang ? langAttrs() : ''}>${esc(langLabel())} · meanings and summaries also show in it</span></span><span class="go">›</span></button>
+      <button type="button" class="act share-card" data-action="share-help"><span class="ic">${ICO.share}</span><span><strong>Use Linger in any app</strong><span class="small">${BETA && BETA.native ? 'Take a screenshot or select text, tap Share, then Linger' : 'Select text anywhere, tap Share, then “Explain with Linger”'}</span></span><span class="go">›</span></button>
 
       <p class="set-label">Display</p>
       <div class="card">
-        <div class="set-row"><div><strong>Appearance</strong></div>${seg('theme', [['system', 'Match phone'], ['light', '☀️ Light'], ['dark', '🌙 Dark']])}</div>
+        <div class="set-row"><div><strong>Appearance</strong></div>${seg('theme', [['system', 'Match phone'], ['light', 'Light'], ['dark', 'Dark']])}</div>
         <div class="set-row"><div><strong>Text size</strong><span class="small">Makes the words bigger without changing the layout</span></div>
           ${seg('text', [[0.9, 'A', 'Small'], [1, 'A', 'Default'], [1.15, 'A', 'Large'], [1.3, 'A', 'Largest']], 'aa')}
           <div class="set-preview">Your rent is due on the 1st. Tap any word to see what it means.</div></div>
@@ -1219,10 +1236,10 @@
     const queued = BETA.pending();
     const shellOld = SHELL_BUILD && SHELL_BUILD < LATEST_SHELL;
     return `<div class="beta-sec"><div class="label">Beta</div>
-      ${shellOld ? '<a class="act share-card" href="itms-beta://"><span class="ic">⬆️</span><span><strong>Update the Linger app</strong><span class="small">A newer version is ready in TestFlight. Open TestFlight and tap Update.</span></span><span class="go">›</span></a>' : ''}
-      <button type="button" class="act share-card" data-action="beta-feedback"><span class="ic">💬</span><span><strong>Send feedback</strong><span class="small">Tell us what broke, what was confusing, or what you wish Linger did</span></span><span class="go">›</span></button>
-      ${BETA.standalone() ? '' : `<button type="button" class="act share-card" data-action="beta-install"><span class="ic">📲</span><span><strong>Add Linger to your Home Screen</strong><span class="small">Then it opens full screen, like an app</span></span><span class="go">›</span></button>`}
-      <a class="act share-card" href="privacy.html"><span class="ic">🔒</span><span><strong>Privacy policy</strong><span class="small">What Linger keeps, what it sends, and how to delete it</span></span><span class="go">›</span></a>
+      ${shellOld ? '<a class="act share-card" href="itms-beta://"><span class="ic">' + ICO.update + '</span><span><strong>Update the Linger app</strong><span class="small">A newer version is ready in TestFlight. Open TestFlight and tap Update.</span></span><span class="go">›</span></a>' : ''}
+      <button type="button" class="act share-card" data-action="beta-feedback"><span class="ic">${ICO.chat}</span><span><strong>Send feedback</strong><span class="small">Tell us what broke, what was confusing, or what you wish Linger did</span></span><span class="go">›</span></button>
+      ${BETA.standalone() ? '' : `<button type="button" class="act share-card" data-action="beta-install"><span class="ic">${ICO.phone}</span><span><strong>Add Linger to your Home Screen</strong><span class="small">Then it opens full screen, like an app</span></span><span class="go">›</span></button>`}
+      <a class="act share-card" href="privacy.html"><span class="ic">${ICO.lock}</span><span><strong>Privacy policy</strong><span class="small">What Linger keeps, what it sends, and how to delete it</span></span><span class="go">›</span></a>
       <p class="small beta-ver">Linger Beta ${esc(BETA.version)} · ${esc(BETA.date)}${BETA.standalone() ? ' · installed' : ''}${queued ? ` · <span class="plane-wait" aria-hidden="true">${planeIcon}</span>${queued} feedback ${queued === 1 ? 'message' : 'messages'} waiting to send` : ''}</p></div>`;
   }
   function betaOverlay() {
@@ -1250,7 +1267,7 @@
     }
     // One-time tip on the phone, after setup, when Linger isn't on the Home Screen yet.
     if (S.installTip && !html && S.tab !== 'settings' && !S.coach && !S.sheet && !S.pending && !S.explain && !S.paste && !S.shareHelp && !S.langPick && !S.cityPick && !S.acct && !S.onb && !S.activity)
-      html += `<div class="beta-tip" role="dialog" aria-label="Add Linger to your Home Screen"><span>📲 <strong>Add Linger to your Home Screen</strong> so it opens like an app.</span>
+      html += `<div class="beta-tip" role="dialog" aria-label="Add Linger to your Home Screen"><span><strong>Add Linger to your Home Screen</strong> so it opens like an app.</span>
         <span class="coach-acts"><button type="button" class="link-btn" data-action="beta-tip-later">Later</button><button type="button" class="btn primary small-btn" data-action="beta-install">Show me</button></span></div>`;
     return html;
   }
@@ -1396,7 +1413,7 @@
         try { const all = JSON.parse(localStorage.getItem(CUSTOM_CITIES) || '{}'); all[id] = CITIES[id]; localStorage.setItem(CUSTOM_CITIES, JSON.stringify(all)); } catch {}
       }
       S.cityMake = null; S.cityQuery = ''; setCity(id);
-      showToast(same ? `📍 ${c.name} already has a guide` : `✨ Linger wrote a guide for ${c.name}`);
+      showToast(same ? `${c.name} already has a guide` : `Linger wrote a guide for ${c.name}`);
     } catch { S.cityMake = { q, status: 'fail' }; }
     render();
   }
@@ -1418,7 +1435,7 @@
       const { latitude: la, longitude: lo } = pos.coords;
       const [best, km] = Object.entries(CITIES).map(([id, c]) => [id, distKm(la, lo, c.lat, c.lon)]).sort((p, q) => p[1] - q[1])[0];
       setCity(best);
-      showToast(km < 120 ? `📍 Showing ${CITIES[best].name}, near you` : `📍 No guide here yet. Closest: ${CITIES[best].name}`);
+      showToast(km < 120 ? `Showing ${CITIES[best].name}, near you` : `No guide here yet. Closest: ${CITIES[best].name}`);
       render();
     }, () => { S.cityPick = true; S.cityQuery = ''; showToast('Couldn’t get your location. Pick your city from the list.'); render(); }, { timeout: 10000, maximumAge: 600000 });
   }
@@ -1463,9 +1480,9 @@
     </header>
     <div class="body wb loc-body">
       <article class="loc-item loc-gk"><span class="loc-title">Good to know</span>
-        ${ess.map(([ic, t, d]) => `<div class="gk-row"><span class="gk-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</article>
+        ${ess.map(([ic, t, d]) => `<div class="gk-row"><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</article>
       <div class="lh-switch loc-switch" role="group" aria-label="City guide sections">${segs.map(([v, l]) => `<button type="button" class="lh-seg ${S.localSeg === v ? 'on' : ''}" data-action="seg" data-v="${v}" aria-pressed="${S.localSeg === v}">${l}</button>`).join('')}</div>
-      <p class="loc-note">${note}${c.ai && S.localSeg !== 'mixups' ? ' <span class="ai-note">✨ Written by Linger AI. Double-check anything important.</span>' : ''}</p>
+      <p class="loc-note">${note}${c.ai && S.localSeg !== 'mixups' ? ' <span class="ai-note">Written by Linger AI. Double-check anything important.</span>' : ''}</p>
       <div class="wlist">${items}</div>
       <article class="loc-item"><span class="badge b-loc">Small talk</span><span class="mean">${esc(c.talk)}</span></article>
     </div>`;
@@ -1761,7 +1778,7 @@
     return `<div class="full-view game-view bubble-view">${gameTop('Bubble catch', hearts)}
       <div class="bb-meaning${FX.bbMiss ? ' shake' : ''}"><span class="bb-n">${b.round} of ${b.rounds}</span>${esc(shortMeaning(D[r.k].meaning))}${r.lost ? `<span class="bb-was">It was <b>${esc(D[r.k].word)}</b></span>` : ''}</div>
       <div class="bb-sky" aria-label="Word bubbles">${bubbles}</div>
-      <div class="g-foot bb-foot"><span>${b.score} pts</span>${b.streak > 1 ? `<span class="bb-streak">🔥 ${b.streak} in a row</span>` : ''}</div></div>`;
+      <div class="g-foot bb-foot"><span>${b.score} pts</span>${b.streak > 1 ? `<span class="bb-streak">${b.streak} in a row</span>` : ''}</div></div>`;
   }
 
   // Unscramble: the meaning and the sentence (with a gap) are the clue; tap letters to spell the word.
@@ -1834,7 +1851,7 @@
         ${all.length ? `<div class="pk-list">${all.map((k) => { const on = p.sel.includes(k); return `<button type="button" class="pk-chip${on ? ' on' : ''}" data-action="pk-word" data-k="${k}" aria-pressed="${on}"><span class="pk-tick" aria-hidden="true">${on ? '✓' : '+'}</span>${esc(cap(D[k].word))}</button>`; }).join('')}</div>`
           : '<p class="pk-empty">You haven’t saved any words that fit this game yet. Surprise me uses Linger’s own words.</p>'}
         ${n && n < need ? `<p class="small pk-note">Pick at least ${need}, or Linger adds a few of its own.</p>` : ''}
-        <div class="grid2"><button type="button" class="btn" data-action="pk-random">🎲 Surprise me</button><button type="button" class="btn primary" data-action="pk-go" ${n ? '' : 'disabled'}>${n ? `Play with ${n}` : 'Pick words'}</button></div></div></div>`;
+        <div class="grid2"><button type="button" class="btn" data-action="pk-random">Surprise me</button><button type="button" class="btn primary" data-action="pk-go" ${n ? '' : 'disabled'}>${n ? `Play with ${n}` : 'Pick words'}</button></div></div></div>`;
   }
 
   // ---------- Say it: hear the word, say it, Linger checks how close it was ----------
@@ -1935,8 +1952,8 @@
     const pickOthers = (list, not, n, f) => shuffle(list.filter((x) => f(x) !== f(not))).slice(0, n).map(f);
     shuffle(slang).slice(0, 3).forEach((e) => qs.push({ q: `In ${name}, what does “${e.word}” mean?`, right: e.meaning, wrong: pickOthers([...slang, ...otherSlang], e, 2, (x) => x.meaning), more: e.local || '' }));
     if (slang.length && otherSlang.length) { const e = shuffle(slang)[0]; qs.push({ q: `Which word would you most likely hear in ${name}?`, right: e.word, wrong: pickOthers(otherSlang, e, 2, (x) => x.word), more: `“${e.word}”: ${e.meaning}` }); }
-    shuffle(customs).slice(0, 3).forEach((t) => qs.push({ q: `${t.ic || '📌'} ${t.title}. What’s the custom in ${name}?`, right: t.body, wrong: pickOthers(customs, t, 2, (x) => x.body), more: '' }));
-    shuffle(around).slice(0, 2).forEach((t) => qs.push({ q: `${t.ic || '🧭'} Getting around ${name}: “${t.title}”. What does it mean?`, right: t.body, wrong: pickOthers(around, t, 2, (x) => x.body), more: '' }));
+    shuffle(customs).slice(0, 3).forEach((t) => qs.push({ q: `${t.title}. What’s the custom in ${name}?`, right: t.body, wrong: pickOthers(customs, t, 2, (x) => x.body), more: '' }));
+    shuffle(around).slice(0, 2).forEach((t) => qs.push({ q: `Getting around ${name}: “${t.title}”. What does it mean?`, right: t.body, wrong: pickOthers(around, t, 2, (x) => x.body), more: '' }));
     return shuffle(qs).slice(0, 8).map((q) => ({ ...q, opts: shuffle([q.right, ...q.wrong]) }));
   }
   function startCityQuiz() { S.cq = { city: CITIES[S.city] ? S.city : 'pgh', qs: cityQuestions(CITIES[S.city] ? S.city : 'pgh'), i: 0, right: 0, picked: null }; }
@@ -1952,7 +1969,7 @@
   }
   function viewCityQuiz() {
     const g = S.cq, c = CITIES[g.city] || CITIES.pgh, title = `${c.name} quiz`;
-    if (!g.qs.length) return gameEnd('city-view', title, '🏙️', 'There isn’t enough about this city yet for a quiz. Try another city.', 'cityquiz');
+    if (!g.qs.length) return gameEnd('city-view', title, '', 'There isn’t enough about this city yet for a quiz. Try another city.', 'cityquiz');
     if (g.over) return gameEnd('city-view', title, `<span class="g-stars">${stars(g.stars)}</span>`, `${g.right} of ${g.qs.length} right. ${g.stars === 3 ? `You know ${esc(c.name)} like a local!` : 'Read the Local tab and try again.'}${g.best ? ' New best!' : ''}`, 'cityquiz');
     const q = g.qs[g.i], answered = g.picked !== null;
     const opts = q.opts.map((o, i) => {
@@ -1962,7 +1979,7 @@
     const ok = answered && q.opts[g.picked] === q.right;
     return `<div class="full-view game-view city-view">${gameTop(title, `${g.i + 1} of ${g.qs.length}`)}
       <div class="cq-progress" aria-hidden="true"><span style="width:${Math.round(g.i / g.qs.length * 100)}%"></span></div>
-      <div class="cq-q${FX.cqNew ? ' new' : ''}"><span class="cq-city">${c.emoji || '📍'} ${esc(cityName(c))}</span>${esc(q.q)}</div>
+      <div class="cq-q${FX.cqNew ? ' new' : ''}"><span class="cq-city">${esc(cityName(c))}</span>${esc(q.q)}</div>
       <div class="cq-opts${FX.cqNew ? ' new' : ''}">${opts}</div>
       ${answered ? `<p class="g-hint cq-verdict${ok ? ' ok' : ''}">${ok ? '✓ Right!' : '✕ Not quite.'}${q.more ? ' ' + esc(q.more) : ''}</p>` : ''}
       <div class="g-acts">${answered ? `<button type="button" class="btn primary wide-btn" data-action="cq-next">${g.i + 1 < g.qs.length ? 'Next question' : 'See results'}</button>` : ''}</div></div>`;
@@ -1987,7 +2004,7 @@
       })();
     }
     const x = TTR.get(key);
-    return `<div class="lh-trtext"><div class="label">🌐 In ${esc(langOf(L).own)} <button type="button" class="link-btn" data-action="lang-open">Change</button></div>
+    return `<div class="lh-trtext"><div class="label">In ${esc(langOf(L).own)} <button type="button" class="link-btn" data-action="lang-open">Change</button></div>
       ${x.status === 'ok' ? `<p ${langAttrs(L)}>${x.t.map(esc).join(' ')}</p>` : x.status === 'wait' ? thinking('Translating…') : x.status === 'off' ? '<p class="small">Your phone can’t translate this by itself. Turn on AI explanations in Settings to translate with Linger.</p>' : '<p class="small">Couldn’t translate right now. Try again in a moment.</p>'}</div>`;
   }
 
@@ -2050,7 +2067,7 @@
     return t && t.status === 'ok' ? `<span ${langAttrs(L)}>${esc(t.t)}</span>` : t && t.status === 'wait' ? `<span class="tr-wait">${esc(text)}</span>` : esc(text);
   }
   function cardLangs() {
-    if (!S.langs.length) return `<button type="button" class="card-addlang" data-action="lang-open">🌐 Show in my language</button>`;
+    if (!S.langs.length) return `<button type="button" class="card-addlang" data-action="lang-open">Show in my language</button>`;
     const cur = S.langs.includes(S.cardLang) ? S.cardLang : '';
     return `<div class="card-langs" role="group" aria-label="Show this card in">${[['', 'English'], ...S.langs.map((c) => [c, langOf(c).own])].map(([c, n]) => `<button type="button" class="${cur === c ? 'on' : ''}" data-action="card-lang" data-v="${c}" aria-pressed="${cur === c}" ${c ? `lang="${esc(c)}"` : ''}>${esc(n)}</button>`).join('')}</div>`;
   }
@@ -2087,7 +2104,7 @@
       ${cardLangs()}
       ${wT && wT.status === 'ok' ? `<div class="wc-tr" ${langAttrs(L)}>${esc(wT.t)}</div>` : ''}
       <div class="wc-sec"><div class="label">Meaning</div><div class="meaning">${dict ? inLang(dict, L) : ok ? inLang(ai.meaning, L) : e && e.pending ? thinking('Looking it up…') : '<span class="small">No dictionary entry. See what it means here, below.</span>'}</div></div>
-      <div class="wc-sec wc-here"><div class="label">✨ In this sentence</div>
+      <div class="wc-sec wc-here"><div class="label">In this sentence</div>
         ${ok ? `<div>${inLang(ai.meaning, L)}</div>${aiRate('word|' + word)}` : ai && ai.status === 'off' ? aiAsk('word') : slow(ai) ? thinking('Still working on it. This is taking longer than usual.') + (dict ? '<div class="small">The dictionary meaning is above in the meantime.</div>' : '') : ai && ai.status === 'wait' ? thinking('Linger is reading the sentence…') : `<div class="small">${e && e.ctx ? inLang(e.ctx, L) : navigator.onLine ? 'Couldn’t reach Linger AI. Open the word again in a moment.' : 'You’re offline. Open the word again when you’re back online.'}</div>`}
         ${S.sheetI != null && S.source === 'camera' && S.scan.status === 'done' ? (S.fixing ? `<div class="wc-fix-row"><label class="small" for="fixWord">What does the word really say?</label><input id="fixWord" class="paste-box" style="min-height:0;height:40px" value="${esc(word)}" autocomplete="off" autocapitalize="off" spellcheck="false"><span class="sync-acts"><button type="button" class="btn small-btn" data-action="fix-cancel">Cancel</button><button type="button" class="btn primary small-btn" data-action="fix-save">Fix it</button></span></div>` : '<button type="button" class="link-btn wc-fix" data-action="fix-open">Misread? Fix this word</button>') : ''}
         ${ctx ? `<div class="ctx">“${boldIn(ctx, S.sheetRaw || word)}”</div>` : ''}</div>
@@ -2106,7 +2123,7 @@
         <button type="button" class="speak ${on ? 'on' : ''}" data-action="speak-word" aria-label="Read it aloud" ${canSpeak ? '' : 'disabled'}>${speaker}</button></div></div>
       <div class="ph-text">“${esc(p.text)}”</div>
       ${cardLangs()}
-      ${ok ? `<div class="wc-sec"><div class="label">✨ What it means</div><div class="meaning">${inLang(ai.meaning, L)}</div></div>
+      ${ok ? `<div class="wc-sec"><div class="label">What it means</div><div class="meaning">${inLang(ai.meaning, L)}</div></div>
         ${ai.plain ? `<div class="wc-sec"><div class="label">In plain English</div><div>${inLang(ai.plain, L)}</div></div>` : ''}
         ${inside.length ? `<div class="wc-sec"><div class="label">Words in it</div><div class="ph-words">${inside.map((h) => `<button type="button" class="ph-word" data-action="phrase-word" data-w="${esc(h.word)}"><strong>${esc(h.word)}</strong><span>${inLang(h.meaning, L)}${h.easier ? ` · <i>${esc(h.easier)}</i>` : ''}</span></button>`).join('')}</div></div>` : ''}`
         : ai && ai.status === 'off' ? aiAsk('phrase') : slow(ai) ? thinking('Still working on it. This is taking longer than usual.') : ai && ai.status === 'wait' ? thinking('Linger is reading your highlight…') : '<div class="small">Couldn’t reach Linger AI. Check your connection and try again.</div>'}
@@ -2142,9 +2159,9 @@
           <div class="sum-title">Where are you?</div>
           <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cityQ" type="search" placeholder="Search any U.S. city" value="${esc(q)}" aria-label="Search any U.S. city" autocomplete="off"></label>
           ${!q ? '<button type="button" class="btn ghost" data-action="city-locate">◎ Use my location</button>' : ''}
-          <div class="city-list">${list.map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${c.emoji}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}${c.ai ? ' · made by Linger AI' : ''}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>
+          <div class="city-list">${list.map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${ICO.pin}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}${c.ai ? ' · made by Linger AI' : ''}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>
           ${q.length >= 2 && !exact ? `<button type="button" class="city-make" data-action="city-make" ${mk && mk.status === 'wait' ? 'disabled' : ''}>
-            ${mk && mk.status === 'wait' ? thinking(`Writing a guide for ${esc(q)}…`) : `<span class="city-emoji" aria-hidden="true">✨</span><span class="city-txt"><strong>Make a guide for “${esc(q)}”</strong><small>Linger AI writes slang, customs and getting around</small></span>`}</button>
+            ${mk && mk.status === 'wait' ? thinking(`Writing a guide for ${esc(q)}…`) : `<span class="city-emoji" aria-hidden="true">${ICO.spark}</span><span class="city-txt"><strong>Make a guide for “${esc(q)}”</strong><small>Linger AI writes slang, customs and getting around</small></span>`}</button>
             ${mk && mk.status === 'none' ? `<div class="small">Linger couldn’t find a U.S. city called “${esc(q)}”. Check the spelling, or add the state (like “Springfield, IL”).</div>` : ''}
             ${mk && mk.status === 'fail' ? '<div class="small">Couldn’t reach Linger AI. Check your connection and try again.</div>' : ''}
             ${mk && mk.status === 'off' ? '<div class="small">Making a new guide uses Linger AI. Turn on AI explanations in Settings first.</div>' : ''}` : ''}
@@ -2165,10 +2182,10 @@
         <div class="panel" role="dialog" aria-label="Use Linger in any app"><div class="grab"></div>
           <div class="sum-title">Use Linger in any app</div>
           <div class="small">Select text in a text message, email, web page or PDF, tap <b>Share</b>, and pick Linger. It opens with the explanation ready.</div>
-          <div class="howto"><div class="howto-h">🤖 Android</div>
+          <div class="howto"><div class="howto-h">Android</div>
             <ol><li>Install Linger: ${installEvt ? '<button type="button" class="link-btn" data-action="install">tap here to install</button>' : 'in Chrome, tap <b>⋮</b> then <b>Install app</b> (or <b>Add to Home screen</b>)'}.</li>
             <li>In any app, select text and tap <b>Share</b>.</li><li>Choose <b>Linger</b>.</li></ol></div>
-          <div class="howto"><div class="howto-h">🍎 iPhone</div>
+          <div class="howto"><div class="howto-h">iPhone</div>
             <div class="small" style="margin-bottom: 6px">iPhones don’t let websites join the Share menu, so a free Shortcut does it:</div>
             <ol><li>Open the <b>Shortcuts</b> app and tap <b>+</b>. Name it <b>Explain with Linger</b>.</li>
             <li>Tap the <b>ⓘ</b> button and turn on <b>Show in Share Sheet</b>, receiving <b>Text</b>.</li>
@@ -2185,25 +2202,21 @@
         <div class="panel" role="dialog" aria-label="${esc(s.title)}"><div class="grab"></div>
           <div class="item-head" style="align-items: flex-start"><div class="sum-title">${esc(s.title)}</div>
             <button type="button" class="speak ${on ? 'on' : ''}" data-action="speak-summary" aria-label="${on ? 'Stop reading' : 'Read summary aloud'}" ${canSpeak ? '' : 'disabled'}>${speaker}</button></div>
-          <ul class="points">${s.points.map(([ic, t], pi) => { const x = tr(t.replace(/<[^>]+>/g, '')); return `<li style="--i:${pi}"><span class="pi" aria-hidden="true">${ic}</span><span>${t}${x ? `<span class="tr-line" ${langAttrs()}>${x.status === 'ok' ? esc(x.t) : x.status === 'wait' ? 'Translating…' : ''}</span>` : ''}</span></li>`; }).join('')}</ul>
-          ${S.lang ? `<div class="small">🌐 Also in ${esc(langLabel())}. <button type="button" class="link-btn" data-action="lang-open">Change</button></div>` : ''}
+          <ul class="points">${s.points.map(([ic, t], pi) => { const x = tr(t.replace(/<[^>]+>/g, '')); return `<li style="--i:${pi}"><span class="pi" aria-hidden="true"></span><span>${t}${x ? `<span class="tr-line" ${langAttrs()}>${x.status === 'ok' ? esc(x.t) : x.status === 'wait' ? 'Translating…' : ''}</span>` : ''}</span></li>`; }).join('')}</ul>
+          ${S.lang ? `<div class="small">Also in ${esc(langLabel())}. <button type="button" class="link-btn" data-action="lang-open">Change</button></div>` : ''}
           ${s.dates.length ? `<div style="display: flex; flex-direction: column; gap: 6px"><div class="label" style="color: var(--muted)">Key dates</div><div class="dates" style="--n:${s.points.length}">${s.dates.map((d, di) => `<span class="date" style="--i:${di}">${/^\s*\$/.test(d) ? '' : calIcon}${esc(d)}</span>`).join('')}</div></div>` : ''}
           ${S.source === 'camera' && isImportant(TEXTS.camera) ? importantCard([]) : ''}
           <div class="small">${esc(s.note)} ${n} words on this page are underlined. Tap one for its meaning.</div>
           <button type="button" class="btn primary" data-action="close">Got it</button></div></div>`;
     }
-    if (S.coach && !S.prefs.done && !S.sheet && !S.pending && !S.explain && !S.langPick && !S.cityPick && !S.paste && !S.shareHelp && S.tab !== 'settings' && !sheetIsUp())
-      html += `<div class="coach" role="dialog" aria-label="Set up your account"><span class="coach-arrow" aria-hidden="true"></span>
-        <strong>Set up your account now</strong><span>Pick your languages and level, and keep your words on every device.</span>
-        <div class="coach-acts"><button type="button" class="link-btn" data-action="coach-later">Later</button><button type="button" class="btn primary small-btn" data-action="acct-open">Set up</button></div></div>`;
     if (S.calOpen && S.tab === 'words') html += monthSheet(savedOn());
     if (S.privacy) html += `<div class="sheet"><div class="scrim" aria-hidden="true"></div>
         <div class="panel" role="dialog" aria-labelledby="pvTitle"><div class="grab"></div>
           <div class="sum-title" id="pvTitle">Before you scan</div>
           <ul class="points pv-points">
-            <li><span class="pi" aria-hidden="true">📷</span><span><b>Photos are read on this phone.</b> The picture itself isn’t uploaded.</span></li>
-            <li><span class="pi" aria-hidden="true">✨</span><span>If you turn on <b>AI explanations</b>, a word you open and the sentence around it go to Linger’s server and to Claude (an AI by Anthropic). Nothing is sent unless you allow it.</span></li>
-            <li><span class="pi" aria-hidden="true">🔒</span><span>Bank, medical or immigration papers? Only scan what you’re comfortable with.</span></li>
+            <li><span class="pi" aria-hidden="true"></span><span><b>Photos are read on this phone.</b> The picture itself isn’t uploaded.</span></li>
+            <li><span class="pi" aria-hidden="true"></span><span>If you turn on <b>AI explanations</b>, a word you open and the sentence around it go to Linger’s server and to Claude (an AI by Anthropic). Nothing is sent unless you allow it.</span></li>
+            <li><span class="pi" aria-hidden="true"></span><span>Bank, medical or immigration papers? Only scan what you’re comfortable with.</span></li>
           </ul>
           <label class="pv-keep"><input type="checkbox" data-action="privacy-keep" ${keepScans() ? 'checked' : ''}> Keep the text of my last scan on this phone, so I can open it again</label>
           <button type="button" class="btn primary" data-action="privacy-ok">Got it</button></div></div>`;
@@ -2437,7 +2450,7 @@
     'acct-open': () => { S.coach = false; S.sheet = null; S.phrase = null; S.pending = null; if (S.tab !== 'profile') { S.prevTab = S.tab === 'settings' ? 'lens' : S.tab; S.tab = 'profile'; } },
     'profile-back': () => { S.tab = S.prevTab || 'lens'; },
     'level-check': () => { startOnb(true, 2); },
-    'coach-later': () => { S.coach = false; try { localStorage.setItem('linger.coach.later', String(Date.now())); } catch {} },
+    'level-test': () => { startOnb(true, 2); if (window.LingerTest) S.onb.test = { t: LingerTest.start(), res: null }; },
     'onb-first': () => { S.acct = false; startOnb(false); },
     'onb-read': (d) => {
       const o = S.onb, r = o.reads, i = r.indexOf(d.v);
@@ -2786,7 +2799,7 @@
   if (params.get('import')) {
     const n = importWords(params.get('import'));
     S.tab = 'words';
-    S.toast = n ? `💻 → 📱 ${n} ${n === 1 ? 'word' : 'words'} added from your laptop` : 'These words are already in your list';
+    S.toast = n ? `${n} ${n === 1 ? 'word' : 'words'} added from your laptop` : 'These words are already in your list';
     history.replaceState(null, '', location.pathname);
     setTimeout(() => { S.toast = ''; render(); }, 3500);
   }
@@ -2803,11 +2816,10 @@
   }
   window.addEventListener('resize', fit);
   fit();
-  // First visit: open on Lens, with a bubble at the profile picture inviting them to set up (not a full-screen
-  // questionnaire before they've seen the app). "Later" hides it for a day.
-  const COACH_KEY = 'linger.coach.later';
-  S.coach = !S.prefs.done && !shared && !params.get('import') && (() => { try { return Date.now() - Number(localStorage.getItem(COACH_KEY) || 0) > 86400000; } catch { return true; } })();
-  if (S.coach) render();
+  // First visit: the three setup questions open right away, each with Skip (not when Linger was opened to explain
+  // something shared from another app, or to import words). Signing in on the first question loads an existing setup.
+  S.coach = false;
+  if (!S.prefs.done && !shared && !params.get('import')) startOnb(false);
   // iPhone app (ios/): the Share extension hands over a screenshot or text; the app passes it in here.
   window.LingerNative = {
     heard(m) { sayHeard((m && m.texts) || [], m && m.error); }, // the iPhone app's speech recognizer (Say it)
