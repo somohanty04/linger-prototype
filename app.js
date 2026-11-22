@@ -732,7 +732,7 @@
       <div class="panel" role="dialog" aria-label="Your account"><div class="grab"></div>
         <div class="acct-head">
           <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
-          <div class="acct-who"><div class="sum-title">${email ? 'Your account' : 'Your Linger'}</div>
+          <div class="acct-who"><div class="sum-title">${email ? 'Your account' : 'Guest User'}</div>
             <div class="small">${email ? esc(email) : 'Not signed in. Your words are saved on this phone only.'}</div></div>
         </div>
         ${window.LingerAccount ? LingerAccount.card({ inSheet: true }) : ''}
@@ -779,7 +779,7 @@
     <div class="body set-body prof-body">
       <div class="prof-top">
         <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
-        <div class="prof-who"><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Your Linger'}</div>${email ? `<div class="small">${esc(email)}</div>` : canSignIn ? '<div class="small prof-cta">Sign in to back up your words and see them on your laptop too.</div>' : ''}
+        <div class="prof-who"><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Guest User'}</div>${email ? `<div class="small">${esc(email)}</div>` : canSignIn ? '<div class="small prof-cta">Sign in to back up your words and see them on your laptop too.</div>' : ''}
           ${lvl && lvl[0] !== 'unsure' ? `<span class="prof-level">${esc(LEVEL_NAME[lvl[0]])}</span>` : ''}</div>
         ${!email && canSignIn ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
       </div>
