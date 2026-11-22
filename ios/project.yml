@@ -11,7 +11,7 @@ options:
 settings:
   base:
     MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "2"
     DEVELOPMENT_TEAM: 4MGQ54PRK5  # Apple Developer team
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.0"
