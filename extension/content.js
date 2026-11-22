@@ -42,20 +42,26 @@
     return stems.some((s) => s.length > 2 && COMMON.has(s));
   };
   // hard = not among the ~10,000 most common words, or a formal word Linger knows (unless it's very common).
+  // "How many words to underline" (menu, density) moves the lines: Fewer keeps only long rare words and Linger's formal
+  // words outside the top 6,000; More also takes shorter rare words, formal words from the top 1,200 on, and long
+  // words from the rarest part of the 10,000 list (rank 7,000+). Slang is always underlined: it's local, not rare.
+  const DENSITY = { fewer: { known: 6000, minLen: 8, tail: Infinity }, normal: { known: 2500, minLen: 6, tail: Infinity }, more: { known: 1200, minLen: 5, tail: 7000 } };
   function classify(raw, sentenceStart) {
     const k = keyOf(raw);
     if (k.length < 3 || /\d/.test(raw)) return null;
     if (SLANG[k]) return 'slang';
+    const lv = DENSITY[S.density] || DENSITY.normal;
     const known = PLAIN[k] !== undefined || (D[k] && D[k].kind === 'hard');
-    if (known) return (RANK.get(k) ?? 99999) > 2500 ? 'hard' : null;
+    if (known) return (RANK.get(k) ?? 99999) > lv.known ? 'hard' : null;
     if (/^[A-Z]/.test(raw) && !sentenceStart) return null; // names and places
     if (raw.length > 1 && raw === raw.toUpperCase()) return null; // acronyms
-    if (k.length < 6 || k.includes("'")) return null;
+    if (k.length < lv.minLen || k.includes("'")) return null;
+    if (lv.tail < Infinity && k.length >= 7 && (RANK.get(k) ?? 0) > lv.tail) return 'hard';
     return isCommon(k) ? null : 'hard';
   }
 
   // ---------- settings ----------
-  const S = { off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '' };
+  const S = { off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '', density: 'normal' };
   // AI explanations (Claude) are off until the reader explicitly allows them. aiConsent records that choice ('yes' or
   // 'no') separately from the on/off switch (aiOn): an older aiOn: true is not consent. Nothing goes to Claude without both.
   const aiOK = () => S.aiConsent === 'yes' && S.aiOn === true;
@@ -123,6 +129,24 @@
     if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
     node.parentNode.replaceChild(frag, node);
     if (S.swap) scheduleSwap();
+    if (count > 40) densityTip();
+  }
+  // The first page with more than 40 underlines gets a one-time tip about "How many words to underline" (densityTip
+  // in chrome.storage remembers it was shown, on every site). Only with underlines showing, not on Fewer already.
+  let tipAsked = false;
+  function densityTip() {
+    if (tipAsked || !api || window !== window.top || !S.highlight || S.density === 'fewer') return;
+    tipAsked = true;
+    store({ densityTip: false }, (v) => {
+      if (v.densityTip || dead || !active()) return;
+      try { chrome.storage.local.set({ densityTip: true }); } catch {}
+      attach();
+      const t = document.createElement('div'); t.className = 'dtip';
+      t.innerHTML = '<span role="status">Lots of underlines? Choose <b>Fewer</b> in the Linger menu, under How many words to underline.</span><button type="button" aria-label="Dismiss tip">Got it</button>';
+      t.querySelector('button').onclick = () => t.remove();
+      layer.appendChild(t);
+      setTimeout(() => t.remove(), 20000);
+    });
   }
   function scan(root) {
     if (!active() || !root || count >= MAX) return;
@@ -258,6 +282,12 @@
     .tbar span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .tbar button { flex: none; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: #FFFFFF; color: #1F2AA8; font: inherit; cursor: pointer; }
     .tbar button:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+    .dtip { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; width: max-content; max-width: calc(100vw - 32px); padding: 8px 8px 8px 16px; border-radius: 14px; background: #1F2AA8; color: #FFFFFF; font: 600 14px/20px 'Linger Figtree', 'Figtree', system-ui, sans-serif; box-shadow: 0 8px 24px rgba(16, 20, 80, 0.3); animation: dtip-in .25s ease-out both; }
+    .dtip b { font-weight: 800; }
+    .dtip button { flex: none; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: #FFFFFF; color: #1F2AA8; font: inherit; font-weight: 700; cursor: pointer; }
+    .dtip button:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+    @keyframes dtip-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translateX(-50%); } }
+    @media (prefers-reduced-motion: reduce) { .dtip { animation: none !important; } }
     .wc-easy b { color: #4451E0; }
     .selchip { position: fixed; height: 32px; padding: 0 14px; border: 0; border-radius: 99px; background: linear-gradient(90deg, #5362FF, #2B39B2); color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 20, 80, 0.3); white-space: nowrap; }
     .selchip:focus-visible { outline: 2px solid #1F2AA8; outline-offset: 2px; }
@@ -1486,12 +1516,14 @@
     showFab();
   }
   if (api) {
-    chrome.storage.local.get({ off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '' }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '', density: 'normal' }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       if (dead) return;
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
-      if (active() !== was || ch.bigger || ch.spread || ch.highlight) apply();
+      // A new density: take the underlines off and find the hard words again with the new line.
+      if (ch.density && was && active()) { closeCard(); unwrapAll(); apply(); }
+      else if (active() !== was || ch.bigger || ch.spread || ch.highlight) apply();
       else if (ch.swap || ch.transLang) scheduleSwap();
       if (ch.assistant || ch.aiOn || ch.aiConsent || ch.paused || ch.off || ch.highlight) showFab();
     });

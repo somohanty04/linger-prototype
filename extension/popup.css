@@ -118,3 +118,37 @@ body.all-off main > section:nth-of-type(2), body.all-off main > section:nth-of-t
 .acct-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .acct-btns .btn { padding: 0; }
 .acct-form .link { align-self: center; }
+
+/* ---------- unhappy paths: update notice, PDF, site report, eye-tracking fixes ----------
+   No animation here; the reduce-motion block above covers anything added later. */
+.notice { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #6D79FF; border-radius: 12px; background: var(--surface-soft); color: var(--text-secondary); font-size: 13px; line-height: 18px; }
+.notice p { margin: 0; }
+#updateText { font-size: 15px; font-weight: 700; color: var(--indigo-900); }
+.notice-btns { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
+.notice-btns .btn { height: 40px; padding: 0 18px; font-size: 15px; }
+.blocked.pdf { display: flex; flex-direction: column; align-items: center; gap: 10px; background: var(--surface-soft); border: 1px solid var(--border-default); color: var(--text-secondary); }
+.blocked.pdf p { margin: 0; align-self: stretch; }
+.blocked.pdf b { color: var(--indigo-900); }
+.blocked.pdf .tip { text-align: center; color: var(--text-muted); font-weight: 600; }
+#issueOpen { margin-top: -8px; }
+.issue { align-self: stretch; display: flex; flex-direction: column; gap: 8px; margin-top: -8px; padding: 12px; border-radius: 12px; background: var(--surface-soft); color: var(--text-secondary); font-size: 13px; line-height: 18px; }
+.issue p { margin: 0; }
+.issue-lbl { font-weight: 700; color: var(--text-primary); }
+.issue textarea { width: 100%; resize: vertical; min-height: 64px; padding: 8px 10px; border: 2px solid #868B99; border-radius: 12px; background: #FFFFFF; color: var(--text-primary); font: 500 14px/19px 'Figtree', system-ui, sans-serif; }
+.issue textarea::placeholder { color: var(--text-muted); }
+.issue textarea:focus { outline: 2px solid var(--indigo-600); outline-offset: 1px; border-color: var(--indigo-600); }
+.issue .btn.wide { width: 100%; }
+.pair input[aria-invalid="true"] { border-color: var(--bad); }
+div.problem { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fix { flex: none; height: 32px; padding: 0 14px; border: 1px solid var(--bad); border-radius: 99px; background: #FFFFFF; color: var(--bad); font: 700 13px/13px 'Figtree', system-ui, sans-serif; cursor: pointer; }
+.fix:focus-visible { outline: 3px solid var(--indigo-600); outline-offset: 2px; }
+.warn { align-self: stretch; margin: 0; padding: 10px 12px; border-radius: 12px; background: #FFF6E0; color: #5B4A1F; font-size: 13px; line-height: 18px; }
+.snooze { align-self: stretch; }
+.fixview { align-items: stretch; }
+.fixview h2:focus { outline: none; }
+.fixview h2:focus-visible { outline: 3px solid var(--indigo-600); outline-offset: 2px; }
+.check { margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 19px; color: var(--text-secondary); }
+.check b { color: var(--text-primary); }
+.fixview .btn.wide { width: 100%; }
+/* The troubleshooting view replaces the rest of the menu while it's open. */
+body.fixing main > :not(#fixView) { display: none !important; }
