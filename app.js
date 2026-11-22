@@ -103,7 +103,7 @@
     tab: 'lens', source: 'camera', askFirst: true, autoHard: true,
     pending: null, pendingRaw: '', sheet: null, sheetRaw: '', explain: false,
     lensMode: 'scan', pasteDraft: '', // Lens switch: scan | upload | paste, and the text being pasted
-    saved: ['arrears', 'jitney', 'nebby'], savedDates: { arrears: 'Oct 24', jitney: 'Oct 23', nebby: 'Oct 22' },
+    saved: [], savedDates: {}, // nothing saved until they save something (or sign in to an account that has words)
     wordFilter: 'all', query: '', localSeg: 'slang', city: (() => { try { return localStorage.getItem('linger.city') || 'pgh'; } catch { return 'pgh'; } })(), cityPick: false,
     activity: null, // 'story' | 'cards'
     cards: { idx: 0, revealed: false },
@@ -151,6 +151,19 @@
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   // Line icons for list cards (instead of emojis), in the design system's blue.
   const ICO = {
+    chart: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>',
+    user: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+    laptop: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></svg>',
+    book: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20"/></svg>',
+    palette: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/></svg>',
+    access: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.5" r="1.8"/><path d="M5 8.5l7 1.5 7-1.5M12 10v4.5M9 21l3-6.5 3 6.5"/></svg>',
+    camera: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+    mic: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>',
+    ban: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
+    cloud: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a5 5 0 0 1-.5-10A6 6 0 0 1 18 9.5a4.3 4.3 0 0 1-.5 8.5z"/></svg>',
+    doc: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
+    trash: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>',
+    flask: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 19A1.5 1.5 0 0 0 5.8 21h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/><path d="M7 15h10"/></svg>',
     globe: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
     share: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     update: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16V8M8 12l4-4 4 4"/></svg>',
@@ -248,6 +261,13 @@
     Object.entries(data.custom || {}).forEach(([k, e]) => { if (!D[k]) D[k] = e; });
     S.saved = data.saved.filter((k) => D[k]);
     S.savedDates = data.savedDates || {};
+    // Older versions started everyone with three example words. Drop them (only if they still have those exact dates).
+    const SEED = { arrears: 'Oct 24', jitney: 'Oct 23', nebby: 'Oct 22' };
+    const seeded = Object.keys(SEED).filter((k) => S.savedDates[k] === SEED[k] && S.saved.includes(k));
+    if (seeded.length) {
+      S.saved = S.saved.filter((k) => !seeded.includes(k)); seeded.forEach((k) => delete S.savedDates[k]);
+      try { localStorage.setItem(STORE, JSON.stringify({ ...data, saved: S.saved, savedDates: S.savedDates })); } catch {}
+    }
   })();
   // ---------- live sync with the laptop Reader (Firebase; see sync.js) ----------
   let syncConn = null;
@@ -861,34 +881,46 @@
     while (days.has(dayKey(d))) { streak++; d.setDate(d.getDate() - 1); }
     return { total: words.length, known, almost, learning: words.length - known - almost, right, wrong, days, streak, looked: all.filter((e) => e.n).length };
   }
+  const PROF_SECS = { progress: 'Your progress', account: 'Account', laptop: 'Laptop & extension', setup: 'Reading setup' };
   function viewProfile() {
     const email = signedInAs(), st = stats(), lvl = LEVELS.find((l) => l[0] === S.prefs.level) || null;
-    const [nextId, target] = NEXT[S.prefs.level] || NEXT.intermediate, next = LEVELS.find((l) => l[0] === nextId);
-    const pts = st.known + st.almost * 0.5, pct = Math.min(100, Math.round(pts / target * 100));
-    const today = startOfDay(new Date()), counts = savedOn();
-    const week = Array.from({ length: 7 }, (_, i) => { const x = new Date(today); x.setDate(today.getDate() - 6 + i); return { d: x, n: counts[dayKey(x)] || 0, on: st.days.has(dayKey(x)) }; });
-    const peak = Math.max(1, ...week.map((w) => w.n));
-    const acc = st.right + st.wrong ? Math.round(st.right / (st.right + st.wrong) * 100) : 0;
-    const tile = (n, l, cls = '') => `<div class="db-tile ${cls}"><strong>${n}</strong><span>${l}</span></div>`;
-    const bests = [['match', 'Match up', '★'], ['bubbles', 'Bubble catch', ' pts'], ['scramble', 'Unscramble', '★'], ['say', 'Say it', '★'], ['city.' + S.city, city().name + ' quiz', '★']].map(([g, n, u]) => [n, best(g), u]).filter((x) => x[1]);
+    const sec = PROF_SECS[S.profSec] ? S.profSec : null;
+    const head = `<header class="set-head prof-head">${sec ? '<button type="button" class="set-back" data-action="prof-sec" data-v="" aria-label="Back to Profile">‹</button>' : '<button type="button" class="set-back" data-action="profile-back" aria-label="Back">‹</button>'}<h1>${sec ? PROF_SECS[sec] : 'Profile'}</h1></header>`;
     const row = (k, v) => `<div class="acct-row"><span>${k}</span><span>${esc(v)}</span></div>`;
-    // Signed out: a Sign in button beside the picture, and the sign-in form opens right under it. Signed in: the
-    // account card (sync status, Sign out, Delete account) is at the bottom, styled like "Connect with a code".
-    const acct = acctState(), canSignIn = !!(window.LingerAccount && LingerAccount.available() && acct && acct.auth === 'out');
-    return `<header class="set-head prof-head"><button type="button" class="set-back" data-action="profile-back" aria-label="Back">‹</button><h1>Profile</h1></header>
-    <div class="body set-body prof-body">
-      ${!S.prefs.done || !S.prefs.level ? '<button type="button" class="setup-strip" data-action="onb-first"><span class="setup-ic" aria-hidden="true">' + ICO.spark + '</span><span class="setup-txt"><strong>Finish setting up Linger</strong><span>3 quick questions</span></span><span class="setup-go">Set up ›</span></button>' : ''}
-      <div class="prof-top">
-        <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
-        <div class="prof-who"><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Guest User'}</div>${email ? `<div class="small">${esc(email)}</div>` : canSignIn ? '<div class="small prof-cta">Sign in to back up your words and see them on your laptop too.</div>' : ''}
-          ${lvl && lvl[0] !== 'unsure' ? `<span class="prof-level">${esc(LEVEL_NAME[lvl[0]])}</span>` : ''}</div>
-        ${!email && canSignIn && !acct.formOpen ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
-      </div>
-      ${!email && acct && acct.formOpen ? `<p class="rv-label rv-first">Account</p>
-      ${LingerAccount.card({ inSheet: true })}` : ''}
-
-      <p class="rv-label">Your progress</p>
-      <div class="card db-level">
+    if (!sec) {
+      const setupDone = S.prefs.done && S.prefs.level;
+      // Signed out: a Sign in button beside the picture, and the sign-in form opens right under it.
+      const acct = acctState(), canSignIn = !!(window.LingerAccount && LingerAccount.available() && acct && acct.auth === 'out');
+      const rows = [
+        ['progress', ICO.chart, 'Your progress', st.total ? `${st.total} saved · ${st.known} known${st.streak ? ` · ${st.streak}-day streak` : ''}` : 'Save words to see your progress'],
+        ['account', ICO.user, 'Account', email ? esc(email) : 'Not signed in · sign in to keep your words'],
+        ['laptop', ICO.laptop, 'Laptop & extension', email ? 'Syncs with your account' : S.sync.status === 'on' ? 'Connected with a code' : 'Use Linger on your computer too'],
+        ['setup', ICO.book, 'Reading setup', setupDone ? esc([lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : '', S.langs.length ? langsLabel() : 'Simple English'].filter(Boolean).join(' · ')) : 'Not finished · 3 quick questions', setupDone ? '' : 'data-dot="1"']
+      ];
+      return `${head}<div class="body set-body prof-body">
+        ${!setupDone ? '<button type="button" class="setup-strip" data-action="onb-first"><span class="setup-ic" aria-hidden="true">' + ICO.spark + '</span><span class="setup-txt"><strong>Finish setting up Linger</strong><span>3 quick questions</span></span><span class="setup-go">Set up ›</span></button>' : ''}
+        <div class="prof-top">
+          <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
+          <div class="prof-who"><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Guest User'}</div>${email ? `<div class="small">${esc(email)}</div>` : canSignIn ? '<div class="small prof-cta">Sign in to back up your words and see them on your laptop too.</div>' : ''}
+            ${lvl && lvl[0] !== 'unsure' ? `<span class="prof-level">${esc(LEVEL_NAME[lvl[0]])}</span>` : ''}</div>
+          ${!email && canSignIn && !acct.formOpen ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
+        </div>
+        ${!email && acct && acct.formOpen ? LingerAccount.card({ inSheet: true }) : ''}
+        ${menuList(rows, 'prof-sec')}
+        ${menuList([['', gear, 'Settings', 'Reading, display, accessibility'], ['privacy', ICO.lock, 'Privacy', 'What Linger keeps and how to delete it']], 'set-sec')}
+      </div>`;
+    }
+    let body = '';
+    if (sec === 'progress') {
+      const [nextId, target] = NEXT[S.prefs.level] || NEXT.intermediate, next = LEVELS.find((l) => l[0] === nextId);
+      const pts = st.known + st.almost * 0.5, pct = Math.min(100, Math.round(pts / target * 100));
+      const today = startOfDay(new Date()), counts = savedOn();
+      const week = Array.from({ length: 7 }, (_, i) => { const x = new Date(today); x.setDate(today.getDate() - 6 + i); return { d: x, n: counts[dayKey(x)] || 0, on: st.days.has(dayKey(x)) }; });
+      const peak = Math.max(1, ...week.map((w) => w.n));
+      const acc = st.right + st.wrong ? Math.round(st.right / (st.right + st.wrong) * 100) : 0;
+      const tile = (n, l, cls = '') => `<div class="db-tile ${cls}"><strong>${n}</strong><span>${l}</span></div>`;
+      const bests = [['match', 'Match up', '★'], ['bubbles', 'Bubble catch', ' pts'], ['scramble', 'Unscramble', '★'], ['say', 'Say it', '★'], ['city.' + S.city, city().name + ' quiz', '★']].map(([g, n, u]) => [n, best(g), u]).filter((x) => x[1]);
+      body = `<div class="card db-level">
         <div class="db-lh"><div><span class="label">${next ? `Next: ${esc(LEVEL_NAME[next[0]])}` : 'Top level'}</span><strong>${esc(LEVEL_NAME[S.prefs.level] || LEVEL_NAME.intermediate)}</strong></div>
           <div class="db-ring" style="--p:${pct}" role="img" aria-label="${pct}% of the way"><span>${pct}%</span></div></div>
         <div class="db-bar" aria-hidden="true"><span style="width:${pct}%"></span></div>
@@ -902,26 +934,25 @@
         <div class="db-bars">${week.map((w) => `<div class="db-col${w.on ? ' on' : ''}"><span class="db-n">${w.n || ''}</span><span class="db-b" style="height:${Math.round(w.n / peak * 100)}%"></span><span class="db-d">${'SMTWTFS'[w.d.getDay()]}</span></div>`).join('')}</div>
         <div class="small">${st.right + st.wrong ? `Practice: ${st.right} right, ${st.wrong} to try again (${acc}%). ` : ''}Days with a dot under them are days you used Linger.</div>
       </div>
-      ${bests.length ? `<div class="card db-best"><strong>Best scores</strong>${bests.map(([n, v, u]) => `<div class="acct-row"><span>${esc(n)}</span><span>${v}${u}</span></div>`).join('')}</div>` : ''}
-
-
-      <p class="rv-label">Chrome extension and laptop</p>
-      <div class="card prof-ext"><strong>${email ? 'Syncs with your account' : 'Sign in to sync'}</strong>
+      ${bests.length ? `<div class="card db-best"><strong>Best scores</strong>${bests.map(([n, v, u]) => `<div class="acct-row"><span>${esc(n)}</span><span>${v}${u}</span></div>`).join('')}</div>` : ''}`;
+    } else if (sec === 'account') {
+      body = window.LingerAccount ? LingerAccount.card({ inSheet: true }) : '<p class="small">Accounts aren’t available right now.</p>';
+    } else if (sec === 'laptop') {
+      body = `<div class="card prof-ext"><strong>${email ? 'Syncs with your account' : 'Sign in to sync'}</strong>
         <span class="small">${email ? 'Sign in to the Linger Chrome extension with this same account, and words you save there show up here by themselves. No code needed.' : 'Sign in here and in the Linger Chrome extension with the same account, and your words sync by themselves.'}</span>
         <span class="small">Not working? Connect with a code instead:</span></div>
-      ${syncCard()}
-
-      ${!S.prefs.done || !S.prefs.level ? '' : `<p class="rv-label">Reading setup</p>
-      <div class="acct-setup">
+      ${syncCard()}`;
+    } else if (sec === 'setup') {
+      body = !S.prefs.done || !S.prefs.level ? `<div class="acct-setup acct-start"><strong>Finish setting up Linger</strong>
+          <span>3 quick questions: what you read, your languages, and your English level (with an optional English check).</span>
+          <button type="button" class="btn primary small-btn" data-action="onb-first">Set up now</button></div>` : `<div class="acct-setup">
           <div class="acct-setup-h"><strong>Reading setup</strong><button type="button" class="link-btn" data-action="onb-edit">Change</button></div>
           ${row('Reading', readsLabel() || 'Not set yet')}
           ${row(S.langs.length > 1 ? 'Languages' : 'Language', S.langs.length ? langsLabel() + ' + English' : 'Simple English')}
           ${row('English level', lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : 'Not set yet')}
-          <button type="button" class="link-btn acct-test" data-action="level-test">${S.prefs.test ? 'Retake the English check' : 'Not sure? Take the English check'}</button></div>`}
-      <button type="button" class="act share-card" data-action="tab" data-tab="settings"><span class="ic">${gear}</span><span><strong>Settings</strong><span class="small">Text size, dark mode, high contrast, color filters, motion</span></span><span class="go">›</span></button>
-      ${email ? `<p class="rv-label">Account</p>
-      ${LingerAccount.card({ inSheet: true })}` : ''}
-    </div>`;
+          <button type="button" class="link-btn acct-test" data-action="level-test">${S.prefs.test ? 'Retake the English check' : 'Not sure? Take the English check'}</button></div>`;
+    }
+    return `${head}<div class="body set-body prof-body">${body}</div>`;
   }
 
   // A square, small profile picture (it's stored in the account, so keep it to a few KB).
@@ -1186,15 +1217,37 @@
       </div></div>`;
   }
 
-  // Settings (opened from the gear on Lens): the reading switches, your language, and sharing from other apps.
+  // A list of sections (iOS-style): each row opens its own page, so there's never a wall of switches at once.
+  // rows: [section id, icon, title, one-line summary]; act: the data-action each row uses.
+  const menuList = (rows, act) => `<nav class="menu card" aria-label="Sections">${rows.map(([id, ic, t, sub, attrs]) =>
+    `<button type="button" class="menu-row" data-action="${act}" data-v="${id}" ${attrs || ''}><span class="menu-ic" aria-hidden="true">${ic}</span><span class="menu-txt"><strong>${t}</strong><span class="small">${sub}</span></span><span class="go" aria-hidden="true">›</span></button>`).join('')}</nav>`;
+  const SET_SECS = { reading: 'Reading', display: 'Display', access: 'Accessibility', privacy: 'Privacy', beta: 'Beta' };
+  // Settings (the gear on Lens, or from Profile): a menu of sections, then one section at a time.
   function viewSettings() {
+    const sec = SET_SECS[S.setSec] ? S.setSec : null;
+    const back = sec ? `<button type="button" class="set-back" data-action="set-sec" data-v="" aria-label="Back to Settings">‹</button>`
+      : `<button type="button" class="set-back" data-action="set-close" aria-label="Back to ${S.setFrom === 'profile' ? 'Profile' : 'Lens'}">‹</button>`;
+    const head = `<header class="set-head">${back}<h1>${sec ? SET_SECS[sec] : 'Settings'}</h1></header>`;
+    if (!sec) {
+      const theme = { system: 'Match phone', light: 'Light', dark: 'Dark' }[A11Y.theme] || 'Match phone';
+      const size = { 0.9: 'Small', 1: 'Default', 1.15: 'Large', 1.3: 'Largest' }[A11Y.text] || 'Default';
+      const on = [A11Y.contrast && 'High contrast', A11Y.motion && 'Reduce motion', A11Y.filter !== 'none' && 'Color filter'].filter(Boolean);
+      const rows = [
+        ['reading', ICO.book, 'Reading', `${S.autoHard ? 'Underlines on' : 'Underlines off'} · ${esc(S.lang ? langLabel() : 'Simple English')}`],
+        ['display', ICO.palette, 'Display', `${theme} · ${size} text`],
+        ['access', ICO.access, 'Accessibility', on.length ? on.join(', ') : 'Contrast, motion and color filters'],
+        ['privacy', ICO.lock, 'Privacy', signedInAs() ? 'Your data, your account and deleting it' : 'What Linger keeps and what it sends']
+      ];
+      if (BETA) rows.push(['beta', ICO.flask, 'Beta', 'Send feedback, add to Home Screen']);
+      return `${head}<div class="body set-body">${menuList(rows, 'set-sec')}
+        <p class="small set-foot">Linger keeps these settings on this ${BETA && BETA.native ? 'iPhone' : 'device'}.</p></div>`;
+    }
     const seg = (key, opts, cls = '') => `<div class="set-seg ${cls}" role="radiogroup">${opts.map(([v, l, aria]) => `<button type="button" class="${A11Y[key] === v ? 'on' : ''}" role="radio" aria-checked="${A11Y[key] === v}" data-action="a11y" data-k="${key}" data-v="${v}" ${aria ? `aria-label="${aria}"` : ''}>${l}</button>`).join('')}</div>`;
     const sw = (key, label, sub) => `<div class="switch-row"><div><strong>${label}</strong><span class="small">${sub}</span></div>
       <button type="button" class="switch" role="switch" aria-label="${label}" aria-checked="${!!A11Y[key]}" data-action="a11y-toggle" data-k="${key}"></button></div>`;
     const filters = [['none', 'None'], ['gray', 'Grayscale'], ['protan', 'Red-green (protanopia)'], ['deutan', 'Green-red (deuteranopia)'], ['tritan', 'Blue-yellow (tritanopia)']];
-    return `<header class="set-head"><button type="button" class="set-back" data-action="tab" data-tab="lens" aria-label="Back to Lens">‹</button><h1>Settings</h1></header>
-    <div class="body set-body">
-      <p class="set-label">Reading</p>
+    let body = '';
+    if (sec === 'reading') body = `
       <div class="card">
         <div class="switch-row"><div><strong>Underline hard words</strong><span class="small">Words that may be hard for your level get a dotted underline</span></div>
           <button type="button" class="switch" role="switch" aria-label="Underline hard words" aria-checked="${S.autoHard}" data-action="auto"></button></div>
@@ -1204,9 +1257,8 @@
           <button type="button" class="switch" role="switch" aria-label="AI explanations" aria-checked="${aiOK()}" data-action="ai-toggle"></button></div>
       </div>
       <button type="button" class="act share-card" data-action="lang-open"><span class="ic">${ICO.globe}</span><span><strong>My language</strong><span class="small" ${S.lang ? langAttrs() : ''}>${esc(langLabel())} · meanings and summaries also show in it</span></span><span class="go">›</span></button>
-      <button type="button" class="act share-card" data-action="share-help"><span class="ic">${ICO.share}</span><span><strong>Use Linger in any app</strong><span class="small">${BETA && BETA.native ? 'Take a screenshot or select text, tap Share, then Linger' : 'Select text anywhere, tap Share, then “Explain with Linger”'}</span></span><span class="go">›</span></button>
-
-      <p class="set-label">Display</p>
+      <button type="button" class="act share-card" data-action="share-help"><span class="ic">${ICO.share}</span><span><strong>Use Linger in any app</strong><span class="small">${BETA && BETA.native ? 'Take a screenshot or select text, tap Share, then Linger' : 'Select text anywhere, tap Share, then “Explain with Linger”'}</span></span><span class="go">›</span></button>`;
+    else if (sec === 'display') body = `
       <div class="card">
         <div class="set-row"><div><strong>Appearance</strong></div>${seg('theme', [['system', 'Match phone'], ['light', 'Light'], ['dark', 'Dark']])}</div>
         <div class="set-row"><div><strong>Text size</strong><span class="small">Makes the words bigger without changing the layout</span></div>
@@ -1215,17 +1267,44 @@
         <div class="set-row"><div><strong>Display zoom</strong><span class="small">Makes everything bigger, buttons too</span></div>
           ${seg('zoom', [[0.9, 'Smaller'], [1, 'Default'], [1.1, 'Larger'], [1.25, 'Largest']])}</div>
       </div>
-
-      <p class="set-label">Accessibility</p>
+      <button type="button" class="set-reset" data-action="a11y-reset">Reset display and accessibility</button>`;
+    else if (sec === 'access') body = `
       <div class="card">
         ${sw('contrast', 'High contrast', 'Darker text, stronger outlines and solid underlines')}
         ${sw('motion', 'Reduce motion', 'Turns off animations. Also on when your phone’s Reduce Motion is on.')}
+      </div>
+      <div class="card">
         <div class="set-row"><div><strong>Color filter</strong><span class="small">Helps if some colors are hard to tell apart</span></div>
           <div class="filters" role="radiogroup">${filters.map(([v, l]) => `<button type="button" class="${v}${A11Y.filter === v ? ' on' : ''}" role="radio" aria-checked="${A11Y.filter === v}" data-action="a11y" data-k="filter" data-v="${v}"><span class="sw4" aria-hidden="true"><i></i><i></i><i></i><i></i></span>${l}</button>`).join('')}</div></div>
       </div>
-      <button type="button" class="set-reset" data-action="a11y-reset">Reset display and accessibility</button>
-      ${BETA ? betaSettings() : ''}
-    </div>`;
+      <button type="button" class="set-reset" data-action="a11y-reset">Reset display and accessibility</button>`;
+    else if (sec === 'privacy') body = privacySection();
+    else if (sec === 'beta' && BETA) body = betaSettings();
+    return `${head}<div class="body set-body">${body}</div>`;
+  }
+  // Settings → Privacy: the short version of the policy, where this person's words are, and how to delete them.
+  function privacySection() {
+    const email = signedInAs(), n = S.saved.filter((k) => D[k]).length;
+    const words = n === 0 ? 'saved words' : n === 1 ? '1 saved word' : n + ' saved words';
+    const pt = (ic, html) => `<li><span class="pv-ic" aria-hidden="true">${ic}</span><span>${html}</span></li>`;
+    return `
+      <div class="card pv-where"><span class="pv-ic" aria-hidden="true">${email ? ICO.cloud : ICO.phone}</span><div><strong>${email ? 'Saved in your account' : 'Saved on this device only'}</strong>
+        <span class="small">${email ? `Your ${words}, reading setup and progress are in the account for ${esc(email)}. Only you can see them.` : `Your ${words}, settings and progress never leave this device unless you make an account.`}</span></div></div>
+      <p class="set-label">In short</p>
+      <ul class="card pv-list">
+        ${pt(ICO.camera, '<strong>Photos stay on your phone.</strong> Linger reads the text on your device. The picture isn’t uploaded or kept.')}
+        ${pt(ICO.spark, '<strong>Only what you ask about is sent.</strong> A word or phrase and its sentence go to Linger AI to explain it. It isn’t stored. You can turn AI explanations off in Settings → Reading.')}
+        ${pt(ICO.mic, '<strong>The microphone is only on in Say it,</strong> and only while you’re saying a word.')}
+        ${pt(ICO.ban, '<strong>No ads, no tracking.</strong> Linger doesn’t sell or share your data.')}
+      </ul>
+      <a class="act share-card" href="privacy.html"><span class="ic">${ICO.doc}</span><span><strong>Read the full privacy policy</strong><span class="small">What Linger keeps, what it sends, and to whom</span></span><span class="go">›</span></a>
+      <p class="set-label">Your data</p>
+      ${email
+        ? `<button type="button" class="act share-card" data-action="prof-sec" data-v="account"><span class="ic">${ICO.trash}</span><span><strong>Delete account and data</strong><span class="small">In Profile → Account. Deletes your saved words, setup, progress and picture.</span></span><span class="go">›</span></button>`
+        : S.pvClear
+          ? `<div class="card pv-confirm"><strong>Clear everything on this device?</strong><span class="small">This deletes your ${words}, reading setup, progress, settings and city guides from this device. It can’t be undone.</span>
+              <div class="grid2"><button type="button" class="btn" data-action="pv-clear" data-v="no">Cancel</button><button type="button" class="btn danger-btn" data-action="pv-clear" data-v="yes">Clear everything</button></div></div>`
+          : `<button type="button" class="act share-card" data-action="pv-clear" data-v="ask"><span class="ic">${ICO.trash}</span><span><strong>Clear Linger data on this device</strong><span class="small">Saved words, setup, progress and settings</span></span><span class="go">›</span></button>`}`;
   }
   // ---------- beta ----------
   const planeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>';
@@ -1238,11 +1317,10 @@
   function betaSettings() {
     const queued = BETA.pending();
     const shellOld = SHELL_BUILD && SHELL_BUILD < LATEST_SHELL;
-    return `<div class="beta-sec"><div class="label">Beta</div>
+    return `<div class="beta-sec">
       ${shellOld ? '<a class="act share-card" href="itms-beta://"><span class="ic">' + ICO.update + '</span><span><strong>Update the Linger app</strong><span class="small">A newer version is ready in TestFlight. Open TestFlight and tap Update.</span></span><span class="go">›</span></a>' : ''}
       <button type="button" class="act share-card" data-action="beta-feedback"><span class="ic">${ICO.chat}</span><span><strong>Send feedback</strong><span class="small">Tell us what broke, what was confusing, or what you wish Linger did</span></span><span class="go">›</span></button>
       ${BETA.standalone() ? '' : `<button type="button" class="act share-card" data-action="beta-install"><span class="ic">${ICO.phone}</span><span><strong>Add Linger to your Home Screen</strong><span class="small">Then it opens full screen, like an app</span></span><span class="go">›</span></button>`}
-      <a class="act share-card" href="privacy.html"><span class="ic">${ICO.lock}</span><span><strong>Privacy policy</strong><span class="small">What Linger keeps, what it sends, and how to delete it</span></span><span class="go">›</span></a>
       <p class="small beta-ver">Linger Beta ${esc(BETA.version)} · ${esc(BETA.date)}${BETA.standalone() ? ' · installed' : ''}${queued ? ` · <span class="plane-wait" aria-hidden="true">${planeIcon}</span>${queued} feedback ${queued === 1 ? 'message' : 'messages'} waiting to send` : ''}</p></div>`;
   }
   function betaOverlay() {
@@ -1415,7 +1493,7 @@
         CITIES[id] = { ...c, ai: true };
         try { const all = JSON.parse(localStorage.getItem(CUSTOM_CITIES) || '{}'); all[id] = CITIES[id]; localStorage.setItem(CUSTOM_CITIES, JSON.stringify(all)); } catch {}
       }
-      S.cityMake = null; S.cityQuery = ''; setCity(id);
+      S.cityMake = null; S.cityQuery = ''; pickCity(id);
       showToast(same ? `${c.name} already has a guide` : `Linger wrote a guide for ${c.name}`);
     } catch { S.cityMake = { q, status: 'fail' }; }
     render();
@@ -1497,7 +1575,7 @@
     const n = S.saved.filter((k) => D[k]).length, words = `${n} ${n === 1 ? 'word' : 'words'}`;
     const due = S.saved.filter((k) => D[k] && know(k).due).length;
     const tricky = trickyWords();
-    const act = (id, icon, title, sub) => `<button type="button" class="rv-act" data-action="play" data-v="${id}">
+    const act = (id, icon, title, sub, attrs = '') => `<button type="button" class="rv-act" data-action="play" data-v="${id}" ${attrs}>
         <span class="rv-ic" aria-hidden="true">${icon}</span>
         <span class="rv-txt"><span class="rv-title">${title}</span><span class="mean">${sub}</span></span>
         <span class="rv-go">Start</span></button>`;
@@ -1518,13 +1596,18 @@
       ${act('bubbles', gameIcons.bubbles, 'Bubble catch', 'A meaning appears. Pop the word that fits before it floats away.')}
       ${act('scramble', gameIcons.scramble, 'Unscramble', 'Rebuild each word from its letters, with the sentence as your clue.')}
       ${act('say', gameIcons.say, 'Say it', 'Hear each word, then say it. Linger listens and tells you how close you were.')}
-      ${act('cityquiz', gameIcons.city, `${esc(city().name)} quiz`, `How well do you know ${esc(city().name)}? Slang, customs and getting around.`)}
-      <button type="button" class="rv-city" data-action="city-pick">${pin} Quiz a different city</button>
+      <p class="rv-label">City quizzes</p>
+      ${act('cityquiz', gameIcons.city, `${esc(city().name)} quiz`, `How well do you know ${esc(city().name)}? Slang, customs and getting around.`, 'data-city="home"')}
+      <button type="button" class="rv-act" data-action="city-pick" data-v="quiz">
+        <span class="rv-ic" aria-hidden="true">${gameIcons.globe}</span>
+        <span class="rv-txt"><span class="rv-title">Quiz a different city</span><span class="mean">Moving, visiting or just curious? Pick any U.S. city and test what you know.</span></span>
+        <span class="rv-go">Pick</span></button>
       ${bestLine()}
     </div>`;
   }
   const WORD_GAMES = ['match', 'bubbles', 'scramble', 'say'];
   const gameIcons = {
+    globe: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
     say: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>',
     city: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V9l5-3v15M10 21V4l9 4v13"/><path d="M13 10h3M13 14h3"/></svg>',
     match: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="6" rx="1.5"/><rect x="14" y="14" width="7" height="6" rx="1.5"/><path d="M10 7h2a2 2 0 0 1 2 2v8"/></svg>',
@@ -1959,7 +2042,15 @@
     shuffle(around).slice(0, 2).forEach((t) => qs.push({ q: `Getting around ${name}: “${t.title}”. What does it mean?`, right: t.body, wrong: pickOthers(around, t, 2, (x) => x.body), more: '' }));
     return shuffle(qs).slice(0, 8).map((q) => ({ ...q, opts: shuffle([q.right, ...q.wrong]) }));
   }
-  function startCityQuiz() { S.cq = { city: CITIES[S.city] ? S.city : 'pgh', qs: cityQuestions(CITIES[S.city] ? S.city : 'pgh'), i: 0, right: 0, picked: null }; }
+  function startCityQuiz() { const id = [S.quizCity, S.city].find((x) => x && CITIES[x]) || 'pgh'; S.cq = { city: id, qs: cityQuestions(id), i: 0, right: 0, picked: null }; }
+  // A city chosen in the city sheet: from Review's "Quiz a different city" it starts that city's quiz (your own city on
+  // Local stays the same); from Local it becomes your city.
+  function pickCity(id) {
+    if (!CITIES[id]) return;
+    if (S.cityPickFor !== 'quiz') { setCity(id); return; }
+    S.cityPick = false; S.cityPickFor = null; S.quizCity = id;
+    stopSpeaking(); S.sheet = null; S.explain = false; S.activity = 'cityquiz'; startCityQuiz();
+  }
   function cityAnswer(i) {
     const g = S.cq, q = g.qs[g.i]; if (g.picked !== null) return;
     g.picked = i; const ok = q.opts[i] === q.right; if (ok) g.right++;
@@ -2156,13 +2247,14 @@
     if (S.cityPick) {
       const q = (S.cityQuery || '').trim(), ql = q.toLowerCase();
       const list = Object.entries(CITIES).filter(([, c]) => !ql || [c.name, c.state, c.nick, cityName(c)].some((x) => String(x || '').toLowerCase().includes(ql))).sort((x, y) => x[1].name.localeCompare(y[1].name));
+      const forQuiz = S.cityPickFor === 'quiz', mark = forQuiz ? (S.cq && S.activity === 'cityquiz' ? S.cq.city : '') : S.city;
       const exact = list.some(([, c]) => c.name.toLowerCase() === ql || cityName(c).toLowerCase() === ql), mk = S.cityMake && S.cityMake.q === q ? S.cityMake : null;
       html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
-        <div class="panel city-panel" role="dialog" aria-label="Choose a city"><div class="grab"></div>
-          <div class="sum-title">Where are you?</div>
+        <div class="panel city-panel" role="dialog" aria-label="${forQuiz ? 'Choose a city to quiz' : 'Choose a city'}"><div class="grab"></div>
+          <div class="sum-title">${forQuiz ? 'Which city’s quiz?' : 'Where are you?'}</div>
           <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cityQ" type="search" placeholder="Search any U.S. city" value="${esc(q)}" aria-label="Search any U.S. city" autocomplete="off"></label>
-          ${!q ? '<button type="button" class="btn ghost" data-action="city-locate">◎ Use my location</button>' : ''}
-          <div class="city-list">${list.map(([id, c]) => `<button type="button" class="city-row ${S.city === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${ICO.pin}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}${c.ai ? ' · made by Linger AI' : ''}</small></span>${S.city === id ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div>
+          ${!q && !forQuiz ? '<button type="button" class="btn ghost" data-action="city-locate">◎ Use my location</button>' : ''}
+          <div class="city-list">${list.map(([id, c]) => `<button type="button" class="city-row ${mark === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${ICO.pin}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}${c.ai ? ' · made by Linger AI' : ''}${forQuiz && best('city.' + id) ? ` · best ${stars(best('city.' + id))}` : ''}</small></span>${mark === id ? '<span class="tick">✓</span>' : forQuiz ? '<span class="rv-go">Quiz</span>' : ''}</button>`).join('')}</div>
           ${q.length >= 2 && !exact ? `<button type="button" class="city-make" data-action="city-make" ${mk && mk.status === 'wait' ? 'disabled' : ''}>
             ${mk && mk.status === 'wait' ? thinking(`Writing a guide for ${esc(q)}…`) : `<span class="city-emoji" aria-hidden="true">${ICO.spark}</span><span class="city-txt"><strong>Make a guide for “${esc(q)}”</strong><small>Linger AI writes slang, customs and getting around</small></span>`}</button>
             ${mk && mk.status === 'none' ? `<div class="small">Linger couldn’t find a U.S. city called “${esc(q)}”. Check the spelling, or add the state (like “Springfield, IL”).</div>` : ''}
@@ -2170,7 +2262,7 @@
             ${mk && mk.status === 'off' ? '<div class="small">Making a new guide uses Linger AI. Turn on AI explanations in Settings first.</div>' : ''}` : ''}
           ${q.length >= 2 && !list.length ? `<div class="city-none"><strong>We don’t have a guide for “${esc(q)}” yet</strong>
             <div class="sync-acts">${BETA ? '<button type="button" class="link-btn" data-action="city-request">Ask us to add it</button>' : ''}<button type="button" class="link-btn" data-action="city-locate">Show the nearest city we have</button></div></div>` : ''}
-          ${q ? '' : '<div class="small">Each guide has slang, customs, getting around and common mix-ups. Search for any U.S. city to add one.</div>'}</div></div>`;
+          ${q ? '' : `<div class="small">${forQuiz ? 'Your own city on Local stays the same. Search for any U.S. city to add a quiz for it.' : 'Each guide has slang, customs, getting around and common mix-ups. Search for any U.S. city to add one.'}</div>`}</div></div>`;
     }
     if (S.langPick) html += langSheet();
     if (S.shareHelp && BETA && BETA.native) {
@@ -2281,7 +2373,7 @@
     scroll.innerHTML = views[S.tab]();
     scroll.scrollTop = lastTab === S.tab ? top : 0;
     // A new screen rises in; a new section or filter on the same screen deals its cards in. Other taps redraw in place.
-    const viewKey = [S.tab, S.localSeg, S.wordFilter, S.city, S.activity, S.calDay].join('|');
+    const viewKey = [S.tab, S.localSeg, S.wordFilter, S.city, S.activity, S.calDay, S.setSec, S.profSec].join('|');
     scroll.classList.remove('view-in', 'list-in');
     if (!calm() && lastTab !== S.tab) scroll.classList.add('view-in');
     else if (!calm() && viewKey !== lastViewKey) scroll.classList.add('list-in');
@@ -2450,8 +2542,19 @@
     'text-tr': () => { if (!S.lang) { S.langPick = true; return; } S.textTr = !S.textTr; },
     accept: () => { S.sheet = S.pending; S.sheetRaw = S.pendingRaw; S.pending = null; track(S.sheet, 'lookup'); S.seenToks.add(S.sheet); },
     dismiss: () => { track(S.pending, 'dismiss'); S.pending = null; },
-    'acct-open': () => { S.coach = false; S.sheet = null; S.phrase = null; S.pending = null; if (S.tab !== 'profile') { S.prevTab = S.tab === 'settings' ? 'lens' : S.tab; S.tab = 'profile'; } },
-    'profile-back': () => { S.tab = S.prevTab || 'lens'; },
+    'acct-open': () => { S.coach = false; S.sheet = null; S.phrase = null; S.pending = null; S.profSec = null; if (S.tab !== 'profile') { S.prevTab = S.tab === 'settings' ? 'lens' : S.tab; S.tab = 'profile'; } },
+    'profile-back': () => { S.tab = S.prevTab || 'lens'; S.profSec = null; },
+    'prof-sec': (d) => { if (S.tab !== 'profile') { S.prevTab = S.tab === 'settings' ? S.setFrom || 'lens' : S.tab; S.tab = 'profile'; } S.profSec = d.v || null; S.pvClear = false; scroll.scrollTop = 0; },
+    'set-sec': (d) => { if (S.tab !== 'settings') { stopSpeaking(); closeCamera(); S.setFrom = S.tab; S.tab = 'settings'; S.pending = null; S.sheet = null; S.explain = false; } S.setSec = d.v || null; S.pvClear = false; scroll.scrollTop = 0; },
+    'set-close': () => { S.tab = S.setFrom === 'profile' ? 'profile' : 'lens'; S.setFrom = null; S.setSec = null; },
+    'pv-clear': (d) => {
+      if (d.v === 'ask') { S.pvClear = true; return; }
+      if (d.v !== 'yes') { S.pvClear = false; return; }
+      if (signedInAs()) return; // signed in: deleting goes through Profile → Account
+      stopSync();
+      try { Object.keys(localStorage).filter((k) => k.startsWith('linger.')).forEach((k) => localStorage.removeItem(k)); } catch {}
+      location.reload(); return false;
+    },
     'level-check': () => { startOnb(true, 2); },
     'level-test': () => { startOnb(true, 2); if (window.LingerTest) S.onb.test = { t: LingerTest.start(), res: null }; },
     'onb-first': () => { S.acct = false; startOnb(false); },
@@ -2481,7 +2584,7 @@
     'test-agree': () => { const o = S.onb, r = o.test.res; o.level = r.level; o.testResult = { cefr: r.cefr, level: r.level, right: r.right, total: r.total, words: r.words, agreed: true, at: Date.now() }; o.test = null; finishOnb(false); },
     'test-disagree': () => { const o = S.onb, r = o.test.res; o.suggested = r.level; o.level = ''; o.testResult = { cefr: r.cefr, level: r.level, right: r.right, total: r.total, words: r.words, agreed: false, at: Date.now() }; o.test = null; },
     'onb-signin': () => { S.acct = true; S.acctFromOnb = true; },
-    close: () => { S.phrase = null; S.acct = false; S.acctFromOnb = false; S.paste = false; S.shareHelp = false; S.cityPick = false; S.langPick = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
+    close: () => { S.cityPickFor = null; S.phrase = null; S.acct = false; S.acctFromOnb = false; S.paste = false; S.shareHelp = false; S.cityPick = false; S.langPick = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
     explain: () => { stopSpeaking(); S.explain = true; S.pending = null; S.sheet = null; },
     read: () => { readLens(); },
     'speak-summary': () => { speak('summary', summaryText(SUMMARY[S.source])); },
@@ -2512,9 +2615,9 @@
     },
     filter: (d) => { S.wordFilter = d.v; },
     seg: (d) => { S.localSeg = d.v; },
-    'city-pick': () => { S.cityPick = true; S.cityQuery = ''; S.cityMake = null; },
+    'city-pick': (d) => { S.cityPick = true; S.cityPickFor = d.v || null; S.cityQuery = ''; S.cityMake = null; },
     'city-make': () => { const q = (S.cityQuery || '').trim(); if (q) makeCity(q); },
-    'city-set': (d) => { stopSpeaking(); setCity(d.v); },
+    'city-set': (d) => { stopSpeaking(); pickCity(d.v); },
     'city-locate': () => { S.cityPick = false; locateCity(); },
     hear: (d) => { const e = D[d.k]; if (e) speak('hear-' + d.k, `${e.word}. ${e.sentence}`); },
     play: (d) => {
@@ -2525,7 +2628,7 @@
       else if (d.v === 'bubbles') startBubbles();
       else if (d.v === 'scramble') startScramble();
       else if (d.v === 'say') startSay();
-      else if (d.v === 'cityquiz') startCityQuiz();
+      else if (d.v === 'cityquiz') { if (d.city === 'home') S.quizCity = null; startCityQuiz(); }
       else { const all = d.only ? d.only : practiceOrder(); S.cards = { idx: 0, revealed: false, order: all.slice(0, SESSION), rest: all.slice(SESSION), done: 0 }; }
     },
     'mt-pick': (d) => matchPick(d.side, d.k),
@@ -2581,7 +2684,7 @@
     },
     'paste-clip': async () => { try { const t = await navigator.clipboard.readText(); if (t) { S.pasteDraft = t; render(); } } catch { const b = document.getElementById('pasteText'); if (b) b.focus(); } },
     rescan: () => { stopSpeaking(); S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pending = null; S.sheet = null; S.explain = false; },
-    settings: () => { stopSpeaking(); closeCamera(); S.tab = 'settings'; S.pending = null; S.sheet = null; S.explain = false; },
+    settings: () => { stopSpeaking(); closeCamera(); S.setFrom = S.tab; S.setSec = null; S.tab = 'settings'; S.pending = null; S.sheet = null; S.explain = false; },
     'paste-open': () => { stopSpeaking(); closeCamera(); S.tab = 'lens'; S.lensMode = 'paste'; S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pending = null; S.sheet = null; S.explain = false; },
     'cal-day': (d) => { const same = S.calDay === d.v || (!S.calDay && d.v === dayKey(new Date())); S.calDay = same && S.calDay ? null : d.v; buzz(6); },
     'cal-week': (d) => { S.calWeek = Math.min(0, (S.calWeek || 0) + Number(d.v)); fx('wk', Number(d.v) > 0 ? 'next' : 'prev'); },
@@ -2723,7 +2826,8 @@
     if (S.onb) { if (S.onb.edit) { S.onb = null; render(); } return; } // first-time setup: use Skip
     if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp || S.cityPick || S.langPick) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; S.cityPick = false; S.langPick = false; render(); }
     else if (S.activity) { S.activity = null; S.game = null; render(); }
-    else if (S.tab === 'settings') { S.tab = 'lens'; render(); }
+    else if (S.tab === 'settings') { if (S.setSec) S.setSec = null; else { S.tab = S.setFrom === 'profile' ? 'profile' : 'lens'; S.setFrom = null; } render(); }
+    else if (S.tab === 'profile' && S.profSec) { S.profSec = null; render(); }
   });
 
   // Test hook: feed an image to the scanner without a camera.
