@@ -343,23 +343,23 @@
           ${A.verifyNote ? `<span class="small">${esc(A.verifyNote)}</span>` : ''}
           <span class="sync-acts"><button type="button" class="link-btn" data-acct="verified">I’ve confirmed it</button><button type="button" class="link-btn" data-acct="resendverify">Send again</button><button type="button" class="link-btn" data-acct="wrongemail">Wrong email?</button></span></div>`;
       const line = A.sync === 'error' ? esc(A.msg) : A.sync === 'syncing' ? 'Connecting to your account…' : `Your ${n === 1 ? '1 saved word is' : n + ' saved words are'} in your account and on every device you sign in on.`;
-      return `<div class="sync-card ${A.sync === 'error' ? '' : 'on'}" id="acctCard"><div class="sync-h">${A.sync === 'on' ? '<span class="dot-live"></span>' : '👤'}<strong>${opts.inSheet ? (A.sync === 'error' ? 'Words not syncing' : 'Words synced') : 'Signed in as ' + esc(A.user.email)}</strong></div>
+      return `<div class="sync-card ${A.sync === 'error' ? '' : 'on'}" id="acctCard"><div class="sync-h">${A.sync === 'on' ? '<span class="dot-live"></span>' : ''}<strong>${opts.inSheet ? (A.sync === 'error' ? 'Words not syncing' : 'Words synced') : 'Signed in as ' + esc(A.user.email)}</strong></div>
         <div class="small">${line}</div>${verify}
         <div class="sync-acts"><button type="button" class="link-btn" data-acct="signout" ${A.busy ? 'disabled' : ''}>Sign out</button>${opts.inSheet ? `<button type="button" class="link-btn del-link" data-acct="delopen" ${A.busy ? 'disabled' : ''}>Delete account and data</button>` : ''}</div></div>`;
     }
-    if (!A.open) return `<div class="sync-card" id="acctCard"><div class="sync-h">👤 <strong>Keep your words in an account</strong></div>
+    if (!A.open) return `<div class="sync-card" id="acctCard"><div class="sync-h"><strong>Keep your words in an account</strong></div>
       <div class="small">${A.note ? esc(A.note) : 'Sign in to have the same saved words on your phone and laptop, without a pairing code.'}</div>
       <button type="button" class="btn primary small-btn" data-acct="open">Sign in or create account</button></div>`;
     if (A.resetSent) {
       const left = Math.max(0, 60 - Math.round((Date.now() - A.resetSent.at) / 1000));
       clearTimeout(card.t); if (left > 0) card.t = setTimeout(paint, 1000); // count down the resend wait
-      return `<div class="sync-card" id="acctCard" role="group" aria-labelledby="acctResetH"><div class="sync-h" id="acctResetH">✉️ <strong>Check your email</strong></div>
+      return `<div class="sync-card" id="acctCard" role="group" aria-labelledby="acctResetH"><div class="sync-h" id="acctResetH"><strong>Check your email</strong></div>
         <div class="small">If there’s a Linger account for <b>${esc(A.resetSent.email)}</b>, a link to reset your password is on its way. It can take a few minutes. Check your spam or junk folder too.</div>
         ${A.err ? `<div class="small" role="alert" style="color: var(--bad, #A81F64)">${esc(A.err)}</div>` : ''}
         <div class="sync-acts" style="flex-wrap: wrap"><button type="button" class="btn small-btn" data-acct="resetagain" ${left || A.busy ? 'disabled' : ''}>${left ? `Send again in ${left}s` : 'Send again'}</button><button type="button" class="link-btn" data-acct="resetback">Use a different email</button></div>
         <div class="sync-acts"><button type="button" class="link-btn" data-acct="resetdone">Back to sign in</button></div></div>`;
     }
-    return `<form class="sync-card" id="acctForm" novalidate><div class="sync-h">👤 <strong>Sign in to Linger</strong></div>
+    return `<form class="sync-card" id="acctForm" novalidate><div class="sync-h"><strong>Sign in to Linger</strong></div>
       <input class="paste-box" style="${inputStyle}" id="acctEmail" type="email" autocomplete="email" placeholder="Email" value="${esc(A.email)}" required>
       <input class="paste-box" style="${inputStyle}" id="acctPw" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" value="${esc(A.pw)}" required>
       ${A.err ? `<div class="small" role="alert" style="color: var(--bad, #A81F64)">${esc(A.err)}</div>` : ''}${A.note ? `<div class="small" role="status">${esc(A.note)}</div>` : ''}
