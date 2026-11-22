@@ -343,7 +343,7 @@
           ${A.verifyNote ? `<span class="small">${esc(A.verifyNote)}</span>` : ''}
           <span class="sync-acts"><button type="button" class="link-btn" data-acct="verified">I’ve confirmed it</button><button type="button" class="link-btn" data-acct="resendverify">Send again</button><button type="button" class="link-btn" data-acct="wrongemail">Wrong email?</button></span></div>`;
       const line = A.sync === 'error' ? esc(A.msg) : A.sync === 'syncing' ? 'Connecting to your account…' : `Your ${n === 1 ? '1 saved word is' : n + ' saved words are'} in your account and on every device you sign in on.`;
-      return `<div class="sync-card ${A.sync === 'error' ? '' : 'on'}" id="acctCard"><div class="sync-h">${A.sync === 'on' ? '<span class="dot-live"></span>' : ''}<strong>${opts.inSheet ? (A.sync === 'error' ? 'Words not syncing' : 'Words synced') : 'Signed in as ' + esc(A.user.email)}</strong></div>
+      return `<div class="sync-card ${A.sync === 'error' || opts.inSheet ? '' : 'on'}" id="acctCard"><div class="sync-h">${A.sync === 'on' ? '<span class="dot-live"></span>' : ''}<strong>${opts.inSheet ? (A.sync === 'error' ? 'Words not syncing' : 'Words synced') : 'Signed in as ' + esc(A.user.email)}</strong></div>
         <div class="small">${line}</div>${verify}
         <div class="sync-acts"><button type="button" class="link-btn" data-acct="signout" ${A.busy ? 'disabled' : ''}>Sign out</button>${opts.inSheet ? `<button type="button" class="link-btn del-link" data-acct="delopen" ${A.busy ? 'disabled' : ''}>Delete account and data</button>` : ''}</div></div>`;
     }
