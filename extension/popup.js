@@ -4,13 +4,68 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const tidy = (c) => String(c || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const pretty = (c) => tidy(c).replace(/(.{4})(?=.)/g, '$1-');
 
+// Phone code problems, each with what to do next (the code is in the phone app under Words → Turn on live sync).
+const WHERE = 'In the Linger app on your phone, open Words → Turn on live sync to see your code.';
+const PAIR_MSG = {
+  empty: 'Type the 12-letter code from your phone. ' + WHERE,
+  length: 'That isn’t a whole code: codes have 12 letters and numbers, like abcd-efgh-jkmn. ' + WHERE,
+  chars: 'Linger codes never use 0, O, 1, I or L, so one of those letters is a typo. Check the code: ' + WHERE,
+  offline: 'You’re offline. Connect to the internet, then press Connect again.',
+  denied: 'Linger couldn’t use that code. Check each letter against your phone and type it again. ' + WHERE,
+  error: 'Linger’s server didn’t answer. Wait a minute, then press Connect again.',
+  new: 'Connected. Your phone hasn’t saved a word with this code yet, so Linger can’t check it. If words you save here don’t reach your phone, press Disconnect and check the code (Words → Turn on live sync).'
+};
+const DENSITY_HINT = { fewer: 'Fewer: only the hardest words', normal: 'Normal: words outside the 10,000 most common', more: 'More: also shorter and less common words' };
+// Newer version check: the published manifest on the Linger website, at most every 6 hours.
+const SITE = 'https://somohanty04.github.io/linger-prototype/';
+const newer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0; } return false; };
+async function checkUpdate() {
+  const mine = chrome.runtime.getManifest().version;
+  let { updateCheck: c, updateDismissed } = await chrome.storage.local.get({ updateCheck: null, updateDismissed: '' });
+  if (!c || !(Date.now() - c.t < 6 * 60 * 60 * 1000)) {
+    try {
+      const r = await fetch(SITE + 'extension/manifest.json', { cache: 'no-store', signal: AbortSignal.timeout(6000) });
+      const v = r.ok ? (await r.json()).version : null;
+      if (typeof v === 'string' && /^\d+(\.\d+)*$/.test(v)) { c = { t: Date.now(), latest: v }; await chrome.storage.local.set({ updateCheck: c }); }
+    } catch {} // offline or the site is down: say nothing, try again next time
+  }
+  if (!c || !newer(c.latest, mine) || updateDismissed === c.latest) return;
+  $('updateText').textContent = `A newer Linger (${c.latest}) is available`;
+  $('update').hidden = false;
+  $('updateX').onclick = () => { chrome.storage.local.set({ updateDismissed: c.latest }); $('update').hidden = true; };
+}
+// Chrome's PDF viewer: content scripts can't run inside it. The page's own content type says for sure when Linger can
+// look; otherwise go by the address (ends in .pdf, or a pdf path or parameter).
+async function isPdf(tab, url, status) {
+  if (!url) return false;
+  let type = null;
+  try { const [r] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => document.contentType }); type = r && r.result; } catch {}
+  if (type) return type === 'application/pdf';
+  const looks = /\.pdf$/i.test(url.pathname) || /\/pdf\//i.test(url.pathname) || /[?&](format|type|output)=pdf\b/i.test(url.search);
+  return looks && (!status || /\.pdf$/i.test(url.pathname));
+}
+// What a gazeProblem's "why" means, in plain words.
+function problemText(why) {
+  const w = String(why || '');
+  if (w === 'noface') return 'Linger couldn’t see your face for a while';
+  if (/^camera NotAllowedError/.test(w)) return 'camera access is turned off';
+  if (/^camera NotReadableError/.test(w)) return 'the camera is busy (another app may be using it)';
+  if (/^camera NotFoundError/.test(w)) return 'no camera was found';
+  if (/^camera/.test(w)) return 'the camera didn’t start';
+  if (/^model/.test(w)) return 'eye tracking couldn’t load';
+  if (/^hand swipes/.test(w)) return 'hand tracking couldn’t load';
+  return w;
+}
+
 // The menu in the reader's language ("My language"): each language is translated once (Chrome's translator, or Claude
 // through the background worker) and kept in chrome.storage, shared with the page script.
 const UI = {};
 const L = (t) => UI[t] || t;
 const EXTRA = ['Not available here', 'Reload this page to start Linger here.', 'Reload this page to use the new version of Linger.', 'The code has 12 letters and numbers.', 'Checking…',
   'Couldn’t reach Linger. Check your internet connection.', 'Show the original page', 'Translate this page', 'Starting…', 'Couldn’t translate this page. Reload it and try again.',
-  'Click on an underlined word, then the bookmark icon.', 'My language (pick one below)', 'Eye tracking finds hard words through the underlines. Turn on Underline hard words.', 'Ask Linger needs AI explanations turned on.', 'Linger is off for this site, so the ✦ button is hidden.', 'Linger is off on every website. Turn on the Linger switch to use it.', 'The ✦ button should be at the bottom right of this page. If it isn’t, reload the page.'];
+  'Click on an underlined word, then the bookmark icon.', 'My language (pick one below)', 'Eye tracking finds hard words through the underlines. Turn on Underline hard words.', 'Ask Linger needs AI explanations turned on.', 'Linger is off for this site, so the ✦ button is hidden.', 'Linger is off on every website. Turn on the Linger switch to use it.', 'The ✦ button should be at the bottom right of this page. If it isn’t, reload the page.',
+  ...Object.values(PAIR_MSG), ...Object.values(DENSITY_HINT), 'Sending…', 'Thanks. The Linger team will look at this site.', 'Couldn’t send it. You’re offline: connect to the internet and try again.', 'Couldn’t send it right now. Try again in a minute.',
+  'It looks dark where you are. Add light in front of you (a lamp or window), not behind you.', 'Linger sees more than one face. Only one person should be in front of the camera.', 'Fix it'];
 async function localize(lang) {
   if (!lang || lang === 'en') return;
   const skip = (el) => el.closest('[translate="no"], #transLang, script, style, textarea, input'); // language names stay as written
@@ -57,6 +112,32 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
   const status = usable ? await chrome.tabs.sendMessage(tab.id, { type: 'status' }).catch(() => null) : null;
   if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain'].forEach((id) => { $(id).disabled = true; }); }
   if (usable && !status) $('blocked').textContent = L('Reload this page to start Linger here.');
+  // A PDF: say why instead of the generic message, and offer the app's Paste screen.
+  const pdf = await isPdf(tab, url, status);
+  if (pdf) {
+    $('blocked').hidden = true; $('pdf').hidden = false;
+    ['site', 'explain'].forEach((id) => { $(id).disabled = true; });
+    if (/Mac/i.test(navigator.platform)) $('pdfTip').textContent = 'Select all (Cmd+A), copy, then paste.';
+  }
+  checkUpdate();
+  // "Not working on this site?": on normal web pages (not a PDF, not Chrome's own pages).
+  if (usable && !pdf && url.hostname) {
+    $('issueOpen').hidden = false;
+    $('issueOpen').onclick = () => {
+      const open = $('issue').hidden;
+      $('issue').hidden = !open; $('issueOpen').setAttribute('aria-expanded', String(open));
+      if (open) $('issueNote').focus();
+    };
+    $('issueSend').onclick = async () => {
+      const msg = (t) => { $('issueMsg').textContent = L(t); };
+      if (!navigator.onLine) return msg('Couldn’t send it. You’re offline: connect to the internet and try again.');
+      $('issueSend').disabled = true; msg('Sending…');
+      const r = await chrome.runtime.sendMessage({ type: 'site-report', site: url.hostname, note: $('issueNote').value.slice(0, 500) }).catch(() => null);
+      if (r && r.ok) { msg('Thanks. The Linger team will look at this site.'); $('issueNote').value = ''; $('issueNote').disabled = true; return; }
+      $('issueSend').disabled = false;
+      msg(r && r.why === 'offline' ? 'Couldn’t send it. You’re offline: connect to the internet and try again.' : 'Couldn’t send it right now. Try again in a minute.');
+    };
+  }
   // This tab still runs an older copy of Linger (Chrome keeps it after an update until the page reloads).
   if (status && status.version && status.version !== chrome.runtime.getManifest().version) { $('blocked').hidden = false; $('blocked').textContent = L('Reload this page to use the new version of Linger.'); }
   // Why the ✦ Ask Linger button isn't on the page.
@@ -66,8 +147,38 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
     el.hidden = !text; el.textContent = L(text);
   };
 
-  const st = await chrome.storage.local.get({ highlight: false, paused: [], bigger: false, aiOn: false, aiConsent: '', assistant: true, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null, handOn: false, handSecs: 2 });
-  if (st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = 'Last problem: ' + st.gazeProblem.why + '. Open Recalibrate to check the camera.'; }
+  const st = await chrome.storage.local.get({ highlight: false, paused: [], bigger: false, aiOn: false, aiConsent: '', assistant: true, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null, handOn: false, handSecs: 2, density: 'normal', gazeEnv: null, gazeSnooze: 0 });
+  // Eye tracking problems: the last one (30 min), and light / faces the tracker is seeing now (fresh in the last 3 min).
+  const problem = st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000 ? 'Last problem: ' + problemText(st.gazeProblem.why) + '.' : '';
+  const envFresh = st.eyeOn && st.gazeEnv && Date.now() - st.gazeEnv.t < 3 * 60 * 1000;
+  const envText = !envFresh ? '' : [st.gazeEnv.dark ? 'It looks dark where you are. Add light in front of you (a lamp or window), not behind you.' : '', st.gazeEnv.faces > 1 ? 'Linger sees more than one face. Only one person should be in front of the camera.' : ''].filter(Boolean).map(L).join(' ');
+  if (problem || envText) {
+    $('eyeProblem').hidden = !problem; $('eyeProblemText').textContent = problem;
+    $('eyeEnv').hidden = !envText; $('eyeEnv').textContent = envText;
+    $('fixProblem').hidden = !problem; $('fixProblem').textContent = problem;
+    $('fixEnv').hidden = !envText; $('fixEnv').textContent = envText;
+    if (!problem) { $('eyeEnv').appendChild(document.createTextNode(' ')); const b = $('eyeFix'); $('eyeEnv').appendChild(b); $('eyeEnv').classList.add('has-fix'); }
+  }
+  // Troubleshooting view: a checklist and Recalibrate, in place of the rest of the menu.
+  const fixView = (open) => {
+    $('fixView').hidden = !open; document.body.classList.toggle('fixing', open);
+    if (open) { scrollTo(0, 0); $('fixH').focus(); } else $('eyeFix').focus();
+  };
+  $('eyeFix').onclick = () => fixView(true);
+  $('fixBack').onclick = () => fixView(false);
+  $('fixRecal').onclick = async () => { await chrome.runtime.sendMessage({ type: 'eye-recal', tabId: tab && tab.id }); window.close(); };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('fixView').hidden) { e.preventDefault(); fixView(false); } });
+  // "Pause for 30 minutes" from the page's "Want help with this word?" question.
+  if (st.gazeSnooze > Date.now()) {
+    $('eyeSnooze').hidden = false;
+    $('eyeSnoozeText').textContent = 'Eye tracking questions are paused until ' + new Date(st.gazeSnooze).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '.';
+    $('eyeResume').onclick = () => { chrome.storage.local.set({ gazeSnooze: 0 }); $('eyeSnooze').hidden = true; };
+  }
+  // How many words to underline.
+  $('density').value = DENSITY_HINT[st.density] ? st.density : 'normal';
+  const densityHint = () => { $('densityHint').textContent = L(DENSITY_HINT[$('density').value]); };
+  densityHint();
+  $('density').onchange = (e) => { chrome.storage.local.set({ density: e.target.value }); densityHint(); };
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
   // The main switch: Linger off on every website (the "On this site" switch is for this one site only).
@@ -106,9 +217,8 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
   // Eye tracking looks for underlined words, so it needs "Underline hard words" (which now starts off).
   const eyeHint = () => {
     const need = $('eye').checked && !$('highlight').checked;
-    if (need) { $('eyeProblem').hidden = false; $('eyeProblem').textContent = L('Eye tracking finds hard words through the underlines. Turn on Underline hard words.'); }
-    else if ($('eyeProblem').dataset.hint) $('eyeProblem').hidden = true;
-    $('eyeProblem').dataset.hint = need ? '1' : '';
+    $('eyeNeed').hidden = !need;
+    $('eyeNeed').textContent = need ? L('Eye tracking finds hard words through the underlines. Turn on Underline hard words.') : '';
   };
   eyeHint();
   $('highlight').onchange = (e) => { chrome.storage.local.set({ highlight: e.target.checked }); eyeHint(); };
@@ -151,15 +261,24 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
   // Phone pairing: the same 12-character code the phone app shows under Words → live sync.
   const showPair = (code) => { $('paired').hidden = !code; $('pairForm').hidden = !!code; $('pairHint').hidden = !!code; $('codeShow').textContent = pretty(code); };
   showPair(st.pairCode);
+  const pairMsg = (key, bad) => {
+    $('pairMsg').textContent = key ? L(PAIR_MSG[key] || key) : '';
+    $('code').setAttribute('aria-invalid', bad ? 'true' : 'false');
+    if (bad) $('code').setAttribute('aria-describedby', 'pairMsg'); else $('code').removeAttribute('aria-describedby');
+  };
   $('pairForm').onsubmit = async (e) => {
     e.preventDefault();
     const code = tidy($('code').value);
-    if (code.length < 10) { $('pairMsg').textContent = L('The code has 12 letters and numbers.'); return; }
-    $('pairMsg').textContent = L('Checking…');
-    const r = await chrome.runtime.sendMessage({ type: 'check-code', code });
-    if (!r || r.result === 'error') { $('pairMsg').textContent = L('Couldn’t reach Linger. Check your internet connection.'); return; }
+    // Format first (no need to ask the server): 12 letters and numbers, from the app's alphabet (no 0, o, 1, l or i).
+    const bad = !code ? 'empty' : code.length !== 12 ? 'length' : /[01oil]/.test(code) ? 'chars' : '';
+    if (bad) { pairMsg(bad, true); $('code').focus(); return; }
+    if (!navigator.onLine) { pairMsg('offline', false); return; }
+    pairMsg('Checking…', false);
+    const r = await chrome.runtime.sendMessage({ type: 'check-code', code }).catch(() => null);
+    const res = (r && r.result) || 'error';
+    if (res !== 'found' && res !== 'new') { pairMsg(res === 'offline' || res === 'denied' ? res : 'error', res === 'denied'); if (res === 'denied') $('code').focus(); return; }
     await chrome.storage.local.set({ pairCode: code });
-    $('pairMsg').textContent = '';
+    pairMsg(res === 'new' ? 'new' : '', false);
     showPair(code);
   };
   $('unpair').onclick = async () => { await chrome.storage.local.set({ pairCode: '' }); showPair(''); };

@@ -14,6 +14,7 @@ let offset = [0, 0], offsetT = 0;  // quick correction for drift (from clicks), 
 const fx = new OneEuro(), fy = new OneEuro();
 const gate = new BlinkGate(); // drops blinks, and the half-closed frames around them
 let saveTimer = null;
+const clickErr = [];               // recent clicks: was the gaze far from where they clicked?
 // Hand swipes answer "Want help with this word?". Hand tracking only runs while a tab has that question open (it costs CPU).
 const asking = new Set();          // ports of tabs showing the question, with swipes turned on
 let hands = null, handsLoading = null;
@@ -39,6 +40,45 @@ function setStatus(s, msg = '') {
 }
 const problem = (why) => chrome.runtime.sendMessage({ type: 'gaze-problem', why }).catch(() => {});
 
+// ---------- light and faces in the picture ----------
+// Two things people can fix themselves: a dark room (iris landmarks get jumpy) and someone else in view (Linger may
+// follow the wrong face). Brightness = average luminance of a tiny copy of the frame, once a second. Faces = how many
+// MediaPipe finds (numFaces: 2, so it can see a second one). Each has to last a few seconds before the menu hears of it.
+const env = { dark: false, faces: 1, darkSince: 0, brightSince: 0, multiSince: 0, singleSince: 0, lumaT: 0, sentT: 0 };
+let lumaCanvas = null;
+function luma(src, now) {
+  if (now - env.lumaT < 1000) return;
+  env.lumaT = now;
+  let v;
+  try {
+    if (!lumaCanvas) lumaCanvas = new OffscreenCanvas(32, 18);
+    const c = lumaCanvas.getContext('2d', { willReadFrequently: true });
+    c.drawImage(src, 0, 0, 32, 18);
+    const d = c.getImageData(0, 0, 32, 18).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    v = dbg.luma = Math.round(sum / (d.length / 4));
+  } catch { return; }
+  // Dark below 45 (of 255) for 3 s; fine again above 60 for 3 s (the gap stops it flickering at the edge).
+  if (v < 45) { env.brightSince = 0; env.darkSince = env.darkSince || now; } else if (v > 60) { env.darkSince = 0; env.brightSince = env.brightSince || now; }
+  if (!env.dark && env.darkSince && now - env.darkSince > 3000) { env.dark = true; tellEnv(now, true); }
+  if (env.dark && env.brightSince && now - env.brightSince > 3000) { env.dark = false; tellEnv(now, true); }
+}
+function countFaces(n, now) {
+  dbg.numFaces = n;
+  if (n > 1) { env.singleSince = 0; env.multiSince = env.multiSince || now; } else { env.multiSince = 0; env.singleSince = env.singleSince || now; }
+  if (env.faces < 2 && env.multiSince && now - env.multiSince > 2000) { env.faces = n; tellEnv(now, true); }
+  if (env.faces > 1 && env.singleSince && now - env.singleSince > 3000) { env.faces = 1; tellEnv(now, true); }
+}
+// Tell the background on a change, and every minute while a warning stands (so the menu knows it's still true).
+function tellEnv(now, changed) {
+  if (!changed && (!(env.dark || env.faces > 1) || now - env.sentT < 60000)) return;
+  env.sentT = now;
+  chrome.runtime.sendMessage({ type: 'gaze-env', dark: env.dark, faces: env.faces }).catch(() => {});
+}
+// No face for 20 s while a tab is listening: record it once per stretch, so the menu can offer Fix it.
+let faceGoneSaid = false;
+
 // ---------- tabs and the calibration page connect here ----------
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name === 'hand') {
@@ -53,7 +93,7 @@ chrome.runtime.onConnect.addListener((port) => {
   port.postMessage({ status, hasModel: !!model });
   port.onDisconnect.addListener(() => { ports.delete(port); asking.delete(port); });
   port.onMessage.addListener((m) => {
-    if (m.type === 'model') { model = m.model; offset = [0, 0]; fx.reset(); fy.reset(); gate.reset(); }
+    if (m.type === 'model') { model = m.model; offset = [0, 0]; clickErr.length = 0; fx.reset(); fy.reset(); gate.reset(); }
     if (m.type === 'learn' && model) learnAt(m.s, m.strong);
     if (m.type === 'ask') {
       if (m.open && m.swipe) { asking.add(port); loadHands(); } else asking.delete(port);
@@ -71,6 +111,14 @@ function learnAt([sx, sy], strong) {
   const ps = frames.map((r) => predict(model, r.f));
   const px = ps.reduce((s, p) => s + p[0], 0) / ps.length + offset[0], py = ps.reduce((s, p) => s + p[1], 0) / ps.length + offset[1];
   const ex = sx - px, ey = sy - py;
+  // Accuracy check: if 4 of the last 5 clicks (within 2 minutes) landed far from the gaze point, calibration has
+  // probably drifted beyond what the quick correction can fix. Tell the tabs, so the one in front can offer to recalibrate.
+  clickErr.push({ t: now, far: Math.hypot(ex, ey) > 350 });
+  while (clickErr.length > 5 || (clickErr.length && now - clickErr[0].t > 120000)) clickErr.shift();
+  if (clickErr.length >= 5 && clickErr.filter((c) => c.far).length >= 4) {
+    clickErr.length = 0;
+    for (const p of ports) if (p.name === 'gaze') try { p.postMessage({ quality: 'poor' }); } catch {}
+  }
   if (Math.hypot(ex, ey) > 450) return; // probably wasn't looking at it (clicked from memory)
   const k = strong ? 0.6 : 0.35, cap = 220;
   offset = [Math.max(-cap, Math.min(cap, offset[0] + k * ex)), Math.max(-cap, Math.min(cap, offset[1] + k * ey))];
@@ -89,12 +137,23 @@ function onFrame(src, W, H) {
   if (!ports.size || !landmarker) return; // hand gestures only (or the face model didn't load): skip the face
   let res;
   try { res = landmarker.detectForVideo(src, now); } catch (e) { dbg.err = String((e && e.message) || e); return; }
-  const lm = res.faceLandmarks && res.faceLandmarks[0];
-  if (!lm) { if (now - lastFace > 600) setStatus('noface', 'Can’t see your eyes. Face the camera.'); return; }
-  lastFace = now; dbg.faces++;
+  luma(src, now);
+  tellEnv(now, false);
+  // With two faces allowed, follow the biggest one (the person nearest the camera).
+  const all = res.faceLandmarks || [];
+  countFaces(all.length, now);
+  const size = (f) => { let a = 1, b = 0; for (const p of f) { if (p.x < a) a = p.x; if (p.x > b) b = p.x; } return b - a; };
+  const best = all.length > 1 ? all.reduce((bi, f, i) => (size(f) > size(all[bi]) ? i : bi), 0) : 0;
+  const lm = all[best];
+  if (!lm) {
+    if (now - lastFace > 600) setStatus('noface', 'Can’t see your eyes. Face the camera.');
+    if (!faceGoneSaid && now - lastFace > 20000) { faceGoneSaid = true; problem('noface'); }
+    return;
+  }
+  lastFace = now; dbg.faces++; faceGoneSaid = false;
   const blend = {};
-  ((res.faceBlendshapes && res.faceBlendshapes[0] && res.faceBlendshapes[0].categories) || []).forEach((c) => { blend[c.categoryName] = c.score; });
-  const mat = res.facialTransformationMatrixes && res.facialTransformationMatrixes[0] && res.facialTransformationMatrixes[0].data;
+  ((res.faceBlendshapes && res.faceBlendshapes[best] && res.faceBlendshapes[best].categories) || []).forEach((c) => { blend[c.categoryName] = c.score; });
+  const mat = res.facialTransformationMatrixes && res.facialTransformationMatrixes[best] && res.facialTransformationMatrixes[best].data;
   const ft = features(lm, W, H, blend, mat);
   if (!ft) return;
   const blink = ft.blink > 0.45;
@@ -158,7 +217,7 @@ async function start() {
   setStatus('loading', 'Loading eye tracking…');
   setHStatus('loading', 'Loading hand tracking…');
   files = { wasmLoaderPath: url('vendor/mediapipe/vision_wasm_internal.js'), wasmBinaryPath: url('vendor/mediapipe/vision_wasm_internal.wasm') };
-  const opts = (delegate) => ({ baseOptions: { modelAssetPath: url('vendor/mediapipe/face_landmarker.task'), delegate }, runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true });
+  const opts = (delegate) => ({ baseOptions: { modelAssetPath: url('vendor/mediapipe/face_landmarker.task'), delegate }, runningMode: 'VIDEO', numFaces: 2, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true });
   try { landmarker = await FaceLandmarker.createFromOptions(files, opts('GPU')); }
   catch { try { landmarker = await FaceLandmarker.createFromOptions(files, opts('CPU')); } catch (e) { status = { s: 'error', msg: 'Eye tracking couldn’t load.' }; for (const p of ports) try { p.postMessage({ status }); } catch {} problem('model ' + ((e && e.message) || e)); } }
   if (landmarker) setStatus(model ? 'ok' : 'nomodel', model ? '' : 'Set up eye tracking first.');

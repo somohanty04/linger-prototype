@@ -37,7 +37,9 @@ Underlines hard English words on any website, explains them in plain words, and 
 - **The camera is busy**: close Zoom, FaceTime or other apps using it.
 - **"Linger couldn't see your eyes well enough"**: add light in front of you (a window or lamp), sit about an arm's length away, and calibrate again.
 - **"Sit like you did when you set it up"**: you've moved a lot closer, farther or to the side. Move back, or press Recalibrate.
-The menu shows the last problem under Eye tracking.
+The menu shows the last problem under Eye tracking, with **Fix it**: a checklist (light in front of you, face the screen, glasses glare, one face in view, camera not used by another app) and Recalibrate. The menu also warns when the camera picture is dark or shows more than one face (the tracker measures the frame's average brightness and asks MediaPipe for up to 2 faces; it follows the biggest one).
+- **"Linger lost track of where you're looking. Recalibrate?"** appears on the page (at most once every 10 minutes) when you've sat far from your setup position for 20 seconds, when most of your gaze lands far outside the window for 20 seconds, or when 4 of your last 5 clicks landed far from where Linger thought you were looking. Webcam gaze has no confidence score, so these are the signals it uses.
+- **Pause** on "Want help with this word?": **Pause on this page** (until you leave or reload it) or **Pause for 30 minutes** (every tab). The chip at the bottom left says it's paused and has **Resume**.
 
 ## If Linger stops working on a page
 
@@ -50,6 +52,14 @@ The menu shows the last problem under Eye tracking.
 ## Pair with the phone
 
 In the Linger phone app, open **Words → Turn on live sync** and type the 12-character code into the extension's **Your phone** box.
+The menu says what went wrong: not 12 letters and numbers, a letter Linger codes never use (0, O, 1, I, L), no internet, or Linger's server not answering. A code nobody has saved a word with yet can't be told apart from a typo (codes never expire), so Linger connects and says to check the code if words don't arrive.
+
+## When something's off
+
+- **Update available:** the menu checks the published `extension/manifest.json` on the Linger website (at most every 6 hours, silently skipped offline) and offers the download page when there's a newer version.
+- **PDFs:** Chrome's PDF viewer doesn't let extensions in. The menu says so and offers **Open Linger to paste the text** (the app's Paste screen).
+- **Not working on this site?** (menu, under Explain this page): a short report to the Linger team (the site's name, Linger version and an optional note, saved in Firestore `feedback`), and a reminder that highlighting text and clicking ✦ Explain still works.
+- **How many words to underline:** Fewer (long rare words and formal words outside the top 6,000), Normal, or More (also shorter rare words, and long words from the rarest part of the 10,000 list). The first page with more than 40 underlines shows a one-time tip about it.
 
 ## Limits
 
