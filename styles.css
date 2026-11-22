@@ -548,15 +548,21 @@ a.share-card { text-decoration: none; color: inherit; }
 .hero { transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .hero > :not(.wh-rings):not(.ring):not(.dot) { opacity: var(--fade, 1); transition: opacity 0.2s; }
 .screen.sheet-drag .hero, .screen.sheet-drag .hero > * { transition: none; }
-.screen.sheet-up .hero { height: calc(56px + env(safe-area-inset-top, 0px)); padding-top: 0; padding-bottom: 0; }
+.screen.sheet-up .hero { height: calc(80px + env(safe-area-inset-top, 0px)); padding-top: 0; padding-bottom: 0; }
+/* The drawer keeps its rounded top under the banner: a white rounded lip at the bottom of the tucked-away header,
+   which the list scrolls beneath. */
+.hero.wh::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 25px; z-index: 3; border-radius: 24px 24px 0 0; background: var(--surface); pointer-events: none; }
+/* Subtitles fade out and back in instead of popping */
+.hero.wh .wh-title .hsub { transition: opacity 0.2s; }
+.screen.sheet-up .hero.wh .wh-title .hsub { display: block; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0s 0.15s; }
 .screen.sheet-up .hero > :not(.wh-rings):not(.ring):not(.dot) { opacity: var(--fade, 0); pointer-events: none; }
 /* Tucked away, the header becomes a sticky banner: the page title on the left, the account (and on Lens, Language
    and Settings) on the right, always at the top while the drawer scrolls under it. */
-.screen.sheet-up .hero { position: sticky; top: 0; z-index: 6; }
+.hero.wh, .screen.sheet-up .hero { position: sticky; top: 0; z-index: 6; } /* sticky in both looks: scrolling up mid-list brings the full header back into view */
 .screen.sheet-up .hero.wh > :is(.wh-title, .av-btn, .lh-topbar):not(.ring):not(.dot) { opacity: 1; pointer-events: auto; }
 .screen.sheet-up .hero.wh .wh-title { top: calc(12px + var(--sa)); right: 72px; padding: 0 0 0 20px; }
 .screen.sheet-up .hero.wh:has(.lh-topbar) .wh-title { right: 250px; }
-.screen.sheet-up .hero.wh .wh-title :is(.hsub, .cal, .lh-gear) { display: none; }
+.screen.sheet-up .hero.wh .wh-title :is(.cal, .lh-gear) { display: none; }
 .screen.sheet-up .hero.wh h1 { width: auto; max-width: 100%; min-width: 0; font-size: calc(22px * var(--ts, 1)); line-height: 32px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .screen.sheet-up .hero.wh .loc-city { max-width: 100%; }
 .screen.sheet-up .hero.wh h1 br { display: none; }

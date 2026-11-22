@@ -2134,7 +2134,7 @@
   // ---------- pull-up sheet ----------
   // The handle at the top of each white sheet works like a phone's bottom sheet: drag it up and the sheet covers
   // the page (the header shrinks to a thin strip), drag it down to bring the header back. Tapping it toggles.
-  const SHEET_TOP = 56; // the sticky banner's height when the header is tucked away (plus the phone's status bar)
+  const SHEET_TOP = 80; // the tucked-away header: a 56px sticky banner plus the drawer's 24px rounded top (plus the status bar)
   let safeTop = null;
   const statusBar = () => {
     if (safeTop === null) { const p = document.createElement('div'); p.style.cssText = 'position:absolute;visibility:hidden;padding-top:env(safe-area-inset-top,0px)'; document.body.appendChild(p); safeTop = p.offsetHeight; p.remove(); }
@@ -2154,19 +2154,32 @@
     body.insertAdjacentHTML('afterbegin', `<button type="button" class="sheet-grab" aria-expanded="${sheetIsUp()}" aria-label="${sheetIsUp() ? 'Show the header again' : 'Pull the sheet up to fill the screen'}"></button>`);
   }
   // Animate the header to a height, then hand control back to CSS.
+  // The parts that stay on screen in both looks (title, account, and on Lens Language and Settings) glide and shrink
+  // from the big header into the banner and back ("smart animate"); everything else fades.
+  const keepers = (hero) => [hero.querySelector('.wh-title .loc-city') || hero.querySelector('.wh-title h1'), hero.querySelector(':scope > .lh-topbar') || hero.querySelector(':scope > .av-btn')].filter(Boolean);
   function sheetTo(up) {
     const hero = scroll.querySelector('.hero');
     if (!hero) return;
     const from = hero.getBoundingClientRect().height;
+    const keep = keepers(hero), first = keep.map((el) => el.getBoundingClientRect());
+    const fs0 = keep.map((el) => parseFloat(getComputedStyle(el.matches('h1') ? el : el.querySelector('h1') || el).fontSize));
     // Measure the end height with animations off (otherwise the browser reports the starting height).
     screenEl.classList.add('sheet-drag');
     screenEl.classList.toggle('sheet-up', up); hero.style.height = '';
     const to = hero.getBoundingClientRect().height;
+    const last = keep.map((el) => el.getBoundingClientRect());
     hero.style.height = from + 'px'; hero.style.setProperty('--fade', up ? 1 : 0);
+    const glide = !calm();
+    if (glide) keep.forEach((el, i) => {
+      const a = first[i], b = last[i], f1 = parseFloat(getComputedStyle(el.matches('h1') ? el : el.querySelector('h1') || el).fontSize), s = i === 0 && f1 ? fs0[i] / f1 : 1; // the title scales by its font size
+      el.style.transformOrigin = '0 0'; el.style.transition = 'none';
+      el.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${s})`;
+    });
     void hero.offsetHeight;
     screenEl.classList.remove('sheet-drag');
     void hero.offsetHeight;
     hero.style.height = to + 'px'; hero.style.setProperty('--fade', up ? 0 : 1);
+    if (glide) keep.forEach((el) => { el.style.transition = 'transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1)'; el.style.transform = ''; el.addEventListener('transitionend', () => { el.style.transition = ''; el.style.transformOrigin = ''; }, { once: true }); });
     const done = () => { hero.style.height = ''; hero.style.removeProperty('--fade'); };
     hero.addEventListener('transitionend', done, { once: true }); setTimeout(done, 450);
     S.sheetUp = { ...(S.sheetUp || {}), [S.tab]: up };
