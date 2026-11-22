@@ -517,7 +517,8 @@ a.share-card { text-decoration: none; color: inherit; }
 .hero.wh .lh-topbar .lh-lang { margin-right: 4px; }
 .hero.wh.lh2 .wh-title { top: calc(80px + var(--sa)); }
 /* Lens: no pull-up handle on the camera, upload or paste screen; a result has one to bring the header back */
-.body.wb.lb:not(.lb-result)::before { display: none; }
+.scroll .body:not(.lb-result)::before { display: none; } /* pull tabs: only a Lens result keeps one */
+.screen.sheet-up .scroll .body.wb:not(.lb) { min-height: var(--fill, 0px); } /* header tucked away: the drawer fills the screen */
 .lh-rspace { margin-left: auto; }
 .body.wb.lb { flex: 1; min-height: 0; padding: 32px 16px calc(115px + env(safe-area-inset-bottom, 0px)); }
 .body.wb.lens-results { padding-top: 32px; }

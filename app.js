@@ -2108,6 +2108,7 @@
     if (!calm() && lastTab !== S.tab) scroll.classList.add('view-in');
     else if (!calm() && viewKey !== lastViewKey) scroll.classList.add('list-in');
     if (lastTab !== null && lastTab !== S.tab) buzz(8);
+    if (lastTab !== S.tab && S.tab !== 'lens') S.sheetUp = { ...(S.sheetUp || {}), [S.tab]: false }; // a fresh screen starts at the top, header showing
     lastTab = S.tab; lastViewKey = viewKey;
     segSlide(segs);
     switchFlip();
@@ -2149,7 +2150,7 @@
     screenEl.classList.remove('sheet-drag');
     const body = scroll.querySelector('.hero + .body');
     if (!body || body.querySelector(':scope > .sheet-grab')) return;
-    if (S.tab === 'lens' && !body.classList.contains('lb-result')) return; // no handle on the camera / upload / paste screen
+    if (!(S.tab === 'lens' && body.classList.contains('lb-result'))) return; // only a Lens result has a handle; Words, Local and Review follow the scroll
     body.insertAdjacentHTML('afterbegin', `<button type="button" class="sheet-grab" aria-expanded="${sheetIsUp()}" aria-label="${sheetIsUp() ? 'Show the header again' : 'Pull the sheet up to fill the screen'}"></button>`);
   }
   // Animate the header to a height, then hand control back to CSS.
@@ -2172,6 +2173,32 @@
     const g = scroll.querySelector('.sheet-grab');
     if (g) { g.setAttribute('aria-expanded', String(up)); g.setAttribute('aria-label', up ? 'Show the header again' : 'Pull the sheet up to fill the screen'); }
   }
+  // Words, Local and Review: scrolling the drawer down tucks the header away (the drawer stops at the top of the
+  // screen), scrolling back up brings the header back. Pages too short to scroll keep their header.
+  const AUTO_TABS = new Set(['words', 'local', 'review']);
+  let sLast = 0, sAcc = 0, sLock = 0;
+  scroll.addEventListener('scroll', () => {
+    const st = scroll.scrollTop, dy = st - sLast; sLast = st;
+    if (!AUTO_TABS.has(S.tab) || drag) return;
+    if (performance.now() < sLock) { sAcc = 0; return; } // the header is still moving (its own height change scrolls too)
+    sAcc = (sAcc > 0) === (dy > 0) ? sAcc + dy : dy;
+    const up = sheetIsUp();
+    if (!up && sAcc > 12 && st > 4) autoSheet(true);
+    else if (up && (sAcc < -12 || st < 0)) autoSheet(false);
+  }, { passive: true });
+  function autoSheet(up) {
+    if (!scroll.querySelector('.hero')) return;
+    // Tucked away, the drawer fills the whole screen even when its list is short (so it can't bounce back by itself).
+    if (up) screenEl.style.setProperty('--fill', (scroll.clientHeight - SHEET_TOP - statusBar() + 24) + 'px');
+    sLock = performance.now() + 450; sAcc = 0; sheetTo(up);
+  }
+  // Already at the top of the drawer: pulling down (mouse wheel, trackpad or finger) brings the header back.
+  const atTop = () => AUTO_TABS.has(S.tab) && sheetIsUp() && scroll.scrollTop <= 0 && performance.now() >= sLock;
+  scroll.addEventListener('wheel', (e) => { if (e.deltaY < 0 && atTop()) autoSheet(false); }, { passive: true });
+  let tY = null;
+  scroll.addEventListener('touchstart', (e) => { tY = e.touches[0].clientY; }, { passive: true });
+  scroll.addEventListener('touchmove', (e) => { if (tY !== null && e.touches[0].clientY - tY > 24 && atTop()) { tY = null; autoSheet(false); } }, { passive: true });
+  scroll.addEventListener('touchend', () => { tY = null; }, { passive: true });
   let drag = null;
   document.addEventListener('pointerdown', (e) => {
     const g = e.target.closest && e.target.closest('.sheet-grab'); if (!g) return;
