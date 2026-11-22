@@ -149,6 +149,31 @@
   const placeOf = (e) => e.place || PLACES[e.src] || 'the lens';
   const badge = (kind) => { const b = BADGES[kind] || BADGES.common; return `<span class="badge ${b[1]}">${b[0]}</span>`; };
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  // Line icons for list cards (instead of emojis), in the design system's blue.
+  const ICO = {
+    chart: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>',
+    user: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+    laptop: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></svg>',
+    book: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20"/></svg>',
+    palette: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/></svg>',
+    access: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.5" r="1.8"/><path d="M5 8.5l7 1.5 7-1.5M12 10v4.5M9 21l3-6.5 3 6.5"/></svg>',
+    camera: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+    mic: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>',
+    ban: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
+    cloud: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a5 5 0 0 1-.5-10A6 6 0 0 1 18 9.5a4.3 4.3 0 0 1-.5 8.5z"/></svg>',
+    doc: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
+    trash: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>',
+    flask: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 19A1.5 1.5 0 0 0 5.8 21h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/><path d="M7 15h10"/></svg>',
+    globe: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+    share: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
+    update: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16V8M8 12l4-4 4 4"/></svg>',
+    chat: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/></svg>',
+    phone: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>',
+    lock: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>',
+    pin: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    spark: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9z"/><path d="M19 17v4M17 19h4"/></svg>',
+    info: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>'
+  };
   const pin = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
   const speaker = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   const xIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
@@ -216,7 +241,7 @@
   function bump(el) { if (!el || calm()) return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); el.addEventListener('animationend', () => el.classList.remove('bump'), { once: true }); }
   function toggleSave(k) {
     const i = S.saved.indexOf(k);
-    if (i >= 0) { S.saved.splice(i, 1); track(k, 'unsave'); }
+    if (i >= 0) { S.saved.splice(i, 1); track(k, 'unsave'); S.lastRemoved = { k, date: S.savedDates[k] }; showToast(`Removed “${D[k] ? D[k].word : k}”`, { label: 'Undo', action: 'undo-unsave' }); }
     else { S.saved.unshift(k); S.savedDates[k] = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); track(k, 'save'); }
     persist();
     if (syncConn) { if (isSaved(k)) syncConn.put(k, wordData(k)); else syncConn.remove(k); }
@@ -266,10 +291,11 @@
       const mine = {}; S.saved.forEach((k) => { if (!map[k]) mine[k] = wordData(k); });
       syncConn.putMany(mine);
     }
-    if (n) { persist(); showToast(`💻 → 📱 ${n} ${n === 1 ? 'word' : 'words'} arrived from your laptop`); }
+    if (n) { persist(); showToast(`${n} ${n === 1 ? 'word' : 'words'} arrived from your laptop`); }
     render();
   }
-  function showToast(t) { S.toast = t; clearTimeout(showToast.t); showToast.t = setTimeout(() => { S.toast = ''; render(); }, 3500); }
+  function showToast(t, act) { S.toast = t; S.toastAct = act || null; clearTimeout(showToast.t); showToast.t = setTimeout(() => { S.toast = ''; S.toastAct = null; render(); }, act ? 6000 : 3500); }
+  const toastHtml = () => (S.toast ? `<div class="toast${S.toastAct ? ' with-act' : ''}" role="status">${esc(S.toast)}${S.toastAct ? `<button type="button" data-action="${S.toastAct.action}">${esc(S.toastAct.label)}</button>` : ''}</div>` : '');
   async function startSync(code) {
     if (!window.LingerSync || !LingerSync.available()) return;
     S.sync = { status: 'connecting', code, msg: '', first: true }; render();
@@ -290,7 +316,7 @@
       <div class="sync-acts"><button type="button" class="link-btn" data-action="sync-copy">Copy Reader link</button><button type="button" class="link-btn" data-action="sync-off">Turn off</button></div>
       <span hidden id="readerUrl">${esc(readerUrl + '?pair=' + sy.code)}</span></div>`;
     if (sy.status === 'connecting') return '<div class="sync-card"><strong>Connecting…</strong></div>';
-    return `<div class="sync-card"><div class="sync-h">🔗 <strong>Connect with a code</strong></div>
+    return `<div class="sync-card"><div class="sync-h"><strong>Connect with a code</strong></div>
       <div class="small">${sy.status === 'error' ? esc(sy.msg) : 'Get a code here, then type it in the Linger Chrome extension menu (or Linger Reader). Words saved there show up here.'}</div>
       <button type="button" class="btn primary small-btn" data-action="sync-on">${sy.status === 'error' ? 'Try again' : 'Get a code'}</button></div>`;
   }
@@ -374,6 +400,9 @@
   const learned = (k) => { const e = know(k); return e.seen && e.p >= 0.8; }; // known from their own history: stop underlining it
   const track = (k, type, ok) => { if (L && k) L.record(k, type, ok); };
   // Flashcards: the words they most need first (due for review, then least known).
+  // Missed at least twice and not known yet: worth a focused round.
+  const trickyWords = () => S.saved.filter((k) => D[k]).map((k) => ({ k, e: know(k) })).filter((x) => (x.e.wrong || 0) >= 2 && x.e.p < 0.7).sort((a, b) => (b.e.wrong - a.e.wrong) || (a.e.p - b.e.p)).slice(0, 8).map((x) => x.k);
+  const SESSION = 10; // flashcards come in rounds of 10 so a long list never feels endless
   const practiceOrder = () => S.saved.filter((k) => D[k]).map((k) => ({ k, e: know(k) })).sort((a, b) => (b.e.due - a.e.due) || (a.e.p - b.e.p)).map((x) => x.k);
   function summarize(text) {
     const sents = sentencesOf(text);
@@ -486,16 +515,18 @@
   }
   const fileToDataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
   async function startCamera() {
+    if (needPrivacy(startCamera)) return;
     stopSpeaking(); warmUp();
     S.pending = null; S.sheet = null; S.explain = false;
     try {
-      camStream = await openStream(facing, false);
+      if (camLive()) resumeCamera(); else camStream = await openStream(facing, false); // reuse the stream: no new permission prompt
       countCameras();
       S.tab = 'lens'; S.source = 'camera';
       S.scan = { status: 'live', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' };
-    } catch {
+    } catch (e) {
+      const kind = camErrKind(e);
       S.tab = 'lens'; S.source = 'camera';
-      S.scan = { status: 'error', progress: 0, img: null, msg: 'Couldn’t open the camera. Allow camera access in your browser, or use Upload a photo.', conf: 0, origin: 'camera' };
+      S.scan = { status: 'error', progress: 0, img: null, msg: CAM_ERR[kind][1], camErr: kind, conf: 0, origin: 'camera' };
     }
     render();
   }
@@ -518,7 +549,79 @@
     }
     render();
   }
+  // Why the camera couldn't open, so the screen can say what to do next.
+  const CAM_ERR = {
+    denied: ['Camera access is off', 'Linger needs the camera to read letters, signs and bills. Turn it back on, or use a photo or paste text instead.'],
+    nocam: ['No camera found', 'Linger couldn’t find a camera on this device. Upload a photo or paste the text instead.'],
+    busy: ['The camera is busy', 'Another app may be using the camera. Close it and tap Try again, or upload a photo instead.'],
+    other: ['Couldn’t open the camera', 'Tap Try again. If it still doesn’t work, upload a photo or paste the text instead.']
+  };
+  const camErrKind = (e) => { const n = e && e.name; return n === 'NotAllowedError' || n === 'SecurityError' ? 'denied' : n === 'NotFoundError' || n === 'OverconstrainedError' || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? 'nocam' : n === 'NotReadableError' || n === 'AbortError' ? 'busy' : 'other'; };
+  // The iPhone app (shell build 2+) can open its own page in Settings, where camera access is turned back on.
+  const SHELL_BUILD = BETA && BETA.native ? Number((window.LINGER_SHELL && LINGER_SHELL.build) || 1) : 0;
+  const LATEST_SHELL = 2, REQUIRED_SHELL = 1;
+  // A photo Linger couldn't read: work out the likely reason from the picture itself (light, glare, focus).
+  const RETAKE = {
+    dark: ['Too dark to read', 'Turn on a light or move closer to a window, then take it again.'],
+    glare: ['Too much glare', 'Tilt the page a little so the light doesn’t shine back off it.'],
+    blur: ['The photo is blurry', 'Hold the phone still for a second, and tap the screen to focus before you take it.'],
+    far: ['The words are too small', 'Move closer so the text fills the frame, and flatten the page if it’s folded.']
+  };
+  function photoCheck(src) {
+    return new Promise((res) => {
+      const im = new Image();
+      im.onload = () => {
+        try {
+          const w = 240, h = Math.max(1, Math.round(im.height * w / im.width)), c = document.createElement('canvas'); c.width = w; c.height = h;
+          const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, w, h);
+          const p = g.getImageData(0, 0, w, h).data; let sum = 0, bright = 0;
+          for (let i = 0; i < p.length; i += 4) { const y = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2]; sum += y; if (y > 248) bright++; }
+          const n = p.length / 4, mean = sum / n, sharp = sharpness(c) / (w * h);
+          // Measured on test photos: blurry pages score under 30, sharp ones 200+. Glare is a blown-out patch (part of the
+          // picture pure white), not a whole white page.
+          const b = bright / n;
+          res(mean < 70 ? 'dark' : sharp < 60 ? 'blur' : b > 0.15 && b < 0.8 ? 'glare' : 'far');
+        } catch { res('far'); }
+      };
+      im.onerror = () => res('far'); im.src = src;
+    });
+  }
+  // Text that isn't English (or is handwriting) reads as nonsense: almost none of the most common English words appear.
+  const COMMON_EN = new Set('the a an and or to of in on at for from by with is are was were be been will would can could should must you your we our they their it this that these those he she his her i me my not no yes if as do does did have has had please pay'.split(' '));
+  const looksEnglish = (text) => { const w = text.toLowerCase().match(/[a-z']+/g) || []; if (w.length < 12) return true; return w.filter((x) => COMMON_EN.has(x)).length / w.length >= 0.06; };
+  // Important letters: deadlines, money owed, legal steps. Linger points them out and says where to get free help.
+  const IMPORTANT_RE = /\b(evict(ion|ed)?|notice to (quit|vacate)|court|summons|hearing|lawsuit|judg(e)?ment|penalt(y|ies)|late fees?|past due|overdue|final notice|shut ?off|disconnect(ion|ed)?|terminat(e|ion|ed)|deadline|must (pay|respond|reply|appear|submit)|failure to|collections?|garnish|IRS|immigration|USCIS|deport(ation)?|benefits|SNAP|Medicaid|Medicare)\b/i;
+  const isImportant = (text) => IMPORTANT_RE.test(text || '');
+  function importantCard(dates) {
+    return `<div class="imp-card" role="note"><div class="imp-h"><span class="imp-ic" aria-hidden="true">${ICO.info}</span><strong>This looks important</strong></div>
+      <span>It mentions a deadline, money or a legal step. Read it carefully and don’t wait until the last day.</span>
+      ${dates && dates.length ? `<div class="dates">${dates.map((d) => `<span class="date">${esc(d)}</span>`).join('')}</div>` : ''}
+      <span class="small">Linger isn’t legal advice. If you’re not sure what to do, free help is available:</span>
+      <ul class="imp-help"><li><a href="tel:211">Call 211</a>: free, any time, connects you to local help with housing, bills and benefits</li>
+        <li><a href="https://www.lawhelp.org" target="_blank" rel="noopener">LawHelp.org</a>: free legal aid near you</li>
+        <li><a href="tel:311">Call 311</a>: your city’s services line, in most US cities</li></ul></div>`;
+  }
+  // The last scan's text stays on this phone (not the picture) so it can be opened again, unless they say not to.
+  const LAST_SCAN = 'linger.lastScan', SCAN_BUSY = 'linger.scanBusy', KEEP_SCANS = 'linger.keepScans', PRIVACY_SEEN = 'linger.privacy.v1';
+  const keepScans = () => { try { return localStorage.getItem(KEEP_SCANS) !== 'no'; } catch { return true; } };
+  function rememberScan() {
+    try { localStorage.removeItem(SCAN_BUSY); if (!keepScans() || S.scan.noKeep) { localStorage.removeItem(LAST_SCAN); return; }
+      localStorage.setItem(LAST_SCAN, JSON.stringify({ text: TEXTS.camera, origin: S.scan.origin, pages: S.scan.pages || 1, conf: S.scan.conf || 0, at: Date.now() })); } catch {}
+  }
+  const lastScan = () => { try { return JSON.parse(localStorage.getItem(LAST_SCAN) || 'null'); } catch { return null; } };
+  const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + (Math.round(m / 60) === 1 ? ' hour ago' : ' hours ago') : Math.round(m / 1440) === 1 ? 'yesterday' : Math.round(m / 1440) + ' days ago'; };
+  // Shown once, before the first scan, photo or paste: what happens to what they scan.
+  const privacySeen = () => { try { return !!localStorage.getItem(PRIVACY_SEEN); } catch { return true; } };
+  function needPrivacy(next) { if (privacySeen()) return false; S.privacy = true; S.privacyNext = next; render(); return true; }
   function stopCamera() { if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; } }
+  // After a photo (or switching to Upload / Paste) the camera is paused, not closed: asking for it again would show the
+  // browser's permission prompt again. It's closed for real when you leave Lens or the app goes to the background.
+  const camLive = () => !!camStream && camStream.getVideoTracks().some((t) => t.readyState === 'live');
+  function pauseCamera() { if (camStream) camStream.getVideoTracks().forEach((t) => { t.enabled = false; }); if (S.scan.status === 'live') S.scan.status = 'idle'; }
+  function resumeCamera() { if (camStream) camStream.getVideoTracks().forEach((t) => { t.enabled = true; }); }
+  // Back to the camera after Clear (or the Scan tab): straight to the live view when the camera is still open.
+  function backToCamera() { if (camLive()) { resumeCamera(); S.source = 'camera'; S.lensMode = 'scan'; S.scan = { status: 'live', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; } }
+  document.addEventListener('visibilitychange', () => { if (document.hidden && camStream && S.scan.status !== 'live') stopCamera(); });
   function closeCamera() { stopCamera(); if (S.scan.status === 'live') S.scan.status = 'idle'; }
   // Keep only the part of the picture inside the on-screen frame (the video is shown with object-fit: cover).
   function shutterFlash(card) {
@@ -566,21 +669,31 @@
   }
   const scanStage = (p) => (p < 30 ? 'Finding the words…' : p < 70 ? 'Reading each line…' : p < 95 ? 'Checking the hard words…' : 'Almost there…');
   async function scanImage(src, origin = 'camera') {
-    closeCamera(); stopSpeaking();
+    if (needPrivacy(() => scanImage(src, origin))) return;
+    pauseCamera(); stopSpeaking(); lensExpand(false);
+    const more = S.addPage; // adding a page to the scan already on screen
+    try { localStorage.setItem(SCAN_BUSY, String(Date.now())); } catch {}
     S.tab = 'lens'; S.source = 'camera';
     S.pending = null; S.sheet = null; S.explain = false;
     S.lensMode = origin === 'upload' ? 'upload' : 'scan';
-    S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0, origin }; render();
+    S.scan = { status: 'reading', progress: 0, img: src, msg: '', conf: 0, origin, page: more ? more.pages + 1 : 1 }; render();
     try {
       const { text, conf, boxes } = await readImage(src, (p) => { S.scan.progress = p; const el = document.getElementById('scanPct'); if (el) el.textContent = p + '%'; const st = document.getElementById('scanStage'); if (st && st.textContent !== scanStage(p)) { st.textContent = scanStage(p); st.classList.remove('swap'); void st.offsetWidth; st.classList.add('swap'); } });
       if (text.split(' ').length < 3) throw new Error('empty');
-      Object.keys(D).forEach((k) => { if (D[k].scanned && !isSaved(k)) delete D[k]; });
-      TEXTS.camera = text; SUMMARY.camera = summarize(text);
-      S.scan.status = 'done'; S.scan.conf = conf; S.scan.boxes = boxes; S.shotView = boxes ? 'picture' : 'text'; if (boxes) fx('shot', 1);
+      if (!more) Object.keys(D).forEach((k) => { if (D[k].scanned && !isSaved(k)) delete D[k]; });
+      const all = more ? more.text + ' ' + text : text;
+      TEXTS.camera = all; SUMMARY.camera = summarize(all);
+      S.scan.status = 'done'; S.scan.conf = more ? Math.min(conf, more.scan.conf || conf) : conf; S.scan.pages = more ? more.pages + 1 : 1;
+      S.scan.boxes = more ? null : boxes; S.shotView = S.scan.boxes ? 'picture' : 'text'; if (S.scan.boxes) fx('shot', 1);
+      S.scan.notEnglish = !looksEnglish(all); S.addPage = null; S.textTr = false;
+      rememberScan();
       S.explain = true; // show the plain-English summary right away
+      if (src) setTimeout(() => { if (S.tab === 'lens' && S.scan.status === 'done') sheetTo(true); }, 0);
     } catch (e) {
+      try { localStorage.removeItem(SCAN_BUSY); } catch {}
       S.scan.status = 'error';
-      S.scan.msg = e.message === 'empty' ? 'Linger couldn’t find readable text. Try again closer, flatter and in better light.' : 'Couldn’t read the photo. Check your internet connection and try again.';
+      if (e.message === 'empty') { S.scan.reason = await photoCheck(src); S.scan.msg = RETAKE[S.scan.reason][0] + '. ' + RETAKE[S.scan.reason][1]; }
+      else S.scan.msg = navigator.onLine ? 'Couldn’t read the photo. Try again in a moment.' : 'You’re offline. Linger needs the internet the first time it reads a photo. Try again when you’re back online.';
     }
     render();
   }
@@ -622,6 +735,7 @@
     if (dev) {
       try { return { t: await within(dev.translate(text), 4000), sentence: withSentence && context ? await within(dev.translate(context), 4000) : '', note: '' }; } catch { onDevice.set(to, null); }
     }
+    if (!aiOK()) return null; // the phone's own translator above is fine; Linger's server only with consent
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Linger-Id': lingerId },
@@ -638,11 +752,18 @@
   // example) or a highlighted phrase (meaning, plain English, the hard words in it). Cached; the screen redraws when
   // the answer arrives.
   const AIX = new Map();
+  // Consent for Linger AI, asked on the first word card (and switchable in Settings). 'yes' | 'no' | '' (not asked yet).
+  const AI_CONSENT = 'linger.aiConsent';
+  S.aiConsent = (() => { try { return localStorage.getItem(AI_CONSENT) || ''; } catch { return ''; } })();
+  const aiOK = () => S.aiConsent === 'yes';
+  function setAiConsent(v) { S.aiConsent = v; try { localStorage.setItem(AI_CONSENT, v); localStorage.setItem(AI_CONSENT + 'At', String(Date.now())); } catch {} }
   function explainAI(mode, text, context) {
     if (!text) return null;
+    if (!aiOK()) return { status: 'off' };
     const key = `${mode}|${text}|${context || ''}`;
     if (!AIX.has(key)) {
-      AIX.set(key, { status: 'wait' });
+      AIX.set(key, { status: 'wait', t0: Date.now() });
+      setTimeout(() => { const v = AIX.get(key); if (v && v.status === 'wait') render(); }, 5200); // "taking longer than usual"
       (async () => {
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
@@ -693,7 +814,7 @@
       ${w && w.sentence ? `<div class="ctx" ${A}>“${esc(w.sentence)}”</div>` : ''}
       ${w && w.note ? `<div class="small" ${A}>${esc(w.note)}</div>` : ''}
       ${waiting ? '<div class="small">Translating…</div>' : ''}`;
-    return `<div class="tr-box"><div class="label">🌐 In ${esc(L.own)}</div>${body}</div>`;
+    return `<div class="tr-box"><div class="label">In ${esc(L.own)}</div>${body}</div>`;
   }
   function langSheet() {
     const q = S.langQuery.trim().toLowerCase();
@@ -730,7 +851,7 @@
       <div class="panel" role="dialog" aria-label="Your account"><div class="grab"></div>
         <div class="acct-head">
           <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
-          <div class="acct-who"><div class="sum-title">${email ? 'Your account' : 'Your Linger'}</div>
+          <div class="acct-who"><div class="sum-title">${email ? 'Your account' : 'Guest User'}</div>
             <div class="small">${email ? esc(email) : 'Not signed in. Your words are saved on this phone only.'}</div></div>
         </div>
         ${window.LingerAccount ? LingerAccount.card({ inSheet: true }) : ''}
@@ -768,20 +889,25 @@
     const row = (k, v) => `<div class="acct-row"><span>${k}</span><span>${esc(v)}</span></div>`;
     if (!sec) {
       const setupDone = S.prefs.done && S.prefs.level;
+      // Signed out: a Sign in button beside the picture, and the sign-in form opens right under it.
+      const acct = acctState(), canSignIn = !!(window.LingerAccount && LingerAccount.available() && acct && acct.auth === 'out');
       const rows = [
-        ['progress', '📈', 'Your progress', st.total ? `${st.total} saved · ${st.known} known${st.streak ? ` · 🔥 ${st.streak}-day streak` : ''}` : 'Save words to see your progress'],
-        ['account', '👤', 'Account', email ? esc(email) : 'Not signed in · sign in to keep your words'],
-        ['laptop', '💻', 'Laptop & extension', email ? 'Syncs with your account' : S.sync.status === 'on' ? 'Connected with a code' : 'Use Linger on your computer too'],
-        ['setup', '📖', 'Reading setup', setupDone ? esc([lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : '', S.langs.length ? langsLabel() : 'Simple English'].filter(Boolean).join(' · ')) : 'Not finished · 3 quick questions', setupDone ? '' : 'data-dot="1"']
+        ['progress', ICO.chart, 'Your progress', st.total ? `${st.total} saved · ${st.known} known${st.streak ? ` · ${st.streak}-day streak` : ''}` : 'Save words to see your progress'],
+        ['account', ICO.user, 'Account', email ? esc(email) : 'Not signed in · sign in to keep your words'],
+        ['laptop', ICO.laptop, 'Laptop & extension', email ? 'Syncs with your account' : S.sync.status === 'on' ? 'Connected with a code' : 'Use Linger on your computer too'],
+        ['setup', ICO.book, 'Reading setup', setupDone ? esc([lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : '', S.langs.length ? langsLabel() : 'Simple English'].filter(Boolean).join(' · ')) : 'Not finished · 3 quick questions', setupDone ? '' : 'data-dot="1"']
       ];
       return `${head}<div class="body set-body prof-body">
+        ${!setupDone ? '<button type="button" class="setup-strip" data-action="onb-first"><span class="setup-ic" aria-hidden="true">' + ICO.spark + '</span><span class="setup-txt"><strong>Finish setting up Linger</strong><span>3 quick questions</span></span><span class="setup-go">Set up ›</span></button>' : ''}
         <div class="prof-top">
           <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
-          <div><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Your Linger'}</div><div class="small">${email ? esc(email) : 'Not signed in · words are on this phone only'}</div>
+          <div class="prof-who"><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Guest User'}</div>${email ? `<div class="small">${esc(email)}</div>` : canSignIn ? '<div class="small prof-cta">Sign in to back up your words and see them on your laptop too.</div>' : ''}
             ${lvl && lvl[0] !== 'unsure' ? `<span class="prof-level">${esc(LEVEL_NAME[lvl[0]])}</span>` : ''}</div>
+          ${!email && canSignIn && !acct.formOpen ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
         </div>
+        ${!email && acct && acct.formOpen ? LingerAccount.card({ inSheet: true }) : ''}
         ${menuList(rows, 'prof-sec')}
-        ${menuList([['', '⚙️', 'Settings', 'Reading, display, accessibility'], ['privacy', '🔒', 'Privacy', 'What Linger keeps and how to delete it']], 'set-sec')}
+        ${menuList([['', gear, 'Settings', 'Reading, display, accessibility'], ['privacy', ICO.lock, 'Privacy', 'What Linger keeps and how to delete it']], 'set-sec')}
       </div>`;
     }
     let body = '';
@@ -804,7 +930,7 @@
       <div class="db-tiles">${tile(st.total, 'saved')}${tile(st.known, 'known', 'k')}${tile(st.almost, 'almost', 'a')}${tile(st.learning, 'learning', 'l')}</div>
       <div class="db-split" aria-hidden="true">${st.total ? `<span class="k" style="flex:${st.known}"></span><span class="a" style="flex:${st.almost}"></span><span class="l" style="flex:${st.learning}"></span>` : '<span class="e"></span>'}</div>
       <div class="card db-week">
-        <div class="db-wh"><strong>🔥 ${st.streak}-day streak</strong><span class="small">Words saved, last 7 days</span></div>
+        <div class="db-wh"><strong>${st.streak}-day streak</strong><span class="small">Words saved, last 7 days</span></div>
         <div class="db-bars">${week.map((w) => `<div class="db-col${w.on ? ' on' : ''}"><span class="db-n">${w.n || ''}</span><span class="db-b" style="height:${Math.round(w.n / peak * 100)}%"></span><span class="db-d">${'SMTWTFS'[w.d.getDay()]}</span></div>`).join('')}</div>
         <div class="small">${st.right + st.wrong ? `Practice: ${st.right} right, ${st.wrong} to try again (${acc}%). ` : ''}Days with a dot under them are days you used Linger.</div>
       </div>
@@ -812,7 +938,7 @@
     } else if (sec === 'account') {
       body = window.LingerAccount ? LingerAccount.card({ inSheet: true }) : '<p class="small">Accounts aren’t available right now.</p>';
     } else if (sec === 'laptop') {
-      body = `<div class="card prof-ext"><strong>${email ? '✓ Syncs with your account' : 'Sign in to sync'}</strong>
+      body = `<div class="card prof-ext"><strong>${email ? 'Syncs with your account' : 'Sign in to sync'}</strong>
         <span class="small">${email ? 'Sign in to the Linger Chrome extension with this same account, and words you save there show up here by themselves. No code needed.' : 'Sign in here and in the Linger Chrome extension with the same account, and your words sync by themselves.'}</span>
         <span class="small">Not working? Connect with a code instead:</span></div>
       ${syncCard()}`;
@@ -823,7 +949,8 @@
           <div class="acct-setup-h"><strong>Reading setup</strong><button type="button" class="link-btn" data-action="onb-edit">Change</button></div>
           ${row('Reading', readsLabel() || 'Not set yet')}
           ${row(S.langs.length > 1 ? 'Languages' : 'Language', S.langs.length ? langsLabel() + ' + English' : 'Simple English')}
-          ${row('English level', lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : 'Not set yet')}</div>`;
+          ${row('English level', lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : 'Not set yet')}
+          <button type="button" class="link-btn acct-test" data-action="level-test">${S.prefs.test ? 'Retake the English check' : 'Not sure? Take the English check'}</button></div>`;
     }
     return `${head}<div class="body set-body prof-body">${body}</div>`;
   }
@@ -888,7 +1015,7 @@
   };
   const backIcon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
   const onbOpt = (on, ic, title, sub, action, v, multi, attrs = '') => `<button type="button" class="onb-opt${on ? ' on' : ''}" role="${multi ? 'checkbox' : 'radio'}" aria-checked="${on}" data-action="${action}" data-v="${esc(v)}">
-      <span class="onb-ic" aria-hidden="true">${ic}</span><span class="onb-txt"><strong ${attrs}>${esc(title)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="onb-check${multi ? ' box' : ''}" aria-hidden="true"></span></button>`;
+      ${ic ? `<span class="onb-ic" aria-hidden="true">${ic}</span>` : ''}<span class="onb-txt"><strong ${attrs}>${esc(title)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="onb-check${multi ? ' box' : ''}" aria-hidden="true"></span></button>`;
   // The page: header (title, progress), white sheet (body), and the buttons at the bottom.
   const onbFrame = ({ title, sub, kicker = '', dots, top, body, foot, label }) => `<div class="onb" role="dialog" aria-modal="true" aria-labelledby="onbT">
       <header class="onb-hero">
@@ -907,7 +1034,7 @@
     let title, sub, body, can = true;
     if (step === 0) {
       title = 'What do you need help reading?'; sub = 'Pick all that apply.';
-      body = `<div class="onb-list" role="group" aria-labelledby="onbT">${READS.map((r) => onbOpt(o.reads.includes(r[0]), r[1], r[2], r[0] === 'all' ? 'A bit of everything' : '', 'onb-read', r[0], true)).join('')}</div>
+      body = `<div class="onb-list" role="group" aria-labelledby="onbT">${READS.map((r) => onbOpt(o.reads.includes(r[0]), '', r[2], r[0] === 'all' ? 'A bit of everything' : '', 'onb-read', r[0], true)).join('')}</div>
         ${o.reads.includes('other') ? `<label class="onb-field"><span>What do you read?</span><input id="onbOther" type="text" maxlength="80" placeholder="For example: school notes, recipes, contracts" value="${esc(o.other)}" autocomplete="off"></label>` : ''}`;
       can = o.reads.length > 0 && (!o.reads.includes('other') || !!o.other.trim());
       const st = acctState();
@@ -926,15 +1053,19 @@
         <div class="onb-chips">${chips || '<span class="onb-none">None picked: Linger explains in <b>Simple English</b>.</span>'}</div>
         ${o.langs.length > 1 ? '<p class="onb-hint">Summaries use the first one. Word meanings show in each.</p>' : ''}`;
     } else {
-      title = 'Your English level'; sub = 'A rough guess is fine. It sets which words Linger underlines.';
-      body = `${o.suggested ? `<p class="onb-hint">The check suggested <b>${esc(levelName(o.suggested))}</b>. Pick the one that fits you.</p>` : ''}
-        <div class="onb-list" role="radiogroup" aria-labelledby="onbT">${LEVELS.map((l) => onbOpt(o.level === l[0], l[1], l[2], l[3], 'onb-level', l[0], false)).join('')}</div>
-        ${o.level === 'unsure' ? `<div class="onb-test-card"><strong>Let Linger check</strong><span>About 4 minutes: quick “do you know this word?” taps, then 10 meaning questions. Linger suggests a level and you decide.</span>
-          <button type="button" class="btn primary small-btn" data-action="test-start">Take the English check</button></div>` : ''}`;
-      can = !!o.level;
+      title = 'Your English level'; sub = 'It sets which words Linger underlines. You can change it anytime.';
+      // The English check comes first, as its own card with a button, so people who don't know their level find it.
+      const picked = o.level && o.level !== 'unsure' ? o.level : '';
+      body = `<div class="onb-test-card onb-test-top"><strong>Not sure? Take the English check</strong>
+          <span>About 4 minutes: tap whether you know some words, then answer 10 questions about meanings. Linger suggests a level, and you decide.</span>
+          <button type="button" class="btn primary small-btn" data-action="test-start">Take the English check</button></div>
+        ${o.suggested ? `<p class="onb-hint">The check suggested <b>${esc(levelName(o.suggested))}</b>. Pick the one that fits you.</p>` : ''}
+        <p class="onb-or" id="onbLvl">Or choose your level</p>
+        <div class="onb-list" role="radiogroup" aria-labelledby="onbLvl">${LEVELS.filter((l) => l[0] !== 'unsure').map((l) => onbOpt(picked === l[0], l[1], l[2], l[3], 'onb-level', l[0], false)).join('')}</div>`;
+      can = !!picked;
     }
     const foot = `${step > 0 ? `<button type="button" class="lh-round onb-back" data-action="onb-back" aria-label="Back">${backIcon}</button>` : ''}
-      <button type="button" class="btn primary lh-cta" data-action="onb-next" ${can ? '' : 'disabled'}>${step < 2 ? 'Continue' : o.level === 'unsure' ? 'Skip the check' : o.edit ? 'Save' : 'Start reading'}</button>`;
+      <button type="button" class="btn primary lh-cta" data-action="onb-next" ${can ? '' : 'disabled'}>${step < 2 ? 'Continue' : o.edit ? 'Save' : 'Start reading'}</button>`;
     return onbFrame({ title: esc(title), sub, kicker: step === 0 && !o.edit ? 'Welcome to Linger' : '', dots, top: `<button type="button" class="onb-skip" data-action="onb-skip">${o.edit ? 'Cancel' : 'Skip'}</button>`, body, foot });
   }
   // The English check (entest.js): part 1 "Do you know this word?" taps, part 2 meaning questions, then the suggested
@@ -988,9 +1119,8 @@
   // the same header as Words (gradient, rings, logo, 36px title, subtitle), then the switch on the white sheet.
   const lensHero = () => `<header class="hero wh lh2">
       <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
-      ${logo}${avatarBtn()}
-      <div class="wh-title"><div class="wh-row"><h1>Lens</h1><span class="lh-tools"><button type="button" class="lh-lang" data-action="lang-open" aria-label="Your language: ${esc(langLabel())}. Change it">🌐 <span ${S.lang ? langAttrs() : ''}>${esc(S.lang ? langLabel() : 'Language')}</span></button><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button></span></div>
-        <div class="hsub">Point or upload any text to understand</div></div>
+      ${logo}<div class="lh-topbar"><button type="button" class="lh-lang" data-action="lang-open" aria-label="Your language: ${esc(langLabel())}. Change it">${ICO.globe}<span ${S.lang ? langAttrs() : ''}>${esc(S.lang ? langLabel() : 'Language')}</span></button><button type="button" class="lh-gear" data-action="settings" aria-label="Settings">${gear}</button>${avatarBtn()}</div>
+      <div class="wh-title"><div class="wh-row"><h1>Lens</h1></div></div>
     </header>`;
   const lensSwitch = (mode) => `<div class="lh-switch" role="group" aria-label="How to read something">
         ${[['scan', 'Scan'], ['upload', 'Upload a photo'], ['paste', 'Paste text']].map(([m, l]) => `<button type="button" class="lh-seg ${mode === m ? 'on' : ''}" data-action="lens-mode" data-v="${m}" aria-pressed="${mode === m}">${l}</button>`).join('')}
@@ -1006,7 +1136,7 @@
     const reading = sc.status === 'reading', done = sc.status === 'done' && !!TEXTS.camera;
     let card, cta;
     if (reading) {
-      card = `<div class="lh-card lh-reading"><img class="lh-photo" src="${sc.img}" alt="Your photo"><span class="lh-scanline" aria-hidden="true"></span><p class="lh-hint"><span id="scanStage">${scanStage(sc.progress)}</span> <span id="scanPct">${sc.progress}%</span></p></div>`;
+      card = `<div class="lh-card lh-reading"><img class="lh-photo" src="${sc.img}" alt="Your photo"><span class="lh-scanline" aria-hidden="true"></span><p class="lh-hint">${sc.page > 1 ? `Page ${sc.page}: ` : ''}<span id="scanStage">${scanStage(sc.progress)}</span> <span id="scanPct">${sc.progress}%</span></p></div>`;
       cta = `<button type="button" class="btn primary lh-cta" disabled>Reading…</button>`;
     } else if (done) {
       const active = S.pending || S.sheet, speaking = S.speaking === 'lens';
@@ -1025,11 +1155,14 @@
       let autos = [];
       if (S.autoHard) { autos = [...new Set(tokens().map(keyOf))].filter((k) => k && PLAIN[k]).slice(0, 8); autos.forEach((k) => makeEntry(k, TEXTS.camera, SCAN_PLACE)); }
       card = `<div class="lh-card lh-result">
-          <div class="lh-rhead"><span>${ORIGIN_LABEL[sc.origin] || 'Your text'}</span><button type="button" class="lh-trbtn${S.textTr && S.lang ? ' on' : ''}" data-action="text-tr" aria-pressed="${!!(S.textTr && S.lang)}">🌐 ${S.lang ? esc(langOf(S.lang).own) : 'Translate'}</button>${boxes ? `<span class="lh-views" role="group" aria-label="Show as"><button type="button" class="${picture ? 'on' : ''}" data-action="shot-view" data-v="picture" aria-pressed="${!!picture}">Picture</button><button type="button" class="${picture ? '' : 'on'}" data-action="shot-view" data-v="text" aria-pressed="${!picture}">Text</button></span>` : ''}<button type="button" class="lh-clear" data-action="lens-clear">Clear</button></div>
+          <div class="lh-rhead"><span>${ORIGIN_LABEL[sc.origin] || 'Your text'}${sc.pages > 1 ? ` · ${sc.pages} pages` : ''}</span><span class="lh-rspace"></span>${boxes ? `<span class="lh-views" role="group" aria-label="Show as"><button type="button" class="${picture ? 'on' : ''}" data-action="shot-view" data-v="picture" aria-pressed="${!!picture}">Picture</button><button type="button" class="${picture ? '' : 'on'}" data-action="shot-view" data-v="text" aria-pressed="${!picture}">Text</button></span>` : ''}<button type="button" class="lh-clear" data-action="lens-clear">Clear</button></div>
           <p class="lh-tip">Tap a word. Press and drag across words to explain a phrase.</p>
+          ${isImportant(TEXTS.camera) ? importantCard(SUMMARY.camera && SUMMARY.camera.dates) : ''}
+          ${sc.notEnglish ? `<div class="lh-notice" role="note"><strong>This may not be English</strong><span>Linger reads printed English. Handwriting and other languages often come out wrong.</span><span class="lh-acts">${S.lang ? `<button type="button" class="link-btn" data-action="text-tr">${S.textTr ? 'Hide the translation' : 'Translate it into ' + esc(langOf(S.lang).own)}</button>` : '<button type="button" class="link-btn" data-action="lang-open">Pick your language to translate it</button>'}${sc.origin === 'camera' ? '<button type="button" class="link-btn" data-action="retake">Retake</button>' : ''}</span></div>` : ''}
           ${picture ? `<div class="lh-shot${FX.shot ? ' fresh' : ''}"><img src="${sc.img}" alt="${esc(ORIGIN_LABEL[sc.origin] || 'Your photo')}. The words on it are buttons.">${toks}</div>` : `<div class="lh-text">${toks}</div>`}
           ${S.textTr && S.lang ? textTrBox() : ''}
-          ${sc.conf && sc.conf < 60 ? '<p class="lh-warn">Some words may be misread. A flatter, brighter photo helps.</p>' : ''}
+          ${sc.conf && sc.conf < 60 ? `<div class="lh-warn" role="note"><span>Some words may be wrong. Tap a word to fix it, or take a flatter, brighter photo.</span>${sc.origin === 'camera' ? '<button type="button" class="link-btn" data-action="retake">Retake</button>' : ''}</div>` : ''}
+          <div class="lh-more">${sc.origin === 'camera' || sc.origin === 'upload' ? '<button type="button" class="link-btn" data-action="add-page">+ Add another page</button>' : ''}${keepScans() && !sc.noKeep ? '<button type="button" class="link-btn lh-forget" data-action="forget-scan">Don’t keep this scan</button>' : '<span class="small">Not kept on this phone</span>'}</div>
           ${autos.length ? `<p class="lh-sub">Hard words here</p><div class="lh-chips">${autos.map((k) => `<button type="button" class="lh-chip" data-action="open" data-k="${k}">${esc(cap(D[k].word))}</button>`).join('')}</div>` : ''}
         </div>`;
       cta = `<div class="lh-ctarow"><button type="button" class="btn primary lh-cta" data-action="explain">${sparkIcon}Explain this text</button>
@@ -1039,7 +1172,8 @@
           <span class="lh-dropic">${imgIcon}</span>
           <strong>Choose a photo</strong>
           <span>A letter, sign or bill from your photos</span>
-          ${sc.status === 'error' && sc.origin === 'upload' ? `<span class="lh-err">${esc(sc.msg)}</span>` : ''}
+          ${sc.status === 'error' && sc.origin === 'upload' ? `<span class="lh-err" role="alert">${esc(sc.msg)}</span>` : ''}
+          ${S.addPage ? `<span class="small">Adding page ${S.addPage.pages + 1} to your scan</span>` : ''}
         </label>`;
       cta = `<label class="btn primary lh-cta" for="photo">${imgIcon}Choose photo</label>`;
     } else if (mode === 'paste') {
@@ -1052,18 +1186,30 @@
     } else {
       const live = sc.status === 'live', corners = '<i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i>';
       const err = sc.status === 'error' && sc.origin !== 'upload';
-      const hint = live ? 'Fit the whole page inside the frame' : err ? 'Camera is off' : 'Tap Turn on camera to start';
-      card = `<div class="lh-card">
-          ${live ? '<video id="cam" playsinline muted autoplay></video>' : `<div class="lh-empty">${err ? `<p>${esc(sc.msg)}</p>` : '<p>Linger reads it and explains the hard words.</p>'}</div>`}
-          <div class="lh-frame" id="camFrame">${corners}</div>
-          <p class="lh-hint">${hint}</p>
+      const hint = live ? (S.addPage ? `Page ${S.addPage.pages + 1}: fit the whole page inside the frame` : 'Fit the whole page inside the frame') : '';
+      const ce = err && sc.camErr ? CAM_ERR[sc.camErr] : null, rt = err && sc.reason ? RETAKE[sc.reason] : null;
+      const settingsHelp = sc.camErr !== 'denied' ? '' : SHELL_BUILD >= 2 ? '<button type="button" class="btn small-btn" data-action="open-settings">Open Settings</button>'
+        : BETA && BETA.native ? '<p class="small">Open the Settings app, tap <b>Linger</b>, then turn on <b>Camera</b>.</p>' : '<p class="small">Allow the camera for this site in your browser’s settings (the icon next to the address), then tap Try again.</p>';
+      const inside = ce ? `<div class="lh-blocked" role="alert"><strong>${esc(ce[0])}</strong><p>${esc(ce[1])}</p>${settingsHelp}
+            <div class="lh-alt"><button type="button" class="btn small-btn" data-action="lens-mode" data-v="upload">Upload a photo</button><button type="button" class="btn small-btn" data-action="lens-mode" data-v="paste">Paste text</button></div></div>`
+        : rt ? `<div class="lh-blocked lh-retake" role="alert">${sc.img ? `<img class="lh-thumb" src="${sc.img}" alt="The photo Linger couldn’t read">` : ''}<strong>${esc(rt[0])}</strong><p>${esc(rt[1])}</p>
+            <div class="lh-alt"><button type="button" class="btn small-btn" data-action="lens-mode" data-v="upload">Upload instead</button>${S.addPage ? '<button type="button" class="btn small-btn" data-action="add-page-cancel">Back to your scan</button>' : ''}</div></div>`
+        : err ? `<div class="lh-empty"><p>${esc(sc.msg)}</p></div>` : '';
+      const last = !live && !err && !S.addPage ? lastScan() : null;
+      let busy = null; try { busy = Number(localStorage.getItem(SCAN_BUSY) || 0); } catch {}
+      const resume = busy && Date.now() - busy < 86400000 && S.scan.status !== 'reading' ? `<div class="lh-resume" role="status"><span><strong>Your last scan didn’t finish</strong><span class="small">The app closed while Linger was reading it.</span></span><button type="button" class="link-btn" data-action="resume-dismiss">OK</button></div>`
+        : last && last.text ? `<div class="lh-resume"><span><strong>Your last scan</strong><span class="small">${esc(ORIGIN_LABEL[last.origin] || 'Scan')}${last.pages > 1 ? ` · ${last.pages} pages` : ''} · ${ago(last.at)}</span></span><button type="button" class="btn small-btn" data-action="resume-open">Open</button><button type="button" class="lh-x" data-action="forget-scan" aria-label="Forget your last scan">✕</button></div>` : '';
+      card = `${resume}<div class="lh-card">
+          ${live ? '<video id="cam" playsinline muted autoplay></video>' : inside || '<div class="lh-empty"><p>Linger reads it and explains the hard words.</p></div>'}${S.addPage && !err ? '<button type="button" class="link-btn lh-cancel-page" data-action="add-page-cancel">Cancel adding a page</button>' : ''}
+          ${inside ? '' : `<div class="lh-frame" id="camFrame">${corners}</div>`}
+          ${hint ? `<p class="lh-hint">${hint}</p>` : ''}
           ${camCount !== 1 ? `<button type="button" class="lh-flip" data-action="cam-flip" aria-label="Switch to the ${facing === 'environment' ? 'front' : 'back'} camera">${flipIcon}</button>` : ''}
         </div>`;
-      cta = `<button type="button" class="btn primary lh-cta" data-action="shutter">${camIcon}${live ? 'Take photo' : err ? 'Try again' : 'Turn on camera'}</button>`;
+      cta = `<button type="button" class="btn primary lh-cta" data-action="${rt ? 'retake' : 'shutter'}">${camIcon}${live ? 'Take photo' : rt ? 'Retake' : err ? 'Try again' : 'Turn on camera'}</button>`;
     }
     const shown = done || reading ? (sc.origin === 'upload' ? 'upload' : sc.origin === 'paste' || sc.origin === 'share' ? 'paste' : 'scan') : mode;
     return `<div class="lens-home lh2-home">${lensHero()}
-      <div class="body wb lb">
+      <div class="body wb lb${done ? ' lb-result' : ''}">
         ${lensSwitch(shown)}
         ${card}
         ${cta}
@@ -1087,12 +1233,12 @@
       const size = { 0.9: 'Small', 1: 'Default', 1.15: 'Large', 1.3: 'Largest' }[A11Y.text] || 'Default';
       const on = [A11Y.contrast && 'High contrast', A11Y.motion && 'Reduce motion', A11Y.filter !== 'none' && 'Color filter'].filter(Boolean);
       const rows = [
-        ['reading', '📖', 'Reading', `${S.autoHard ? 'Underlines on' : 'Underlines off'} · ${esc(S.lang ? langLabel() : 'Simple English')}`],
-        ['display', '🎨', 'Display', `${theme} · ${size} text`],
-        ['access', '♿', 'Accessibility', on.length ? on.join(', ') : 'Contrast, motion and color filters'],
-        ['privacy', '🔒', 'Privacy', signedInAs() ? 'Your data, your account and deleting it' : 'What Linger keeps and what it sends']
+        ['reading', ICO.book, 'Reading', `${S.autoHard ? 'Underlines on' : 'Underlines off'} · ${esc(S.lang ? langLabel() : 'Simple English')}`],
+        ['display', ICO.palette, 'Display', `${theme} · ${size} text`],
+        ['access', ICO.access, 'Accessibility', on.length ? on.join(', ') : 'Contrast, motion and color filters'],
+        ['privacy', ICO.lock, 'Privacy', signedInAs() ? 'Your data, your account and deleting it' : 'What Linger keeps and what it sends']
       ];
-      if (BETA) rows.push(['beta', '🧪', 'Beta', 'Send feedback, add to Home Screen']);
+      if (BETA) rows.push(['beta', ICO.flask, 'Beta', 'Send feedback, add to Home Screen']);
       return `${head}<div class="body set-body">${menuList(rows, 'set-sec')}
         <p class="small set-foot">Linger keeps these settings on this ${BETA && BETA.native ? 'iPhone' : 'device'}.</p></div>`;
     }
@@ -1106,11 +1252,15 @@
         <div class="switch-row"><div><strong>Underline hard words</strong><span class="small">Words that may be hard for your level get a dotted underline</span></div>
           <button type="button" class="switch" role="switch" aria-label="Underline hard words" aria-checked="${S.autoHard}" data-action="auto"></button></div>
       </div>
-      <button type="button" class="act share-card" data-action="lang-open"><span class="ic">🌐</span><span><strong>My language</strong><span class="small" ${S.lang ? langAttrs() : ''}>${esc(langLabel())} · meanings and summaries also show in it</span></span><span class="go">›</span></button>
-      <button type="button" class="act share-card" data-action="share-help"><span class="ic">↗️</span><span><strong>Use Linger in any app</strong><span class="small">${BETA && BETA.native ? 'Take a screenshot or select text, tap Share, then Linger' : 'Select text anywhere, tap Share, then “Explain with Linger”'}</span></span><span class="go">›</span></button>`;
+      <div class="card">
+        <div class="switch-row"><div><strong>AI explanations</strong><span class="small">What a word means in its sentence, from Claude (an AI by Anthropic). Sends the word or highlight and its sentence to Linger’s server. Also used to translate when your phone can’t, and to make new city guides.</span></div>
+          <button type="button" class="switch" role="switch" aria-label="AI explanations" aria-checked="${aiOK()}" data-action="ai-toggle"></button></div>
+      </div>
+      <button type="button" class="act share-card" data-action="lang-open"><span class="ic">${ICO.globe}</span><span><strong>My language</strong><span class="small" ${S.lang ? langAttrs() : ''}>${esc(langLabel())} · meanings and summaries also show in it</span></span><span class="go">›</span></button>
+      <button type="button" class="act share-card" data-action="share-help"><span class="ic">${ICO.share}</span><span><strong>Use Linger in any app</strong><span class="small">${BETA && BETA.native ? 'Take a screenshot or select text, tap Share, then Linger' : 'Select text anywhere, tap Share, then “Explain with Linger”'}</span></span><span class="go">›</span></button>`;
     else if (sec === 'display') body = `
       <div class="card">
-        <div class="set-row"><div><strong>Appearance</strong></div>${seg('theme', [['system', 'Match phone'], ['light', '☀️ Light'], ['dark', '🌙 Dark']])}</div>
+        <div class="set-row"><div><strong>Appearance</strong></div>${seg('theme', [['system', 'Match phone'], ['light', 'Light'], ['dark', 'Dark']])}</div>
         <div class="set-row"><div><strong>Text size</strong><span class="small">Makes the words bigger without changing the layout</span></div>
           ${seg('text', [[0.9, 'A', 'Small'], [1, 'A', 'Default'], [1.15, 'A', 'Large'], [1.3, 'A', 'Largest']], 'aa')}
           <div class="set-preview">Your rent is due on the 1st. Tap any word to see what it means.</div></div>
@@ -1138,23 +1288,23 @@
     const words = n === 0 ? 'saved words' : n === 1 ? '1 saved word' : n + ' saved words';
     const pt = (ic, html) => `<li><span class="pv-ic" aria-hidden="true">${ic}</span><span>${html}</span></li>`;
     return `
-      <div class="card pv-where"><span class="pv-ic" aria-hidden="true">${email ? '☁️' : '📱'}</span><div><strong>${email ? 'Saved in your account' : 'Saved on this device only'}</strong>
+      <div class="card pv-where"><span class="pv-ic" aria-hidden="true">${email ? ICO.cloud : ICO.phone}</span><div><strong>${email ? 'Saved in your account' : 'Saved on this device only'}</strong>
         <span class="small">${email ? `Your ${words}, reading setup and progress are in the account for ${esc(email)}. Only you can see them.` : `Your ${words}, settings and progress never leave this device unless you make an account.`}</span></div></div>
       <p class="set-label">In short</p>
       <ul class="card pv-list">
-        ${pt('📷', '<strong>Photos stay on your phone.</strong> Linger reads the text on your device. The picture isn’t uploaded or kept.')}
-        ${pt('✨', '<strong>Only what you ask about is sent.</strong> A word or phrase and its sentence go to Linger AI to explain it. It isn’t stored.')}
-        ${pt('🎙️', '<strong>The microphone is only on in Say it,</strong> and only while you’re saying a word.')}
-        ${pt('🚫', '<strong>No ads, no tracking.</strong> Linger doesn’t sell or share your data.')}
+        ${pt(ICO.camera, '<strong>Photos stay on your phone.</strong> Linger reads the text on your device. The picture isn’t uploaded or kept.')}
+        ${pt(ICO.spark, '<strong>Only what you ask about is sent.</strong> A word or phrase and its sentence go to Linger AI to explain it. It isn’t stored. You can turn AI explanations off in Settings → Reading.')}
+        ${pt(ICO.mic, '<strong>The microphone is only on in Say it,</strong> and only while you’re saying a word.')}
+        ${pt(ICO.ban, '<strong>No ads, no tracking.</strong> Linger doesn’t sell or share your data.')}
       </ul>
-      <a class="act share-card" href="privacy.html"><span class="ic">📄</span><span><strong>Read the full privacy policy</strong><span class="small">What Linger keeps, what it sends, and to whom</span></span><span class="go">›</span></a>
+      <a class="act share-card" href="privacy.html"><span class="ic">${ICO.doc}</span><span><strong>Read the full privacy policy</strong><span class="small">What Linger keeps, what it sends, and to whom</span></span><span class="go">›</span></a>
       <p class="set-label">Your data</p>
       ${email
-        ? `<button type="button" class="act share-card" data-action="prof-sec" data-v="account"><span class="ic">🗑️</span><span><strong>Delete account and data</strong><span class="small">In Profile → Account. Deletes your saved words, setup, progress and picture.</span></span><span class="go">›</span></button>`
+        ? `<button type="button" class="act share-card" data-action="prof-sec" data-v="account"><span class="ic">${ICO.trash}</span><span><strong>Delete account and data</strong><span class="small">In Profile → Account. Deletes your saved words, setup, progress and picture.</span></span><span class="go">›</span></button>`
         : S.pvClear
           ? `<div class="card pv-confirm"><strong>Clear everything on this device?</strong><span class="small">This deletes your ${words}, reading setup, progress, settings and city guides from this device. It can’t be undone.</span>
               <div class="grid2"><button type="button" class="btn" data-action="pv-clear" data-v="no">Cancel</button><button type="button" class="btn danger-btn" data-action="pv-clear" data-v="yes">Clear everything</button></div></div>`
-          : `<button type="button" class="act share-card" data-action="pv-clear" data-v="ask"><span class="ic">🗑️</span><span><strong>Clear Linger data on this device</strong><span class="small">Saved words, setup, progress and settings</span></span><span class="go">›</span></button>`}`;
+          : `<button type="button" class="act share-card" data-action="pv-clear" data-v="ask"><span class="ic">${ICO.trash}</span><span><strong>Clear Linger data on this device</strong><span class="small">Saved words, setup, progress and settings</span></span><span class="go">›</span></button>`}`;
   }
   // ---------- beta ----------
   const planeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>';
@@ -1166,9 +1316,11 @@
   }
   function betaSettings() {
     const queued = BETA.pending();
+    const shellOld = SHELL_BUILD && SHELL_BUILD < LATEST_SHELL;
     return `<div class="beta-sec">
-      <button type="button" class="act share-card" data-action="beta-feedback"><span class="ic">💬</span><span><strong>Send feedback</strong><span class="small">Tell us what broke, what was confusing, or what you wish Linger did</span></span><span class="go">›</span></button>
-      ${BETA.standalone() ? '' : `<button type="button" class="act share-card" data-action="beta-install"><span class="ic">📲</span><span><strong>Add Linger to your Home Screen</strong><span class="small">Then it opens full screen, like an app</span></span><span class="go">›</span></button>`}
+      ${shellOld ? '<a class="act share-card" href="itms-beta://"><span class="ic">' + ICO.update + '</span><span><strong>Update the Linger app</strong><span class="small">A newer version is ready in TestFlight. Open TestFlight and tap Update.</span></span><span class="go">›</span></a>' : ''}
+      <button type="button" class="act share-card" data-action="beta-feedback"><span class="ic">${ICO.chat}</span><span><strong>Send feedback</strong><span class="small">Tell us what broke, what was confusing, or what you wish Linger did</span></span><span class="go">›</span></button>
+      ${BETA.standalone() ? '' : `<button type="button" class="act share-card" data-action="beta-install"><span class="ic">${ICO.phone}</span><span><strong>Add Linger to your Home Screen</strong><span class="small">Then it opens full screen, like an app</span></span><span class="go">›</span></button>`}
       <p class="small beta-ver">Linger Beta ${esc(BETA.version)} · ${esc(BETA.date)}${BETA.standalone() ? ' · installed' : ''}${queued ? ` · <span class="plane-wait" aria-hidden="true">${planeIcon}</span>${queued} feedback ${queued === 1 ? 'message' : 'messages'} waiting to send` : ''}</p></div>`;
   }
   function betaOverlay() {
@@ -1196,7 +1348,7 @@
     }
     // One-time tip on the phone, after setup, when Linger isn't on the Home Screen yet.
     if (S.installTip && !html && S.tab !== 'settings' && !S.coach && !S.sheet && !S.pending && !S.explain && !S.paste && !S.shareHelp && !S.langPick && !S.cityPick && !S.acct && !S.onb && !S.activity)
-      html += `<div class="beta-tip" role="dialog" aria-label="Add Linger to your Home Screen"><span>📲 <strong>Add Linger to your Home Screen</strong> so it opens like an app.</span>
+      html += `<div class="beta-tip" role="dialog" aria-label="Add Linger to your Home Screen"><span><strong>Add Linger to your Home Screen</strong> so it opens like an app.</span>
         <span class="coach-acts"><button type="button" class="link-btn" data-action="beta-tip-later">Later</button><button type="button" class="btn primary small-btn" data-action="beta-install">Show me</button></span></div>`;
     return html;
   }
@@ -1276,6 +1428,15 @@
   let swallowClick = false;
   document.addEventListener('click', (e) => { if (swallowClick) { swallowClick = false; if (e.target.closest && e.target.closest('#calWeek')) { e.stopPropagation(); e.preventDefault(); } } }, true);
 
+  // Signed in: whether the words on this phone have reached the account yet.
+  function syncLine() {
+    const a = acctState(); if (!a || a.auth !== 'in') return '';
+    const n = a.unsynced || 0, w = (x) => `${x} ${x === 1 ? 'word' : 'words'}`;
+    const [cls, t] = !navigator.onLine ? ['wait', n ? `Offline. ${w(n)} will sync when you’re back online.` : 'Offline. Your words will sync when you’re back online.']
+      : a.sync === 'error' ? ['bad', 'Words aren’t syncing right now. They’re safe on this phone.']
+      : a.sync === 'syncing' || n ? ['wait', n ? `Syncing ${w(n)}…` : 'Syncing…'] : ['ok', 'All words synced'];
+    return `<p class="sync-line ${cls}" role="status"><span class="dot" aria-hidden="true"></span>${t}</p>`;
+  }
   function viewWords() {
     const q = S.query.trim().toLowerCase();
     const counts = savedOn();
@@ -1293,11 +1454,12 @@
     return `<header class="hero wh">
       <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
       ${logo}${avatarBtn()}
-      <div class="wh-title"><div class="wh-row"><h1>${esc(day)},<br>${esc(date)}</h1><button type="button" class="cal" data-action="cal-open" aria-label="Open the calendar" aria-haspopup="dialog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button></div>
+      <div class="wh-title"><div class="wh-row"><h1>${esc(day)},<br> ${esc(date)}</h1><button type="button" class="cal" data-action="cal-open" aria-label="Open the calendar" aria-haspopup="dialog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button></div>
         <div class="hsub">${S.calDay ? `${onDay ? `${onDay} ${onDay === 1 ? 'word' : 'words'} saved this day` : 'No words saved this day'} · <button type="button" class="hsub-link" data-action="cal-all">Show all</button>` : `${n === 1 ? '1 word saved' : n + ' words saved'}${known ? ` · ${known} known` : ''}`}</div></div>
       ${weekStrip(counts)}
     </header>
     <div class="body wb">
+      ${syncLine()}
       <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" aria-label="Search your words"></label>
       <div class="lh-switch" role="group" aria-label="Show which words">${filters.map(([id, l]) => `<button type="button" class="lh-seg ${S.wordFilter === id ? 'on' : ''}" data-action="filter" data-v="${id}" aria-pressed="${S.wordFilter === id}">${esc(l)}</button>`).join('')}</div>
       <div class="wlist">${list.length ? list.map((k) => { const e = D[k]; return `<button type="button" class="item" data-action="open" data-k="${k}">
@@ -1305,7 +1467,7 @@
         <span class="mean">${esc(e.meaning)}</span>
         <span class="quote">“${esc(e.sentence)}”</span>
         <span class="meta"><img src="icons/figma/pin.svg" width="12" height="12" alt="">${esc(placeOf(e))}</span>${progress(k)}</button>`; }).join('')
-        : `<div class="empty">${q ? 'No saved words match your search.' : S.calDay ? 'You didn’t save any words this day. Days with a dot have words.' : 'Nothing here yet. Words you save from the lens or the local guide show up here.'}</div>`}
+        : `<div class="empty">${q ? `<strong>No saved words match “${esc(S.query)}”</strong><button type="button" class="link-btn" data-action="clear-search">Clear search</button>` : S.calDay ? 'You didn’t save any words this day. Days with a dot have words.' : S.saved.length && S.wordFilter !== 'all' ? `<strong>No ${S.wordFilter === 'hard' ? 'hard words' : 'slang or customs'} saved yet</strong><button type="button" class="link-btn" data-action="filter" data-v="all">Show all words</button>` : '<strong>No saved words yet</strong><span>Scan or paste a letter, sign or message, tap a hard word, then tap Save. It shows up here.</span><button type="button" class="btn primary small-btn" data-action="tab" data-tab="lens">Go to Lens</button>'}</div>`}
 </div>
       <div class="start-wrap"><button type="button" class="btn primary start" data-action="play" data-v="story"><img src="icons/figma/sparkle.svg" width="19.534" height="20.078" alt="">Start Activity</button></div>
     </div>`;
@@ -1317,6 +1479,7 @@
   const CUSTOM_CITIES = 'linger.cities.custom';
   try { Object.assign(CITIES, JSON.parse(localStorage.getItem(CUSTOM_CITIES) || '{}')); } catch {}
   async function makeCity(q) {
+    if (!aiOK()) { S.cityMake = { q, status: 'off' }; render(); return; }
     S.cityMake = { q, status: 'wait' }; render();
     try {
       const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Linger-Id': lingerId }, body: JSON.stringify({ mode: 'city', text: q }) });
@@ -1331,7 +1494,7 @@
         try { const all = JSON.parse(localStorage.getItem(CUSTOM_CITIES) || '{}'); all[id] = CITIES[id]; localStorage.setItem(CUSTOM_CITIES, JSON.stringify(all)); } catch {}
       }
       S.cityMake = null; S.cityQuery = ''; pickCity(id);
-      showToast(same ? `📍 ${c.name} already has a guide` : `✨ Linger wrote a guide for ${c.name}`);
+      showToast(same ? `${c.name} already has a guide` : `Linger wrote a guide for ${c.name}`);
     } catch { S.cityMake = { q, status: 'fail' }; }
     render();
   }
@@ -1353,9 +1516,9 @@
       const { latitude: la, longitude: lo } = pos.coords;
       const [best, km] = Object.entries(CITIES).map(([id, c]) => [id, distKm(la, lo, c.lat, c.lon)]).sort((p, q) => p[1] - q[1])[0];
       setCity(best);
-      showToast(km < 120 ? `📍 Showing ${CITIES[best].name}, near you` : `📍 No guide here yet. Closest: ${CITIES[best].name}`);
+      showToast(km < 120 ? `Showing ${CITIES[best].name}, near you` : `No guide here yet. Closest: ${CITIES[best].name}`);
       render();
-    }, () => { showToast('Couldn’t get your location. Pick a city instead.'); render(); }, { timeout: 10000, maximumAge: 600000 });
+    }, () => { S.cityPick = true; S.cityQuery = ''; showToast('Couldn’t get your location. Pick your city from the list.'); render(); }, { timeout: 10000, maximumAge: 600000 });
   }
   function setCity(id) { if (!CITIES[id]) return; S.city = id; S.cityPick = false; try { localStorage.setItem('linger.city', id); } catch {} }
 
@@ -1398,9 +1561,9 @@
     </header>
     <div class="body wb loc-body">
       <article class="loc-item loc-gk"><span class="loc-title">Good to know</span>
-        ${ess.map(([ic, t, d]) => `<div class="gk-row"><span class="gk-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</article>
+        ${ess.map(([ic, t, d]) => `<div class="gk-row"><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</article>
       <div class="lh-switch loc-switch" role="group" aria-label="City guide sections">${segs.map(([v, l]) => `<button type="button" class="lh-seg ${S.localSeg === v ? 'on' : ''}" data-action="seg" data-v="${v}" aria-pressed="${S.localSeg === v}">${l}</button>`).join('')}</div>
-      <p class="loc-note">${note}${c.ai && S.localSeg !== 'mixups' ? ' <span class="ai-note">✨ Written by Linger AI. Double-check anything important.</span>' : ''}</p>
+      <p class="loc-note">${note}${c.ai && S.localSeg !== 'mixups' ? ' <span class="ai-note">Written by Linger AI. Double-check anything important.</span>' : ''}</p>
       <div class="wlist">${items}</div>
       <article class="loc-item"><span class="badge b-loc">Small talk</span><span class="mean">${esc(c.talk)}</span></article>
     </div>`;
@@ -1411,6 +1574,7 @@
   function viewReview() {
     const n = S.saved.filter((k) => D[k]).length, words = `${n} ${n === 1 ? 'word' : 'words'}`;
     const due = S.saved.filter((k) => D[k] && know(k).due).length;
+    const tricky = trickyWords();
     const act = (id, icon, title, sub, attrs = '') => `<button type="button" class="rv-act" data-action="play" data-v="${id}" ${attrs}>
         <span class="rv-ic" aria-hidden="true">${icon}</span>
         <span class="rv-txt"><span class="rv-title">${title}</span><span class="mean">${sub}</span></span>
@@ -1422,6 +1586,8 @@
         <div class="hsub">${!n ? 'Save words to practice them here' : due ? `${due} ${due === 1 ? 'word' : 'words'} to review today` : `${words} ready to practice`}</div></div>
     </header>
     <div class="body wb rv-body">
+      ${!n ? '<div class="empty rv-empty"><strong>Nothing to practice yet</strong><span>Save words from Lens or Local and they show up here. The city quiz works any time.</span><button type="button" class="btn primary small-btn" data-action="tab" data-tab="lens">Go to Lens</button></div>' : ''}
+      ${tricky.length ? `<div class="card rv-tricky"><strong>Tricky words</strong><span class="small">You’ve missed these a few times. A short round on just these helps.</span><div class="syns">${tricky.map((k) => `<span class="syn">${esc(D[k].word)}</span>`).join('')}</div><button type="button" class="btn small-btn" data-action="tricky-go">Practice these ${tricky.length}</button></div>` : ''}
       <p class="rv-label rv-first">Flashcards</p>
       ${act('cards', '<i class="ti" style="--ic: url(icons/figma/tab-cards.svg)"></i>', 'Flashcards', due ? `Starts with the ${due === 1 ? 'word' : due + ' words'} you need most, in the sentence where you met ${due === 1 ? 'it' : 'them'}.` : `Go through your ${words}, with the sentence where you met each one.`)}
       <p class="rv-label">Games</p>
@@ -1465,8 +1631,8 @@
     const top = `<div class="topbar"><button type="button" class="x" data-action="quit" aria-label="Close flashcards">${xIcon}</button><span class="t">Flashcards</span><span class="n">${Math.min(c.idx + 1, deck.length)} of ${deck.length}</span></div>`;
     if (c.idx >= deck.length) {
       return `<div class="full-view cards-view">${deco}${top}
-        <div class="flash" style="justify-content: center; align-items: center; text-align: center"><div class="big" style="margin: 0">All caught up</div><div class="small">You reviewed ${deck.length} ${deck.length === 1 ? 'word' : 'words'}. Try Fill in the story next.</div></div>
-        <div class="actions"><button type="button" class="btn white" data-action="play" data-v="story">Fill in the story</button><button type="button" class="btn primary" data-action="quit">Done</button></div></div>`;
+        <div class="flash" style="justify-content: center; align-items: center; text-align: center"><div class="big" style="margin: 0">${(c.rest || []).length ? 'Round done!' : 'All caught up'}</div><div class="small">You reviewed ${(c.done || 0) + deck.length} ${(c.done || 0) + deck.length === 1 ? 'word' : 'words'}.${(c.rest || []).length ? ` ${c.rest.length} more ${c.rest.length === 1 ? 'is' : 'are'} waiting, whenever you’re ready.` : ' Try Fill in the story next.'}</div></div>
+        <div class="actions">${(c.rest || []).length ? `<button type="button" class="btn white" data-action="cards-more">Keep going (${Math.min(SESSION, c.rest.length)} more)</button>` : '<button type="button" class="btn white" data-action="play" data-v="story">Fill in the story</button>'}<button type="button" class="btn primary" data-action="quit">Done</button></div></div>`;
     }
     const e = D[deck[c.idx]];
     const q = esc(e.sentence).replace(new RegExp(esc(e.word), 'i'), (m) => `<b>${m}</b>`);
@@ -1698,7 +1864,7 @@
     return `<div class="full-view game-view bubble-view">${gameTop('Bubble catch', hearts)}
       <div class="bb-meaning${FX.bbMiss ? ' shake' : ''}"><span class="bb-n">${b.round} of ${b.rounds}</span>${esc(shortMeaning(D[r.k].meaning))}${r.lost ? `<span class="bb-was">It was <b>${esc(D[r.k].word)}</b></span>` : ''}</div>
       <div class="bb-sky" aria-label="Word bubbles">${bubbles}</div>
-      <div class="g-foot bb-foot"><span>${b.score} pts</span>${b.streak > 1 ? `<span class="bb-streak">🔥 ${b.streak} in a row</span>` : ''}</div></div>`;
+      <div class="g-foot bb-foot"><span>${b.score} pts</span>${b.streak > 1 ? `<span class="bb-streak">${b.streak} in a row</span>` : ''}</div></div>`;
   }
 
   // Unscramble: the meaning and the sentence (with a gap) are the clue; tap letters to spell the word.
@@ -1771,7 +1937,7 @@
         ${all.length ? `<div class="pk-list">${all.map((k) => { const on = p.sel.includes(k); return `<button type="button" class="pk-chip${on ? ' on' : ''}" data-action="pk-word" data-k="${k}" aria-pressed="${on}"><span class="pk-tick" aria-hidden="true">${on ? '✓' : '+'}</span>${esc(cap(D[k].word))}</button>`; }).join('')}</div>`
           : '<p class="pk-empty">You haven’t saved any words that fit this game yet. Surprise me uses Linger’s own words.</p>'}
         ${n && n < need ? `<p class="small pk-note">Pick at least ${need}, or Linger adds a few of its own.</p>` : ''}
-        <div class="grid2"><button type="button" class="btn" data-action="pk-random">🎲 Surprise me</button><button type="button" class="btn primary" data-action="pk-go" ${n ? '' : 'disabled'}>${n ? `Play with ${n}` : 'Pick words'}</button></div></div></div>`;
+        <div class="grid2"><button type="button" class="btn" data-action="pk-random">Surprise me</button><button type="button" class="btn primary" data-action="pk-go" ${n ? '' : 'disabled'}>${n ? `Play with ${n}` : 'Pick words'}</button></div></div></div>`;
   }
 
   // ---------- Say it: hear the word, say it, Linger checks how close it was ----------
@@ -1872,8 +2038,8 @@
     const pickOthers = (list, not, n, f) => shuffle(list.filter((x) => f(x) !== f(not))).slice(0, n).map(f);
     shuffle(slang).slice(0, 3).forEach((e) => qs.push({ q: `In ${name}, what does “${e.word}” mean?`, right: e.meaning, wrong: pickOthers([...slang, ...otherSlang], e, 2, (x) => x.meaning), more: e.local || '' }));
     if (slang.length && otherSlang.length) { const e = shuffle(slang)[0]; qs.push({ q: `Which word would you most likely hear in ${name}?`, right: e.word, wrong: pickOthers(otherSlang, e, 2, (x) => x.word), more: `“${e.word}”: ${e.meaning}` }); }
-    shuffle(customs).slice(0, 3).forEach((t) => qs.push({ q: `${t.ic || '📌'} ${t.title}. What’s the custom in ${name}?`, right: t.body, wrong: pickOthers(customs, t, 2, (x) => x.body), more: '' }));
-    shuffle(around).slice(0, 2).forEach((t) => qs.push({ q: `${t.ic || '🧭'} Getting around ${name}: “${t.title}”. What does it mean?`, right: t.body, wrong: pickOthers(around, t, 2, (x) => x.body), more: '' }));
+    shuffle(customs).slice(0, 3).forEach((t) => qs.push({ q: `${t.title}. What’s the custom in ${name}?`, right: t.body, wrong: pickOthers(customs, t, 2, (x) => x.body), more: '' }));
+    shuffle(around).slice(0, 2).forEach((t) => qs.push({ q: `Getting around ${name}: “${t.title}”. What does it mean?`, right: t.body, wrong: pickOthers(around, t, 2, (x) => x.body), more: '' }));
     return shuffle(qs).slice(0, 8).map((q) => ({ ...q, opts: shuffle([q.right, ...q.wrong]) }));
   }
   function startCityQuiz() { const id = [S.quizCity, S.city].find((x) => x && CITIES[x]) || 'pgh'; S.cq = { city: id, qs: cityQuestions(id), i: 0, right: 0, picked: null }; }
@@ -1897,7 +2063,7 @@
   }
   function viewCityQuiz() {
     const g = S.cq, c = CITIES[g.city] || CITIES.pgh, title = `${c.name} quiz`;
-    if (!g.qs.length) return gameEnd('city-view', title, '🏙️', 'There isn’t enough about this city yet for a quiz. Try another city.', 'cityquiz');
+    if (!g.qs.length) return gameEnd('city-view', title, '', 'There isn’t enough about this city yet for a quiz. Try another city.', 'cityquiz');
     if (g.over) return gameEnd('city-view', title, `<span class="g-stars">${stars(g.stars)}</span>`, `${g.right} of ${g.qs.length} right. ${g.stars === 3 ? `You know ${esc(c.name)} like a local!` : 'Read the Local tab and try again.'}${g.best ? ' New best!' : ''}`, 'cityquiz');
     const q = g.qs[g.i], answered = g.picked !== null;
     const opts = q.opts.map((o, i) => {
@@ -1907,7 +2073,7 @@
     const ok = answered && q.opts[g.picked] === q.right;
     return `<div class="full-view game-view city-view">${gameTop(title, `${g.i + 1} of ${g.qs.length}`)}
       <div class="cq-progress" aria-hidden="true"><span style="width:${Math.round(g.i / g.qs.length * 100)}%"></span></div>
-      <div class="cq-q${FX.cqNew ? ' new' : ''}"><span class="cq-city">${c.emoji || '📍'} ${esc(cityName(c))}</span>${esc(q.q)}</div>
+      <div class="cq-q${FX.cqNew ? ' new' : ''}"><span class="cq-city">${esc(cityName(c))}</span>${esc(q.q)}</div>
       <div class="cq-opts${FX.cqNew ? ' new' : ''}">${opts}</div>
       ${answered ? `<p class="g-hint cq-verdict${ok ? ' ok' : ''}">${ok ? '✓ Right!' : '✕ Not quite.'}${q.more ? ' ' + esc(q.more) : ''}</p>` : ''}
       <div class="g-acts">${answered ? `<button type="button" class="btn primary wide-btn" data-action="cq-next">${g.i + 1 < g.qs.length ? 'Next question' : 'See results'}</button>` : ''}</div></div>`;
@@ -1923,6 +2089,7 @@
         try {
           const dev = await deviceTranslator(L);
           if (dev) { try { const out = []; for (const x of sents) out.push(await within(dev.translate(x), 4000)); TTR.set(key, { status: 'ok', t: out }); render(); return; } catch { onDevice.set(L, null); } }
+          if (!aiOK()) { TTR.delete(key); TTR.set(key, { status: 'off' }); render(); return; }
           const r = await fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Linger-Id': lingerId }, body: JSON.stringify({ mode: 'translate-many', texts: sents, lang: L, langName: langOf(L).name, from: 'en' }) });
           const j = r.ok ? await r.json() : null;
           TTR.set(key, j && j.translations ? { status: 'ok', t: j.translations } : { status: 'fail' });
@@ -1931,8 +2098,8 @@
       })();
     }
     const x = TTR.get(key);
-    return `<div class="lh-trtext"><div class="label">🌐 In ${esc(langOf(L).own)} <button type="button" class="link-btn" data-action="lang-open">Change</button></div>
-      ${x.status === 'ok' ? `<p ${langAttrs(L)}>${x.t.map(esc).join(' ')}</p>` : x.status === 'wait' ? thinking('Translating…') : '<p class="small">Couldn’t translate right now. Try again in a moment.</p>'}</div>`;
+    return `<div class="lh-trtext"><div class="label">In ${esc(langOf(L).own)} <button type="button" class="link-btn" data-action="lang-open">Change</button></div>
+      ${x.status === 'ok' ? `<p ${langAttrs(L)}>${x.t.map(esc).join(' ')}</p>` : x.status === 'wait' ? thinking('Translating…') : x.status === 'off' ? '<p class="small">Your phone can’t translate this by itself. Turn on AI explanations in Settings to translate with Linger.</p>' : '<p class="small">Couldn’t translate right now. Try again in a moment.</p>'}</div>`;
   }
 
   // Press and drag across words (on the text or the picture) to explain a phrase. With a mouse the drag starts right
@@ -1994,12 +2161,29 @@
     return t && t.status === 'ok' ? `<span ${langAttrs(L)}>${esc(t.t)}</span>` : t && t.status === 'wait' ? `<span class="tr-wait">${esc(text)}</span>` : esc(text);
   }
   function cardLangs() {
-    if (!S.langs.length) return `<button type="button" class="card-addlang" data-action="lang-open">🌐 Show in my language</button>`;
+    if (!S.langs.length) return `<button type="button" class="card-addlang" data-action="lang-open">Show in my language</button>`;
     const cur = S.langs.includes(S.cardLang) ? S.cardLang : '';
     return `<div class="card-langs" role="group" aria-label="Show this card in">${[['', 'English'], ...S.langs.map((c) => [c, langOf(c).own])].map(([c, n]) => `<button type="button" class="${cur === c ? 'on' : ''}" data-action="card-lang" data-v="${c}" aria-pressed="${cur === c}" ${c ? `lang="${esc(c)}"` : ''}>${esc(n)}</button>`).join('')}</div>`;
   }
   const boldIn = (sentence, w) => { const x = esc(sentence); if (!w) return x; const re = new RegExp(esc(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'); return x.replace(re, (m) => `<b>${m}</b>`); };
   const thinking = (t) => `<div class="ai-wait"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>${t}</div>`;
+  const aiFor = (key) => { for (const [k, v] of AIX) if (k.startsWith(key + '|') && v.status === 'ok') return v; return null; };
+  const slow = (ai) => ai && ai.status === 'wait' && ai.t0 && Date.now() - ai.t0 > 5000;
+  // AI off: ask once (what is sent, to whom), and after "Not now" a gentle reminder at most once a week.
+  function aiAsk(what) {
+    if (S.aiConsent === 'no') {
+      let last = 0; try { last = Number(localStorage.getItem('linger.aiNudge') || 0); } catch {}
+      if (!S.aiNudged && Date.now() - last < 7 * 86400000) return '<div class="small">AI explanations are off. You can turn them on in Settings.</div>';
+      if (!S.aiNudged) { S.aiNudged = true; try { localStorage.setItem('linger.aiNudge', String(Date.now())); } catch {} }
+      return `<div class="ai-ask"><span>Want to know what it means in this ${what === 'phrase' ? 'text' : 'sentence'}? Linger AI can explain it.</span><button type="button" class="link-btn" data-action="ai-allow">Turn on AI explanations</button></div>`;
+    }
+    return `<div class="ai-ask" role="group" aria-labelledby="aiAskH"><strong id="aiAskH">Explain this with AI?</strong>
+      <span>Linger can send ${what === 'phrase' ? 'this text' : 'this word and the sentence around it'} to Linger’s server and Claude (an AI by Anthropic) to explain what it means here. Nothing is sent unless you allow it. You can change this in Settings.</span>
+      <span class="sync-acts"><button type="button" class="btn small-btn" data-action="ai-deny">Not now</button><button type="button" class="btn primary small-btn" data-action="ai-allow">Allow</button></span></div>`;
+  }
+  // Beta testers can say whether an AI explanation helped (only the word and Linger's answer are sent, not the sentence).
+  const aiRate = (key) => !BETA ? '' : S.rated && S.rated[key] ? '<div class="small ai-rated" role="status">Thanks for telling us.</div>'
+    : `<div class="ai-rate" role="group" aria-label="Was this explanation helpful?"><span>Helpful?</span><button type="button" data-action="ai-rate" data-v="up" data-key="${esc(key)}" aria-label="Yes, it helped">👍</button><button type="button" data-action="ai-rate" data-v="down" data-key="${esc(key)}" aria-label="No, it didn’t help">👎</button><button type="button" class="link-btn" data-action="ai-report" data-key="${esc(key)}">Report a problem</button></div>`;
   // The word card: dictionary meaning, what it means in this sentence, easier words and an example (Linger AI).
   function wordCard() {
     const k = S.sheet, e = D[k], word = (e && e.word) || S.sheetRaw, ctx = S.sheetCtx || (e && e.sentence) || '';
@@ -2014,8 +2198,9 @@
       ${cardLangs()}
       ${wT && wT.status === 'ok' ? `<div class="wc-tr" ${langAttrs(L)}>${esc(wT.t)}</div>` : ''}
       <div class="wc-sec"><div class="label">Meaning</div><div class="meaning">${dict ? inLang(dict, L) : ok ? inLang(ai.meaning, L) : e && e.pending ? thinking('Looking it up…') : '<span class="small">No dictionary entry. See what it means here, below.</span>'}</div></div>
-      <div class="wc-sec wc-here"><div class="label">✨ In this sentence</div>
-        ${ok ? `<div>${inLang(ai.meaning, L)}</div>` : ai && ai.status === 'wait' ? thinking('Linger is reading the sentence…') : `<div class="small">${e && e.ctx ? inLang(e.ctx, L) : 'Couldn’t reach Linger AI. Check your connection and open the word again.'}</div>`}
+      <div class="wc-sec wc-here"><div class="label">In this sentence</div>
+        ${ok ? `<div>${inLang(ai.meaning, L)}</div>${aiRate('word|' + word)}` : ai && ai.status === 'off' ? aiAsk('word') : slow(ai) ? thinking('Still working on it. This is taking longer than usual.') + (dict ? '<div class="small">The dictionary meaning is above in the meantime.</div>' : '') : ai && ai.status === 'wait' ? thinking('Linger is reading the sentence…') : `<div class="small">${e && e.ctx ? inLang(e.ctx, L) : navigator.onLine ? 'Couldn’t reach Linger AI. Open the word again in a moment.' : 'You’re offline. Open the word again when you’re back online.'}</div>`}
+        ${S.sheetI != null && S.source === 'camera' && S.scan.status === 'done' ? (S.fixing ? `<div class="wc-fix-row"><label class="small" for="fixWord">What does the word really say?</label><input id="fixWord" class="paste-box" style="min-height:0;height:40px" value="${esc(word)}" autocomplete="off" autocapitalize="off" spellcheck="false"><span class="sync-acts"><button type="button" class="btn small-btn" data-action="fix-cancel">Cancel</button><button type="button" class="btn primary small-btn" data-action="fix-save">Fix it</button></span></div>` : '<button type="button" class="link-btn wc-fix" data-action="fix-open">Misread? Fix this word</button>') : ''}
         ${ctx ? `<div class="ctx">“${boldIn(ctx, S.sheetRaw || word)}”</div>` : ''}</div>
       ${ok && ai.synonyms && ai.synonyms.length ? `<div class="wc-sec"><div class="label">Easier words</div><div class="syns">${ai.synonyms.map((x) => `<span class="syn">${esc(x)}</span>`).join('')}</div></div>` : ''}
       ${ok && ai.example ? `<div class="wc-sec"><div class="label">Example</div><div class="wc-ex">“${esc(ai.example)}”</div>${L ? `<div class="small">${inLang(ai.example, L)}</div>` : ''}</div>` : ''}
@@ -2032,15 +2217,16 @@
         <button type="button" class="speak ${on ? 'on' : ''}" data-action="speak-word" aria-label="Read it aloud" ${canSpeak ? '' : 'disabled'}>${speaker}</button></div></div>
       <div class="ph-text">“${esc(p.text)}”</div>
       ${cardLangs()}
-      ${ok ? `<div class="wc-sec"><div class="label">✨ What it means</div><div class="meaning">${inLang(ai.meaning, L)}</div></div>
+      ${ok ? `<div class="wc-sec"><div class="label">What it means</div><div class="meaning">${inLang(ai.meaning, L)}</div></div>
         ${ai.plain ? `<div class="wc-sec"><div class="label">In plain English</div><div>${inLang(ai.plain, L)}</div></div>` : ''}
         ${inside.length ? `<div class="wc-sec"><div class="label">Words in it</div><div class="ph-words">${inside.map((h) => `<button type="button" class="ph-word" data-action="phrase-word" data-w="${esc(h.word)}"><strong>${esc(h.word)}</strong><span>${inLang(h.meaning, L)}${h.easier ? ` · <i>${esc(h.easier)}</i>` : ''}</span></button>`).join('')}</div></div>` : ''}`
-        : ai && ai.status === 'wait' ? thinking('Linger is reading your highlight…') : '<div class="small">Couldn’t reach Linger AI. Check your connection and try again.</div>'}
+        : ai && ai.status === 'off' ? aiAsk('phrase') : slow(ai) ? thinking('Still working on it. This is taking longer than usual.') : ai && ai.status === 'wait' ? thinking('Linger is reading your highlight…') : '<div class="small">Couldn’t reach Linger AI. Check your connection and try again.</div>'}
+      ${ok ? aiRate('phrase|' + p.text.slice(0, 80)) : ''}
       <div class="grid2"><button type="button" class="btn" data-action="close">Close</button><button type="button" class="btn ${s ? 'saved' : 'primary'}" data-action="phrase-save" ${ok ? '' : 'disabled'}>${s ? 'Saved ✓' : 'Save to Words'}</button></div>`;
   }
 
   function overlay() {
-    if (S.onb || S.acct) return (S.onb ? viewOnb() : '') + (S.acct ? acctSheet() : '') + (S.toast ? `<div class="toast" role="status">${esc(S.toast)}</div>` : '');
+    if (S.onb || S.acct) return (S.onb ? viewOnb() : '') + (S.acct ? acctSheet() : '') + toastHtml();
     if (S.activity === 'cards') return viewCards();
     if (S.activity === 'story') return viewStory();
     if (S.activity === 'match') return viewMatch();
@@ -2068,11 +2254,14 @@
           <div class="sum-title">${forQuiz ? 'Which city’s quiz?' : 'Where are you?'}</div>
           <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cityQ" type="search" placeholder="Search any U.S. city" value="${esc(q)}" aria-label="Search any U.S. city" autocomplete="off"></label>
           ${!q && !forQuiz ? '<button type="button" class="btn ghost" data-action="city-locate">◎ Use my location</button>' : ''}
-          <div class="city-list">${list.map(([id, c]) => `<button type="button" class="city-row ${mark === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${c.emoji}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}${c.ai ? ' · made by Linger AI' : ''}${forQuiz && best('city.' + id) ? ` · best ${stars(best('city.' + id))}` : ''}</small></span>${mark === id ? '<span class="tick">✓</span>' : forQuiz ? '<span class="rv-go">Quiz</span>' : ''}</button>`).join('')}</div>
+          <div class="city-list">${list.map(([id, c]) => `<button type="button" class="city-row ${mark === id ? 'on' : ''}" data-action="city-set" data-v="${id}"><span class="city-emoji" aria-hidden="true">${ICO.pin}</span><span class="city-txt"><strong>${esc(cityName(c))}</strong><small>${esc(c.nick)}${c.ai ? ' · made by Linger AI' : ''}${forQuiz && best('city.' + id) ? ` · best ${stars(best('city.' + id))}` : ''}</small></span>${mark === id ? '<span class="tick">✓</span>' : forQuiz ? '<span class="rv-go">Quiz</span>' : ''}</button>`).join('')}</div>
           ${q.length >= 2 && !exact ? `<button type="button" class="city-make" data-action="city-make" ${mk && mk.status === 'wait' ? 'disabled' : ''}>
-            ${mk && mk.status === 'wait' ? thinking(`Writing a guide for ${esc(q)}…`) : `<span class="city-emoji" aria-hidden="true">✨</span><span class="city-txt"><strong>Make a guide for “${esc(q)}”</strong><small>Linger AI writes slang, customs and getting around</small></span>`}</button>
+            ${mk && mk.status === 'wait' ? thinking(`Writing a guide for ${esc(q)}…`) : `<span class="city-emoji" aria-hidden="true">${ICO.spark}</span><span class="city-txt"><strong>Make a guide for “${esc(q)}”</strong><small>Linger AI writes slang, customs and getting around</small></span>`}</button>
             ${mk && mk.status === 'none' ? `<div class="small">Linger couldn’t find a U.S. city called “${esc(q)}”. Check the spelling, or add the state (like “Springfield, IL”).</div>` : ''}
-            ${mk && mk.status === 'fail' ? '<div class="small">Couldn’t reach Linger AI. Check your connection and try again.</div>' : ''}` : ''}
+            ${mk && mk.status === 'fail' ? '<div class="small">Couldn’t reach Linger AI. Check your connection and try again.</div>' : ''}
+            ${mk && mk.status === 'off' ? '<div class="small">Making a new guide uses Linger AI. Turn on AI explanations in Settings first.</div>' : ''}` : ''}
+          ${q.length >= 2 && !list.length ? `<div class="city-none"><strong>We don’t have a guide for “${esc(q)}” yet</strong>
+            <div class="sync-acts">${BETA ? '<button type="button" class="link-btn" data-action="city-request">Ask us to add it</button>' : ''}<button type="button" class="link-btn" data-action="city-locate">Show the nearest city we have</button></div></div>` : ''}
           ${q ? '' : `<div class="small">${forQuiz ? 'Your own city on Local stays the same. Search for any U.S. city to add a quiz for it.' : 'Each guide has slang, customs, getting around and common mix-ups. Search for any U.S. city to add one.'}</div>`}</div></div>`;
     }
     if (S.langPick) html += langSheet();
@@ -2088,10 +2277,10 @@
         <div class="panel" role="dialog" aria-label="Use Linger in any app"><div class="grab"></div>
           <div class="sum-title">Use Linger in any app</div>
           <div class="small">Select text in a text message, email, web page or PDF, tap <b>Share</b>, and pick Linger. It opens with the explanation ready.</div>
-          <div class="howto"><div class="howto-h">🤖 Android</div>
+          <div class="howto"><div class="howto-h">Android</div>
             <ol><li>Install Linger: ${installEvt ? '<button type="button" class="link-btn" data-action="install">tap here to install</button>' : 'in Chrome, tap <b>⋮</b> then <b>Install app</b> (or <b>Add to Home screen</b>)'}.</li>
             <li>In any app, select text and tap <b>Share</b>.</li><li>Choose <b>Linger</b>.</li></ol></div>
-          <div class="howto"><div class="howto-h">🍎 iPhone</div>
+          <div class="howto"><div class="howto-h">iPhone</div>
             <div class="small" style="margin-bottom: 6px">iPhones don’t let websites join the Share menu, so a free Shortcut does it:</div>
             <ol><li>Open the <b>Shortcuts</b> app and tap <b>+</b>. Name it <b>Explain with Linger</b>.</li>
             <li>Tap the <b>ⓘ</b> button and turn on <b>Show in Share Sheet</b>, receiving <b>Text</b>.</li>
@@ -2108,19 +2297,28 @@
         <div class="panel" role="dialog" aria-label="${esc(s.title)}"><div class="grab"></div>
           <div class="item-head" style="align-items: flex-start"><div class="sum-title">${esc(s.title)}</div>
             <button type="button" class="speak ${on ? 'on' : ''}" data-action="speak-summary" aria-label="${on ? 'Stop reading' : 'Read summary aloud'}" ${canSpeak ? '' : 'disabled'}>${speaker}</button></div>
-          <ul class="points">${s.points.map(([ic, t], pi) => { const x = tr(t.replace(/<[^>]+>/g, '')); return `<li style="--i:${pi}"><span class="pi" aria-hidden="true">${ic}</span><span>${t}${x ? `<span class="tr-line" ${langAttrs()}>${x.status === 'ok' ? esc(x.t) : x.status === 'wait' ? 'Translating…' : ''}</span>` : ''}</span></li>`; }).join('')}</ul>
-          ${S.lang ? `<div class="small">🌐 Also in ${esc(langLabel())}. <button type="button" class="link-btn" data-action="lang-open">Change</button></div>` : ''}
+          <ul class="points">${s.points.map(([ic, t], pi) => { const x = tr(t.replace(/<[^>]+>/g, '')); return `<li style="--i:${pi}"><span class="pi" aria-hidden="true"></span><span>${t}${x ? `<span class="tr-line" ${langAttrs()}>${x.status === 'ok' ? esc(x.t) : x.status === 'wait' ? 'Translating…' : ''}</span>` : ''}</span></li>`; }).join('')}</ul>
+          ${S.lang ? `<div class="small">Also in ${esc(langLabel())}. <button type="button" class="link-btn" data-action="lang-open">Change</button></div>` : ''}
           ${s.dates.length ? `<div style="display: flex; flex-direction: column; gap: 6px"><div class="label" style="color: var(--muted)">Key dates</div><div class="dates" style="--n:${s.points.length}">${s.dates.map((d, di) => `<span class="date" style="--i:${di}">${/^\s*\$/.test(d) ? '' : calIcon}${esc(d)}</span>`).join('')}</div></div>` : ''}
+          ${S.source === 'camera' && isImportant(TEXTS.camera) ? importantCard([]) : ''}
           <div class="small">${esc(s.note)} ${n} words on this page are underlined. Tap one for its meaning.</div>
           <button type="button" class="btn primary" data-action="close">Got it</button></div></div>`;
     }
-    if (S.coach && !S.prefs.done && !S.sheet && !S.pending && !S.explain && !S.langPick && !S.cityPick && !S.paste && !S.shareHelp && S.tab !== 'settings' && !sheetIsUp())
-      html += `<div class="coach" role="dialog" aria-label="Set up your account"><span class="coach-arrow" aria-hidden="true"></span>
-        <strong>Set up your account now</strong><span>Pick your languages and level, and keep your words on every device.</span>
-        <div class="coach-acts"><button type="button" class="link-btn" data-action="coach-later">Later</button><button type="button" class="btn primary small-btn" data-action="acct-open">Set up</button></div></div>`;
     if (S.calOpen && S.tab === 'words') html += monthSheet(savedOn());
+    if (S.privacy) html += `<div class="sheet"><div class="scrim" aria-hidden="true"></div>
+        <div class="panel" role="dialog" aria-labelledby="pvTitle"><div class="grab"></div>
+          <div class="sum-title" id="pvTitle">Before you scan</div>
+          <ul class="points pv-points">
+            <li><span class="pi" aria-hidden="true"></span><span><b>Photos are read on this phone.</b> The picture itself isn’t uploaded.</span></li>
+            <li><span class="pi" aria-hidden="true"></span><span>If you turn on <b>AI explanations</b>, a word you open and the sentence around it go to Linger’s server and to Claude (an AI by Anthropic). Nothing is sent unless you allow it.</span></li>
+            <li><span class="pi" aria-hidden="true"></span><span>Bank, medical or immigration papers? Only scan what you’re comfortable with.</span></li>
+          </ul>
+          <label class="pv-keep"><input type="checkbox" data-action="privacy-keep" ${keepScans() ? 'checked' : ''}> Keep the text of my last scan on this phone, so I can open it again</label>
+          <button type="button" class="btn primary" data-action="privacy-ok">Got it</button></div></div>`;
     if (BETA) html += betaOverlay();
-    if (S.toast) html += `<div class="toast" role="status">${esc(S.toast)}</div>`;
+    html += toastHtml();
+    if (S.offline && !S.offlineHidden) html += `<div class="offline-bar" role="status"><span><strong>You’re offline.</strong> Saved words, Review and Local still work. AI explanations and sync wait until you’re back online.</span><button type="button" data-action="offline-hide" aria-label="Hide this message">✕</button></div>`;
+    if (SHELL_BUILD && SHELL_BUILD < REQUIRED_SHELL) html += `<div class="shell-block" role="alertdialog" aria-labelledby="shH"><strong id="shH">Update Linger in TestFlight</strong><span>This version of the Linger app is too old for the latest beta. Open TestFlight and tap Update.</span><a class="btn primary" href="itms-beta://">Open TestFlight</a></div>`;
     if (S.sheet || S.phrase) {
       html += `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
         <div class="panel word-card" role="dialog" aria-label="${S.phrase ? 'What your highlight means' : 'Word meaning'}"><div class="grab"></div>${S.phrase ? phraseCard() : wordCard()}</div></div>`;
@@ -2180,6 +2378,7 @@
     if (!calm() && lastTab !== S.tab) scroll.classList.add('view-in');
     else if (!calm() && viewKey !== lastViewKey) scroll.classList.add('list-in');
     if (lastTab !== null && lastTab !== S.tab) buzz(8);
+    if (lastTab !== S.tab && S.tab !== 'lens') S.sheetUp = { ...(S.sheetUp || {}), [S.tab]: false }; // a fresh screen starts at the top, header showing
     lastTab = S.tab; lastViewKey = viewKey;
     segSlide(segs);
     switchFlip();
@@ -2205,13 +2404,14 @@
   // ---------- pull-up sheet ----------
   // The handle at the top of each white sheet works like a phone's bottom sheet: drag it up and the sheet covers
   // the page (the header shrinks to a thin strip), drag it down to bring the header back. Tapping it toggles.
-  const SHEET_TOP = 40; // header height when the sheet is up (plus the phone's status bar)
+  const SHEET_TOP = 80; // the tucked-away header: a 56px sticky banner plus the drawer's 24px rounded top (plus the status bar)
   let safeTop = null;
   const statusBar = () => {
     if (safeTop === null) { const p = document.createElement('div'); p.style.cssText = 'position:absolute;visibility:hidden;padding-top:env(safe-area-inset-top,0px)'; document.body.appendChild(p); safeTop = p.offsetHeight; p.remove(); }
     return safeTop;
   };
   const sheetIsUp = () => !!(S.sheetUp && S.sheetUp[S.tab]);
+  const lensExpand = (up) => { S.sheetUp = { ...(S.sheetUp || {}), lens: up }; };
   function sheetSetup() {
     // A freshly drawn screen takes its sheet position at once (no animation when switching tabs).
     screenEl.classList.add('sheet-drag');
@@ -2220,28 +2420,68 @@
     screenEl.classList.remove('sheet-drag');
     const body = scroll.querySelector('.hero + .body');
     if (!body || body.querySelector(':scope > .sheet-grab')) return;
+    if (!(S.tab === 'lens' && body.classList.contains('lb-result'))) return; // only a Lens result has a handle; Words, Local and Review follow the scroll
     body.insertAdjacentHTML('afterbegin', `<button type="button" class="sheet-grab" aria-expanded="${sheetIsUp()}" aria-label="${sheetIsUp() ? 'Show the header again' : 'Pull the sheet up to fill the screen'}"></button>`);
   }
   // Animate the header to a height, then hand control back to CSS.
+  // The parts that stay on screen in both looks (title, account, and on Lens Language and Settings) glide and shrink
+  // from the big header into the banner and back ("smart animate"); everything else fades.
+  const keepers = (hero) => [hero.querySelector('.wh-title .loc-city') || hero.querySelector('.wh-title h1'), hero.querySelector(':scope > .lh-topbar') || hero.querySelector(':scope > .av-btn')].filter(Boolean);
   function sheetTo(up) {
     const hero = scroll.querySelector('.hero');
     if (!hero) return;
     const from = hero.getBoundingClientRect().height;
+    const keep = keepers(hero), first = keep.map((el) => el.getBoundingClientRect());
+    const fs0 = keep.map((el) => parseFloat(getComputedStyle(el.matches('h1') ? el : el.querySelector('h1') || el).fontSize));
     // Measure the end height with animations off (otherwise the browser reports the starting height).
     screenEl.classList.add('sheet-drag');
     screenEl.classList.toggle('sheet-up', up); hero.style.height = '';
     const to = hero.getBoundingClientRect().height;
+    const last = keep.map((el) => el.getBoundingClientRect());
     hero.style.height = from + 'px'; hero.style.setProperty('--fade', up ? 1 : 0);
+    const glide = !calm();
+    if (glide) keep.forEach((el, i) => {
+      const a = first[i], b = last[i], f1 = parseFloat(getComputedStyle(el.matches('h1') ? el : el.querySelector('h1') || el).fontSize), s = i === 0 && f1 ? fs0[i] / f1 : 1; // the title scales by its font size
+      el.style.transformOrigin = '0 0'; el.style.transition = 'none';
+      el.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${s})`;
+    });
     void hero.offsetHeight;
     screenEl.classList.remove('sheet-drag');
     void hero.offsetHeight;
     hero.style.height = to + 'px'; hero.style.setProperty('--fade', up ? 0 : 1);
+    if (glide) keep.forEach((el) => { el.style.transition = 'transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1)'; el.style.transform = ''; el.addEventListener('transitionend', () => { el.style.transition = ''; el.style.transformOrigin = ''; }, { once: true }); });
     const done = () => { hero.style.height = ''; hero.style.removeProperty('--fade'); };
     hero.addEventListener('transitionend', done, { once: true }); setTimeout(done, 450);
     S.sheetUp = { ...(S.sheetUp || {}), [S.tab]: up };
     const g = scroll.querySelector('.sheet-grab');
     if (g) { g.setAttribute('aria-expanded', String(up)); g.setAttribute('aria-label', up ? 'Show the header again' : 'Pull the sheet up to fill the screen'); }
   }
+  // Words, Local and Review: scrolling the drawer down tucks the header away (the drawer stops at the top of the
+  // screen), scrolling back up brings the header back. Pages too short to scroll keep their header.
+  const AUTO_TABS = new Set(['words', 'local', 'review']);
+  let sLast = 0, sAcc = 0, sLock = 0;
+  scroll.addEventListener('scroll', () => {
+    const st = scroll.scrollTop, dy = st - sLast; sLast = st;
+    if (!AUTO_TABS.has(S.tab) || drag) return;
+    if (performance.now() < sLock) { sAcc = 0; return; } // the header is still moving (its own height change scrolls too)
+    sAcc = (sAcc > 0) === (dy > 0) ? sAcc + dy : dy;
+    const up = sheetIsUp();
+    if (!up && sAcc > 12 && st > 4) autoSheet(true);
+    else if (up && (sAcc < -12 || st < 0)) autoSheet(false);
+  }, { passive: true });
+  function autoSheet(up) {
+    if (!scroll.querySelector('.hero')) return;
+    // Tucked away, the drawer fills the whole screen even when its list is short (so it can't bounce back by itself).
+    if (up) screenEl.style.setProperty('--fill', (scroll.clientHeight - SHEET_TOP - statusBar() + 24) + 'px');
+    sLock = performance.now() + 450; sAcc = 0; sheetTo(up);
+  }
+  // Already at the top of the drawer: pulling down (mouse wheel, trackpad or finger) brings the header back.
+  const atTop = () => AUTO_TABS.has(S.tab) && sheetIsUp() && scroll.scrollTop <= 0 && performance.now() >= sLock;
+  scroll.addEventListener('wheel', (e) => { if (e.deltaY < 0 && atTop()) autoSheet(false); }, { passive: true });
+  let tY = null;
+  scroll.addEventListener('touchstart', (e) => { tY = e.touches[0].clientY; }, { passive: true });
+  scroll.addEventListener('touchmove', (e) => { if (tY !== null && e.touches[0].clientY - tY > 24 && atTop()) { tY = null; autoSheet(false); } }, { passive: true });
+  scroll.addEventListener('touchend', () => { tY = null; }, { passive: true });
   let drag = null;
   document.addEventListener('pointerdown', (e) => {
     const g = e.target.closest && e.target.closest('.sheet-grab'); if (!g) return;
@@ -2286,6 +2526,7 @@
   const actions = {
     tab: (d) => { stopSpeaking(); closeCamera(); S.tab = d.tab; S.pending = null; S.sheet = null; S.explain = false; },
     word: (d) => {
+      S.sheetI = Number(d.i); S.fixing = false;
       fx('ink', Number(d.i));
       const raw = tokens()[Number(d.i)];
       const k = keyOf(raw);
@@ -2315,7 +2556,7 @@
       location.reload(); return false;
     },
     'level-check': () => { startOnb(true, 2); },
-    'coach-later': () => { S.coach = false; try { localStorage.setItem('linger.coach.later', String(Date.now())); } catch {} },
+    'level-test': () => { startOnb(true, 2); if (window.LingerTest) S.onb.test = { t: LingerTest.start(), res: null }; },
     'onb-first': () => { S.acct = false; startOnb(false); },
     'onb-read': (d) => {
       const o = S.onb, r = o.reads, i = r.indexOf(d.v);
@@ -2354,6 +2595,8 @@
     'a11y-reset': () => { Object.assign(A11Y, A11Y_DEF); setA11y('theme', 'system'); showToast('Display and accessibility reset'); },
     'lang-open': () => { S.langPick = true; S.langQuery = ''; S.sheet = null; S.explain = false; },
     'lang-set': (d) => {
+      const before = S.langs.slice(), name = d.v && langOf(d.v) ? langOf(d.v).own : '';
+      setTimeout(() => { if (S.langs.join() !== before.join()) { S.langUndo = before; showToast(!d.v ? 'Languages cleared' : S.langs.includes(d.v) ? `Added ${name}` : `Removed ${name}`, { label: 'Undo', action: 'lang-undo' }); render(); } }, 0);
       if (!d.v) setLangs([]);
       else if (S.langs.includes(d.v)) setLangs(S.langs.filter((c) => c !== d.v));
       else if (S.langs.length >= 3) { showToast('Up to 3 languages. Remove one first.'); return; }
@@ -2386,7 +2629,7 @@
       else if (d.v === 'scramble') startScramble();
       else if (d.v === 'say') startSay();
       else if (d.v === 'cityquiz') { if (d.city === 'home') S.quizCity = null; startCityQuiz(); }
-      else S.cards = { idx: 0, revealed: false, order: practiceOrder() };
+      else { const all = d.only ? d.only : practiceOrder(); S.cards = { idx: 0, revealed: false, order: all.slice(0, SESSION), rest: all.slice(SESSION), done: 0 }; }
     },
     'mt-pick': (d) => matchPick(d.side, d.k),
     'pk-word': (d) => { const p = S.pick, i = p.sel.indexOf(d.k); if (i >= 0) p.sel.splice(i, 1); else p.sel.push(d.k); buzz(5); },
@@ -2412,13 +2655,33 @@
     shutter: () => { if (S.scan.status === 'live') capture(); else startCamera(); },
     // The Lens switch: picking a mode clears what was read and shows that mode's card.
     'lens-mode': (d) => {
-      stopSpeaking(); S.pending = null; S.sheet = null; S.explain = false;
-      if (d.v !== 'scan') closeCamera();
+      stopSpeaking(); S.pending = null; S.sheet = null; S.explain = false; lensExpand(false);
+      if (d.v !== 'scan') pauseCamera();
       const busy = S.scan.status === 'reading';
       if (!busy) S.scan = { status: S.scan.status === 'live' && d.v === 'scan' ? 'live' : 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' };
       S.lensMode = d.v;
+      if (!busy && d.v === 'scan') backToCamera();
     },
-    'lens-clear': () => { stopSpeaking(); S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pasteDraft = ''; S.pending = null; S.sheet = null; S.explain = false; },
+    retake: () => { stopSpeaking(); lensExpand(false); S.pending = null; S.sheet = null; S.explain = false; S.lensMode = 'scan'; S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; backToCamera(); if (S.scan.status !== 'live') startCamera(); },
+    'open-settings': () => { if (BETA) BETA.post({ open: 'settings' }); },
+    'add-page': () => {
+      S.addPage = { text: TEXTS.camera, pages: S.scan.pages || 1, scan: { ...S.scan } };
+      stopSpeaking(); lensExpand(false); S.pending = null; S.sheet = null; S.explain = false;
+      if (S.scan.origin === 'upload') { S.lensMode = 'upload'; S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'upload' }; return; }
+      S.lensMode = 'scan'; S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; backToCamera(); if (S.scan.status !== 'live') startCamera();
+    },
+    'add-page-cancel': () => { const a = S.addPage; if (!a) return; S.addPage = null; pauseCamera(); TEXTS.camera = a.text; S.source = 'camera'; S.scan = a.scan; S.lensMode = a.scan.origin === 'upload' ? 'upload' : 'scan'; },
+    'forget-scan': () => { try { localStorage.removeItem(LAST_SCAN); } catch {} if (S.scan.status === 'done') S.scan.noKeep = true; showToast('Not kept. This scan is gone when you clear it or close Linger.'); },
+    'resume-open': () => { const l = lastScan(); if (!l) return; stopSpeaking(); pauseCamera(); TEXTS.camera = l.text; SUMMARY.camera = summarize(l.text); S.source = 'camera'; S.tab = 'lens'; S.scan = { status: 'done', progress: 100, img: null, msg: '', conf: l.conf || 0, origin: l.origin || 'camera', pages: l.pages || 1, notEnglish: !looksEnglish(l.text) }; S.shotView = 'text'; },
+    'resume-dismiss': () => { try { localStorage.removeItem(SCAN_BUSY); } catch {} },
+    'privacy-ok': () => { try { localStorage.setItem(PRIVACY_SEEN, String(Date.now())); } catch {} S.privacy = false; const n = S.privacyNext; S.privacyNext = null; if (n) setTimeout(n, 0); },
+    'privacy-keep': () => { try { localStorage.setItem(KEEP_SCANS, keepScans() ? 'no' : 'yes'); if (!keepScans()) localStorage.removeItem(LAST_SCAN); } catch {} },
+    'lens-clear': () => {
+      stopSpeaking(); lensExpand(false);
+      const wasPhoto = S.scan.origin === 'camera';
+      S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pasteDraft = ''; S.pending = null; S.sheet = null; S.explain = false;
+      if (wasPhoto && S.lensMode === 'scan') backToCamera(); // ready for the next photo, no new permission prompt
+    },
     'paste-clip': async () => { try { const t = await navigator.clipboard.readText(); if (t) { S.pasteDraft = t; render(); } } catch { const b = document.getElementById('pasteText'); if (b) b.focus(); } },
     rescan: () => { stopSpeaking(); S.scan = { status: 'idle', progress: 0, img: null, msg: '', conf: 0, origin: 'camera' }; S.pending = null; S.sheet = null; S.explain = false; },
     settings: () => { stopSpeaking(); closeCamera(); S.setFrom = S.tab; S.setSec = null; S.tab = 'settings'; S.pending = null; S.sheet = null; S.explain = false; },
@@ -2464,6 +2727,29 @@
       if (d.v === 'knew') buzz(12);
     },
     'card-flag': () => { S.cards.flag = !S.cards.flag; },
+    'cards-more': () => { const c = S.cards; const done = (c.done || 0) + (c.order || []).length + (c.again || []).length; S.cards = { idx: 0, revealed: false, order: c.rest.slice(0, SESSION), rest: c.rest.slice(SESSION), done }; },
+    'tricky-go': () => actions.play({ v: 'cards', only: trickyWords() }),
+    'clear-search': () => { S.query = ''; },
+    'undo-unsave': () => { const r = S.lastRemoved; S.toast = ''; S.toastAct = null; if (!r || isSaved(r.k)) return; toggleSave(r.k); if (r.date) { S.savedDates[r.k] = r.date; persist(); } S.lastRemoved = null; },
+    'lang-undo': () => { if (S.langUndo) { setLangs(S.langUndo); if (S.prefs.done) savePrefs({}); } S.langUndo = null; S.toast = ''; S.toastAct = null; },
+    'offline-hide': () => { S.offlineHidden = true; },
+    'ai-allow': () => { setAiConsent('yes'); },
+    'ai-deny': () => { setAiConsent('no'); S.aiNudged = true; try { localStorage.setItem('linger.aiNudge', String(Date.now())); } catch {} },
+    'ai-toggle': () => { setAiConsent(aiOK() ? 'no' : 'yes'); },
+    'ai-rate': (d) => { S.rated = { ...(S.rated || {}), [d.key]: d.v }; const ai = aiFor(d.key); BETA.sendFeedback(`AI explanation ${d.v === 'up' ? 'helped' : 'did not help'}: ${d.key.split('|').slice(1).join('|')} → ${ai ? ai.meaning : ''}`.slice(0, 600), { kind: d.v === 'up' ? 'other' : 'bug', screen: 'word-card' }); },
+    'ai-report': (d) => { S.sheet = null; S.phrase = null; S.feedback = { kind: 'bug', text: `Problem with the AI explanation of “${d.key.split('|').slice(1).join('|')}”: `, email: signedInAs() || '', screen: 'word-card', sending: false }; },
+    'fix-open': () => { S.fixing = true; setTimeout(() => { const el = document.getElementById('fixWord'); if (el) { el.focus(); el.select(); } }, 0); },
+    'fix-cancel': () => { S.fixing = false; },
+    'fix-save': () => {
+      const el = document.getElementById('fixWord'), w = el ? el.value.trim() : '', i = S.sheetI, toks = tokens();
+      if (!/^[A-Za-z][A-Za-z'’-]{0,30}$/.test(w) || i == null || !toks[i]) { showToast('Type one word, using letters only.'); return; }
+      const m = toks[i].match(/^([^A-Za-z]*)[\s\S]*?([^A-Za-z]*)$/); toks[i] = (m ? m[1] : '') + w + (m ? m[2] : '');
+      TEXTS.camera = toks.join(' '); SUMMARY.camera = summarize(TEXTS.camera); S.fixing = false; rememberScan();
+      const k = keyOf(w); if (k) { makeEntry(k, TEXTS.camera, SCAN_PLACE); openWord(k, w, sentenceAt(i)); }
+      showToast(`Fixed. Now it says “${w}”.`);
+    },
+    'city-request': () => { const q = (S.cityQuery || '').trim(); if (!q || !BETA) return; BETA.sendFeedback('City request: ' + q, { kind: 'idea', screen: 'city' }); showToast(`Thanks! We’ll pass “${q}” on to the team.`); },
+    'open-testflight': () => { location.href = 'itms-beta://'; },
     pick: (d) => { const g = S.game; g.sel = g.sel === d.k ? null : d.k; },
     blank: (d) => {
       const g = S.game, b = Number(d.b);
@@ -2550,6 +2836,7 @@
   // ---------- shared or pasted text ----------
   // Text arrives from the phone's Share menu as ?text=… (Android share target, or the iPhone Shortcut).
   function handleText(raw, origin) {
+    if (origin === 'paste' && needPrivacy(() => handleText(raw, origin))) return;
     stopSpeaking(); closeCamera();
     const t = raw.replace(/\s+/g, ' ').trim();
     if (!t) return;
@@ -2565,9 +2852,15 @@
     Object.keys(D).forEach((k) => { if (D[k].scanned && !isSaved(k)) delete D[k]; });
     TEXTS.camera = cleanText(t); SUMMARY.camera = summarize(TEXTS.camera);
     S.source = 'camera'; S.scan = { status: 'done', progress: 100, img: null, msg: '', conf: 0, origin };
-    S.explain = true;
+    S.explain = true; rememberScan();
   }
+  S.offline = !navigator.onLine;
+  window.addEventListener('offline', () => { S.offline = true; S.offlineHidden = false; render(); });
+  window.addEventListener('online', () => { S.offline = false; showToast('Back online'); render(); });
+  // The iPhone app is older than the newest shell in TestFlight: say so once a day.
+  if (SHELL_BUILD && SHELL_BUILD < LATEST_SHELL) { let t = 0; try { t = Number(localStorage.getItem('linger.shellNag') || 0); } catch {} if (Date.now() - t > 86400000) { try { localStorage.setItem('linger.shellNag', String(Date.now())); } catch {} setTimeout(() => { showToast('A newer Linger app is ready in TestFlight', { label: 'Open', action: 'open-testflight' }); render(); }, 2500); } }
   const params = new URLSearchParams(location.search);
+  if (['paste', 'upload', 'scan'].includes(params.get('lens'))) { S.tab = 'lens'; S.lensMode = params.get('lens'); }
   const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join(' ');
   if (shared) { handleText(shared, 'share'); history.replaceState(null, '', location.pathname); }
   { const saved = (() => { try { return localStorage.getItem(SYNC_KEY); } catch { return null; } })(); if (saved) startSync(saved); }
@@ -2585,6 +2878,7 @@
       persist(); render();
     },
     render: () => render(),
+    notify: (m) => { showToast(m); render(); },
     // Signed in: the account's reading setup and profile picture. (null: signed out.)
     profile: (p) => {
       if (!p) { S.photo = ''; render(); return; }
@@ -2612,7 +2906,7 @@
   if (params.get('import')) {
     const n = importWords(params.get('import'));
     S.tab = 'words';
-    S.toast = n ? `💻 → 📱 ${n} ${n === 1 ? 'word' : 'words'} added from your laptop` : 'These words are already in your list';
+    S.toast = n ? `${n} ${n === 1 ? 'word' : 'words'} added from your laptop` : 'These words are already in your list';
     history.replaceState(null, '', location.pathname);
     setTimeout(() => { S.toast = ''; render(); }, 3500);
   }
@@ -2629,11 +2923,10 @@
   }
   window.addEventListener('resize', fit);
   fit();
-  // First visit: open on Lens, with a bubble at the profile picture inviting them to set up (not a full-screen
-  // questionnaire before they've seen the app). "Later" hides it for a day.
-  const COACH_KEY = 'linger.coach.later';
-  S.coach = !S.prefs.done && !shared && !params.get('import') && (() => { try { return Date.now() - Number(localStorage.getItem(COACH_KEY) || 0) > 86400000; } catch { return true; } })();
-  if (S.coach) render();
+  // First visit: the three setup questions open right away, each with Skip (not when Linger was opened to explain
+  // something shared from another app, or to import words). Signing in on the first question loads an existing setup.
+  S.coach = false;
+  if (!S.prefs.done && !shared && !params.get('import')) startOnb(false);
   // iPhone app (ios/): the Share extension hands over a screenshot or text; the app passes it in here.
   window.LingerNative = {
     heard(m) { sayHeard((m && m.texts) || [], m && m.error); }, // the iPhone app's speech recognizer (Say it)

@@ -54,12 +54,15 @@
   }
   const wordDoc = (b, uid, key) => b.F.doc(b.db, 'users', uid, 'words', key);
   const firebaseBackend = {
-    async onAuth(cb) { const b = await firebase(); b.A.onAuthStateChanged(b.auth, (u) => cb(u ? { uid: u.uid, email: u.email || '' } : null)); },
+    async onAuth(cb) { const b = await firebase(); b.A.onAuthStateChanged(b.auth, (u) => cb(u ? { uid: u.uid, email: u.email || '', verified: !!u.emailVerified } : null)); },
+    async verify() { const b = await firebase(); if (b.auth.currentUser) await b.A.sendEmailVerification(b.auth.currentUser); },
+    async reloadUser() { const b = await firebase(); const u = b.auth.currentUser; if (!u) return false; await u.reload(); return !!u.emailVerified; },
     async signIn(email, pw) { const b = await firebase(); await b.A.signInWithEmailAndPassword(b.auth, email, pw); },
     async signUp(email, pw) {
       const b = await firebase();
       const { user } = await b.A.createUserWithEmailAndPassword(b.auth, email, pw);
       await b.F.setDoc(b.F.doc(b.db, 'users', user.uid), { createdAt: b.F.serverTimestamp(), schema: 1 }, { merge: true });
+      try { await b.A.sendEmailVerification(user); } catch {} // a mistyped email is caught here: the link never arrives
     },
     async reset(email) { const b = await firebase(); await b.A.sendPasswordResetEmail(b.auth, email); },
     async signOut() { const b = await firebase(); await b.A.signOut(b.auth); },
@@ -102,7 +105,9 @@
   const fail = (code) => { const e = new Error(code); e.code = code; throw e; };
   const testBackend = {
     async onAuth(cb) { setTimeout(() => cb(T.cur()), 0); if (bc) bc.addEventListener('message', (e) => { if (e.data === 'auth') cb(T.cur()); }); this._cb = cb; },
-    async signIn(email, pw) { const u = T.users()[email.toLowerCase()]; if (!u || u.pw !== pw) fail('auth/invalid-credential'); store.set('acctTest.current', { uid: u.uid, email }); tellTabs('auth'); this._cb(T.cur()); },
+    async signIn(email, pw) { const u = T.users()[email.toLowerCase()]; if (!u || u.pw !== pw) fail('auth/invalid-credential'); store.set('acctTest.current', { uid: u.uid, email, verified: !!u.verified }); tellTabs('auth'); this._cb(T.cur()); },
+    async verify() {},
+    async reloadUser() { const c = T.cur(), all = T.users(), k = c && c.email.toLowerCase(); if (!k || !all[k]) return false; all[k].verified = true; store.set('acctTest.users', all); store.set('acctTest.current', { ...c, verified: true }); return true; }, // test mode: "clicking the link"
     async signUp(email, pw) {
       const all = T.users(), k = email.toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) fail('auth/invalid-email');
@@ -143,7 +148,7 @@
 
   // ---------- state ----------
   // auth: 'loading' | 'out' | 'in'.  sync: '' | 'syncing' | 'on' | 'error'
-  const A = { auth: 'loading', user: null, sync: '', msg: '', open: false, busy: false, email: '', pw: '', err: '', note: '', del: false, delPw: '', delDevice: false, delStep: '', deleting: false };
+  const A = { confirmOut: false, resetSent: null, firstSync: false, verifyNote: '', auth: 'loading', user: null, sync: '', msg: '', open: false, busy: false, email: '', pw: '', err: '', note: '', del: false, delPw: '', delDevice: false, delStep: '', deleting: false };
   // After an account is deleted the page reloads (to clear what's in memory); this note says what happened.
   try { const n = sessionStorage.getItem('linger.acct.deletedNote'); if (n) { A.note = n; sessionStorage.removeItem('linger.acct.deletedNote'); } } catch {}
   let adapter = null, remote = null, unlisten = null, applying = false, prev = null, timer = null;
@@ -180,6 +185,7 @@
     }
     const now = new Set([...Object.keys(L), ...Object.keys(add)].filter((k) => !drop.includes(k) && (remote[k] || inflight.has(k))));
     store.set(syncedKey(), [...now]); store.set(pendingKey(), [...pending]);
+    if (A.firstSync) { A.firstSync = false; const n = Object.keys(add).length; if (n && adapter.notify) adapter.notify(`Welcome back! ${n} ${n === 1 ? 'word' : 'words'} restored from your account.`); }
     if (Object.keys(add).length || drop.length) { applying = true; try { adapter.apply({ add, remove: drop }); } finally { applying = false; } }
     prev = adapter.words();
   }
@@ -292,10 +298,19 @@
     open: () => { A.open = true; A.err = ''; paint(); setTimeout(() => { const el = document.getElementById('acctEmail'); if (el) el.focus(); }, 0); },
     close: () => { A.open = false; A.err = ''; A.note = ''; paint(); },
     signup: () => run(() => backend().signUp(email(), A.pw), () => { A.pw = ''; A.open = false; }),
-    reset: () => { if (!email()) { A.err = 'Type your email first, then tap “Forgot password?”.'; paint(); return; } run(() => backend().reset(email()), () => { A.note = 'If there’s an account for ' + email() + ', a reset link is on its way.'; }); },
+    reset: () => { if (!email()) { A.err = 'Type your email first, then tap “Forgot password?”.'; paint(); return; } const to = email(); run(() => backend().reset(to), () => { A.resetSent = { email: to, at: Date.now() }; }); },
+    resetagain: () => { if (!A.resetSent || Date.now() - A.resetSent.at < 60000) return; const to = A.resetSent.email; run(() => backend().reset(to), () => { A.resetSent = { email: to, at: Date.now() }; }); },
+    resetback: () => { A.resetSent = null; A.err = ''; A.email = ''; A.open = true; paint(); setTimeout(() => { const el = document.getElementById('acctEmail'); if (el) el.focus(); }, 0); },
+    resetdone: () => { A.resetSent = null; A.err = ''; A.open = true; paint(); setTimeout(() => { const el = document.getElementById('acctPw'); if (el) el.focus(); }, 0); },
+    resendverify: () => run(() => backend().verify(), () => { A.verifyNote = 'Sent. Check your inbox and spam folder.'; }),
+    verified: () => run(async () => { const ok = await backend().reloadUser(); if (ok) { A.user = { ...A.user, verified: true }; A.verifyNote = ''; } else A.verifyNote = 'Not confirmed yet. Open the link in the email, then try again.'; }),
+    wrongemail: () => { A.verifyNote = 'To use a different email, delete this account (nothing is saved in it yet if you just made it) and create a new one.'; A.del = true; A.delPw = ''; paint(); },
+    signoutno: () => { A.confirmOut = false; paint(); },
     // Signing out takes this account's words off the device (they stay in the account and come back on sign-in).
     // Otherwise the next person to sign in on this browser would get them merged into their own account.
-    signout: () => run(async () => {
+    signout: () => { A.confirmOut = true; A.err = ''; paint(); },
+    signoutyes: () => run(async () => {
+      A.confirmOut = false;
       const mine = store.get(syncedKey(), []), L = adapter ? adapter.words() : {};
       await backend().signOut();
       const remove = mine.filter((k) => L[k]);
@@ -316,17 +331,35 @@
   function card(opts = {}) {
     if (!backend() || A.auth === 'loading') return '';
     if (A.auth === 'in' && A.del) return deleteCard();
+    if (A.auth === 'in' && A.confirmOut) {
+      const n = remote ? Object.keys(remote).length : 0;
+      return `<div class="sync-card" id="acctCard" role="group" aria-labelledby="acctOutH"><div class="sync-h" id="acctOutH"><strong>Sign out of ${esc(A.user.email)}?</strong></div>
+        <div class="small">${n ? `Your ${n === 1 ? 'word stays' : n + ' words stay'} safe in your account and ${n === 1 ? 'comes' : 'come'} back when you sign in again. Until then ${n === 1 ? 'it’s' : 'they’re'} taken off this phone, so the next person can’t see ${n === 1 ? 'it' : 'them'}.` : 'You can sign back in any time.'}</div>
+        <div class="sync-acts"><button type="button" class="btn small-btn" data-acct="signoutno">Cancel</button><button type="button" class="btn primary small-btn" data-acct="signoutyes" ${A.busy ? 'disabled' : ''}>Sign out</button></div></div>`;
+    }
     if (A.auth === 'in') {
       const n = remote ? Object.keys(remote).length : 0;
+      const verify = A.user.verified ? '' : `<div class="verify-box" role="status"><strong>Confirm your email</strong><span>We sent a link to <b>${esc(A.user.email)}</b>. Tap it to confirm this email is yours, so you can reset your password if you forget it.</span>
+          ${A.verifyNote ? `<span class="small">${esc(A.verifyNote)}</span>` : ''}
+          <span class="sync-acts"><button type="button" class="link-btn" data-acct="verified">I’ve confirmed it</button><button type="button" class="link-btn" data-acct="resendverify">Send again</button><button type="button" class="link-btn" data-acct="wrongemail">Wrong email?</button></span></div>`;
       const line = A.sync === 'error' ? esc(A.msg) : A.sync === 'syncing' ? 'Connecting to your account…' : `Your ${n === 1 ? '1 saved word is' : n + ' saved words are'} in your account and on every device you sign in on.`;
-      return `<div class="sync-card ${A.sync === 'error' ? '' : 'on'}" id="acctCard"><div class="sync-h">${A.sync === 'on' ? '<span class="dot-live"></span>' : '👤'}<strong>${opts.inSheet ? (A.sync === 'error' ? 'Words not syncing' : 'Words synced') : 'Signed in as ' + esc(A.user.email)}</strong></div>
-        <div class="small">${line}</div>
+      return `<div class="sync-card ${A.sync === 'error' || opts.inSheet ? '' : 'on'}" id="acctCard"><div class="sync-h">${A.sync === 'on' ? '<span class="dot-live"></span>' : ''}<strong>${opts.inSheet ? (A.sync === 'error' ? 'Words not syncing' : 'Words synced') : 'Signed in as ' + esc(A.user.email)}</strong></div>
+        <div class="small">${line}</div>${verify}
         <div class="sync-acts"><button type="button" class="link-btn" data-acct="signout" ${A.busy ? 'disabled' : ''}>Sign out</button>${opts.inSheet ? `<button type="button" class="link-btn del-link" data-acct="delopen" ${A.busy ? 'disabled' : ''}>Delete account and data</button>` : ''}</div></div>`;
     }
-    if (!A.open) return `<div class="sync-card" id="acctCard"><div class="sync-h">👤 <strong>Keep your words in an account</strong></div>
+    if (!A.open) return `<div class="sync-card" id="acctCard"><div class="sync-h"><strong>Keep your words in an account</strong></div>
       <div class="small">${A.note ? esc(A.note) : 'Sign in to have the same saved words on your phone and laptop, without a pairing code.'}</div>
       <button type="button" class="btn primary small-btn" data-acct="open">Sign in or create account</button></div>`;
-    return `<form class="sync-card" id="acctForm" novalidate><div class="sync-h">👤 <strong>Sign in to Linger</strong></div>
+    if (A.resetSent) {
+      const left = Math.max(0, 60 - Math.round((Date.now() - A.resetSent.at) / 1000));
+      clearTimeout(card.t); if (left > 0) card.t = setTimeout(paint, 1000); // count down the resend wait
+      return `<div class="sync-card" id="acctCard" role="group" aria-labelledby="acctResetH"><div class="sync-h" id="acctResetH"><strong>Check your email</strong></div>
+        <div class="small">If there’s a Linger account for <b>${esc(A.resetSent.email)}</b>, a link to reset your password is on its way. It can take a few minutes. Check your spam or junk folder too.</div>
+        ${A.err ? `<div class="small" role="alert" style="color: var(--bad, #A81F64)">${esc(A.err)}</div>` : ''}
+        <div class="sync-acts" style="flex-wrap: wrap"><button type="button" class="btn small-btn" data-acct="resetagain" ${left || A.busy ? 'disabled' : ''}>${left ? `Send again in ${left}s` : 'Send again'}</button><button type="button" class="link-btn" data-acct="resetback">Use a different email</button></div>
+        <div class="sync-acts"><button type="button" class="link-btn" data-acct="resetdone">Back to sign in</button></div></div>`;
+    }
+    return `<form class="sync-card" id="acctForm" novalidate><div class="sync-h"><strong>Sign in to Linger</strong></div>
       <input class="paste-box" style="${inputStyle}" id="acctEmail" type="email" autocomplete="email" placeholder="Email" value="${esc(A.email)}" required>
       <input class="paste-box" style="${inputStyle}" id="acctPw" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" value="${esc(A.pw)}" required>
       ${A.err ? `<div class="small" role="alert" style="color: var(--bad, #A81F64)">${esc(A.err)}</div>` : ''}${A.note ? `<div class="small" role="status">${esc(A.note)}</div>` : ''}
@@ -375,7 +408,8 @@
     saveProfile,
     available: () => !!backend(),
     mode: () => (testMode ? 'test' : hasFirebase() ? 'firebase' : 'off'),
-    state: () => ({ auth: A.auth, email: A.user && A.user.email, sync: A.sync, words: remote ? Object.keys(remote).length : 0, profile: A.profile || null }),
+    state: () => ({ auth: A.auth, email: A.user && A.user.email, sync: A.sync, words: remote ? Object.keys(remote).length : 0, profile: A.profile || null, formOpen: !!A.open || !!A.resetSent, verified: !!(A.user && A.user.verified),
+      unsynced: A.auth === 'in' && remote && adapter ? Object.keys(adapter.words()).filter((k) => !remote[k]).length : 0, msg: A.note || A.err || '' }),
     card,
     localChanged,
     // adapter: { words(): { key: { w, m, s, p, place, date } }, apply({ add, remove }), render() }
@@ -385,6 +419,8 @@
       b.onAuth((u) => {
         const was = A.user && A.user.uid;
         A.user = u; A.auth = u ? 'in' : 'out';
+        if (u && u.uid !== was) A.firstSync = true; // the first sync after signing in says how many words came back
+        A.confirmOut = false;
         if (u && u.uid !== was) { startListening(); loadProfile(); } else if (!u) { stopListening(); A.sync = ''; A.profile = null; if (adapter.profile) adapter.profile(null); }
         paint();
       }).catch((e) => { A.auth = 'out'; A.err = friendly(e); paint(); });

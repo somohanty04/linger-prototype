@@ -226,9 +226,32 @@ async function acctMessage(msg) {
   return { ok: false };
 }
 
+// What the menu can tell apart about a code: 'found' (the phone has used it), 'new' (no document yet: either a fresh
+// code from a phone with no saved words, or a typo; codes never expire, so Linger can't tell which), 'denied' (Firestore
+// refused it), 'offline' (no connection at all) or 'error' (Linger's server didn't answer properly).
 async function checkCode(code) {
-  const r = await fetch(`${DOC(code)}?key=${FIREBASE.apiKey}`);
-  return r.ok ? 'found' : r.status === 404 ? 'new' : 'error';
+  let r;
+  try { r = await fetch(`${DOC(code)}?key=${FIREBASE.apiKey}`); } catch { return 'offline'; }
+  return r.ok ? 'found' : r.status === 404 ? 'new' : r.status === 403 || r.status === 400 ? 'denied' : 'error';
+}
+
+// "Not working on this site?" in the menu: one document in feedback/{autoId}, the collection the beta app's feedback
+// goes to. firestore.rules only allows its listed fields (text, kind, screen, email, version, platform, ua, at,
+// sentAt…), so the site and note go into text, and sentAt is set by the server (the rule wants it to equal request.time).
+function siteReportWrite(site, note) {
+  const str = (v) => ({ stringValue: String(v) });
+  const host = String(site || '').slice(0, 200), extra = String(note || '').trim().slice(0, 500);
+  const text = `Linger for Chrome isn't working on ${host || 'a page'}` + (extra ? `\n\n${extra}` : '');
+  const id = [...crypto.getRandomValues(new Uint8Array(20))].map((n) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[n % 62]).join('');
+  const fields = { text: str(text), kind: str('bug'), screen: str('extension:not-working'), email: str(''), version: str(chrome.runtime.getManifest().version), platform: str('chrome-extension'), ua: str(navigator.userAgent.slice(0, 300)), at: str(new Date().toISOString()) };
+  const name = `projects/${FIREBASE.projectId}/databases/(default)/documents/feedback/${id}`;
+  return { writes: [{ update: { name, fields }, updateTransforms: [{ fieldPath: 'sentAt', setToServerValue: 'REQUEST_TIME' }], currentDocument: { exists: false } }] };
+}
+async function sendSiteReport(site, note) {
+  let r;
+  try { r = await fetch(`${FS}:commit?key=${FIREBASE.apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(siteReportWrite(site, note)) }); }
+  catch { return { ok: false, why: 'offline' }; }
+  return r.ok ? { ok: true } : { ok: false, why: 'error', status: r.status };
 }
 
 // ---------- eye tracker page ----------
@@ -336,6 +359,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       return reply({ ok: true, synced: sent, account: !!acct && tries[0].status === 'fulfilled', error: !sent });
     }
     if (msg.type === 'check-code') return reply({ result: await checkCode(msg.code) });
+    if (msg.type === 'site-report') return reply(await sendSiteReport(msg.site, msg.note));
     if (msg.type && msg.type.startsWith('acct-')) return reply(await acctMessage(msg));
     // ---------- eye tracking ----------
     if (msg.type === 'eye-on') {
@@ -357,6 +381,8 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg.type === 'eye-start') { if (msg.restart) await closeTracker(); await ensureTracker(); return reply({ ok: true }); }
     if (msg.type === 'get-model') { const { gazeModel } = await chrome.storage.local.get({ gazeModel: null }); return reply({ model: gazeModel }); }
     if (msg.type === 'save-model') { await chrome.storage.local.set({ gazeModel: msg.model }); return reply({ ok: true }); }
+    // Light and faces in the camera picture (tracker.js runs in an offscreen page, which can't use chrome.storage).
+    if (msg.type === 'gaze-env') { await chrome.storage.local.set({ gazeEnv: { t: Date.now(), dark: !!msg.dark, faces: Number(msg.faces) || 0 } }); return reply({ ok: true }); }
     if (msg.type === 'gaze-problem') { await chrome.storage.local.set({ gazeProblem: { t: Date.now(), site: 'eye tracking', why: msg.why } }); return reply({ ok: true }); }
     if (msg.type === 'calib-done' || msg.type === 'calib-cancel') {
       if (msg.type === 'calib-done') await chrome.storage.local.set({ gazeModel: msg.model, eyeOn: true, gazeProblem: null });

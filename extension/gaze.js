@@ -40,6 +40,15 @@
     .ask .yes { background: #FFFFFF; color: #1F2AA8; } .ask .no { background: transparent; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.4); }
     .ask .hint { font-size: 11px; font-weight: 600; opacity: 0.8; white-space: nowrap; }
     .ask button.picked { outline: 3px solid #9BE3C4; outline-offset: 2px; }
+    .ask { flex-wrap: wrap; max-width: calc(100vw - 16px); }
+    .ask button:focus-visible, .chip button:focus-visible, .recal button:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+    .ask .pz { background: transparent; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.4); }
+    .ask .pzm { display: flex; gap: 6px; flex-basis: 100%; justify-content: flex-end; }
+    .ask .pzm[hidden] { display: none; }
+    .ask .pzm button { background: rgba(255, 255, 255, 0.18); color: #FFFFFF; }
+    .recal { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); pointer-events: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: calc(100vw - 32px); padding: 10px 12px 10px 16px; border-radius: 14px; background: #1F2AA8; color: #FFFFFF; font-size: 14px; font-weight: 600; box-shadow: 0 10px 24px rgba(16, 20, 80, 0.35); }
+    .recal button { border: 0; border-radius: 99px; height: 32px; padding: 0 14px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .recal .yes { background: #FFFFFF; color: #1F2AA8; } .recal .no { background: transparent; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.5); }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; } }
   </style><div id="ui"></div>`;
   const ui = root.getElementById('ui');
@@ -50,9 +59,10 @@
     if (!G.on) { if (c) c.remove(); return; }
     if (!c) {
       c = document.createElement('div'); c.className = 'chip'; ui.appendChild(c);
-      c.innerHTML = '<span class="live"></span><span class="label"></span><button data-a="recal">Recalibrate</button><button data-a="off">Turn off</button>';
+      c.innerHTML = '<span class="live"></span><span class="label"></span><button type="button" data-a="resume" hidden>Resume</button><button type="button" data-a="recal">Recalibrate</button><button type="button" data-a="off">Turn off</button>';
       c.onclick = (e) => {
         const a = e.target.dataset && e.target.dataset.a;
+        if (a === 'resume') { resume(); return; }
         if (!a || !api) return;
         // After Linger is updated or reloaded, this page still runs the old script, which can't reach the
         // extension any more (Chrome throws "Extension context invalidated"). Say so instead of doing nothing.
@@ -61,7 +71,9 @@
     }
     const bad = G.status !== 'ok' && G.status !== 'loading';
     c.classList.toggle('lost', bad);
-    c.querySelector('.label').textContent = (bad && G.msg) || LABEL[G.status] || LABEL.ok;
+    const p = paused();
+    c.querySelector('.label').textContent = (bad && G.msg) || (p === 'page' ? 'Paused on this page' : p ? 'Paused until ' + new Date(G.snooze).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '') || LABEL[G.status] || LABEL.ok;
+    c.querySelector('[data-a="resume"]').hidden = !p;
     c.querySelector('[data-a="recal"]').textContent = G.status === 'nomodel' || G.status === 'error' ? 'Set up' : 'Recalibrate';
   }
 
@@ -79,7 +91,11 @@
   const toPage = (sx, sy) => { const z = zoom(); return [(sx - screenX - (outerWidth - innerWidth * z) / 2) / z, (sy - screenY - (outerHeight - innerHeight * z)) / z]; };
   const toScreen = (x, y) => { const z = zoom(); return [screenX + (outerWidth - innerWidth * z) / 2 + x * z, screenY + (outerHeight - innerHeight * z) + y * z]; };
   const LABEL = { loading: 'Starting eye tracking…', ok: 'Linger eye tracking', noface: 'Can’t see your eyes. Face the camera.', moved: 'Sit like you did when you set it up', nomodel: 'Eye tracking needs setting up', error: 'Eye tracking stopped' };
-  function setStatus(st) { G.status = st.s; G.msg = st.msg || ''; chip(); }
+  function setStatus(st) {
+    G.status = st.s; G.msg = st.msg || '';
+    G.movedAt = st.s === 'moved' ? G.movedAt || performance.now() : 0;
+    chip();
+  }
   function connect() {
     if (!api || dead) return;
     const want = G.on && !document.hidden;
@@ -92,6 +108,7 @@
       if (m.status) setStatus(m.status);
       if (m.g && document.hasFocus()) { const [x, y] = toPage(m.g[0], m.g[1]); onGaze({ x, y }); }
       if (m.gesture) onSwipe(m.gesture);
+      if (m.quality === 'poor' && document.hasFocus()) offerRecal();
     });
     port.onDisconnect.addListener(() => {
       try { void chrome.runtime.lastError; } catch {}
@@ -117,11 +134,12 @@
     // Eye tracking stays quiet when Linger is off everywhere or on this site.
     const E = { eyeOn: false, off: false, paused: [] }, site = location.hostname || 'file';
     const sync = () => setOn(!!E.eyeOn && !E.off && !(E.paused || []).includes(site));
-    chrome.storage.local.get({ eyeOn: false, off: false, paused: [], gazeModel: null, pauseSecs: 3 }, (v) => { G.dpr = v.gazeModel && v.gazeModel.dpr; G.acc = v.gazeModel && v.gazeModel.acc; G.secs = v.pauseSecs; Object.assign(E, { eyeOn: v.eyeOn, off: v.off, paused: v.paused }); sync(); });
+    chrome.storage.local.get({ eyeOn: false, off: false, paused: [], gazeModel: null, pauseSecs: 3, gazeSnooze: 0 }, (v) => { G.dpr = v.gazeModel && v.gazeModel.dpr; G.acc = v.gazeModel && v.gazeModel.acc; G.secs = v.pauseSecs; G.snooze = v.gazeSnooze || 0; Object.assign(E, { eyeOn: v.eyeOn, off: v.off, paused: v.paused }); sync(); });
     chrome.storage.onChanged.addListener((ch) => {
       if (dead) return;
       if (ch.pauseSecs) G.secs = ch.pauseSecs.newValue;
       if (ch.gazeModel) G.dpr = ch.gazeModel.newValue && ch.gazeModel.newValue.dpr;
+      if (ch.gazeSnooze) { G.snooze = ch.gazeSnooze.newValue || 0; chip(); }
       ['eyeOn', 'off', 'paused'].forEach((k) => { if (ch[k]) E[k] = ch[k].newValue; });
       if (ch.eyeOn || ch.off || ch.paused) sync();
     });
@@ -183,6 +201,10 @@
       }
       while (trail.length && now - trail[0].t > 8000) trail.shift();
     }
+    // "Pause" on the question: keep tracking (clicks still teach it), but don't ask, and don't keep these looks for
+    // when it resumes (they'd count as one long pause).
+    if (paused()) { hist.length = 0; trail.length = 0; return; }
+    checkQuality(d, now);
     if (L.askOpen || now < (G.cool || 0) || hist.length < 20) return;
     // Long look: over the last few seconds the eyes neither moved down a line nor swept across it.
     if (now - hist[0].t >= W * 0.9) {
@@ -252,16 +274,31 @@
     const w = (word.dataset.orig || word.textContent).replace(/[<>&"]/g, '');
     // No on the left and Yes on the right, matching the hand swipes (swipe right = yes, left = no).
     const swipes = !!L.settings.handSwipe;
-    a.innerHTML = `<span>👁 Want help with this word? <b>${w}</b></span><button class="no">No</button><button class="yes">Yes, explain</button>` + (swipes ? '<span class="hint">👋 swipe ← no · yes →</span>' : '');
-    a.style.left = Math.min(Math.max(8, r.left), innerWidth - 300) + 'px';
-    a.style.top = Math.min(r.bottom + 8, innerHeight - 60) + 'px';
+    a.innerHTML = `<span>👁 Want help with this word? <b>${w}</b></span><button type="button" class="no">No</button><button type="button" class="yes">Yes, explain</button><button type="button" class="pz" aria-expanded="false">Pause</button>` + (swipes ? '<span class="hint">👋 swipe ← no · yes →</span>' : '')
+      + '<div class="pzm" role="group" aria-label="Pause eye tracking questions" hidden><button type="button" data-p="page">Pause on this page</button><button type="button" data-p="30">Pause for 30 minutes</button></div>';
     ui.appendChild(a);
+    const place = () => {
+      a.style.left = Math.min(Math.max(8, r.left), Math.max(8, innerWidth - a.offsetWidth - 8)) + 'px';
+      a.style.top = Math.max(8, Math.min(r.bottom + 8, innerHeight - a.offsetHeight - 8)) + 'px';
+    };
+    place();
     send({ type: 'ask', open: true, swipe: swipes });
     const log = (ans) => {
       const how = a.dataset.how || 'click';
       try { chrome.storage.local.get({ gazeLog: [] }, (v) => chrome.storage.local.set({ gazeLog: [...v.gazeLog, { t: Date.now(), site: location.hostname, word: w, why, ans, how, err: G.acc }].slice(-500) })); } catch {}
       // The reading test page records answers per task. Only on Linger's own pages: websites must not see this.
       if (location.protocol === 'chrome-extension:' || window.__lingerTest) window.dispatchEvent(new CustomEvent('linger-answer', { detail: JSON.stringify({ word: w, why, ans, how }) }));
+    };
+    // Pause: "on this page" lasts until this page is left or reloaded; "30 minutes" is for every tab (gazeSnooze).
+    const pz = a.querySelector('.pz'), pzm = a.querySelector('.pzm');
+    pz.onclick = () => { const open = pzm.hidden; pzm.hidden = !open; pz.setAttribute('aria-expanded', String(open)); place(); if (open) pzm.querySelector('button').focus(); };
+    pzm.onclick = (e) => {
+      const p = e.target.dataset && e.target.dataset.p;
+      if (!p) return;
+      log(p === 'page' ? 'pause-page' : 'pause-30');
+      if (p === 'page') G.pagePause = true;
+      else { G.snooze = Date.now() + 30 * 60 * 1000; try { chrome.storage.local.set({ gazeSnooze: G.snooze }); } catch {} }
+      closeAsk(); clearLine(); hist.length = 0; trail.length = 0; chip();
     };
     a.querySelector('.no').onclick = () => { log('no'); closeAsk(); clearLine(); G.cool = performance.now() + 6000; hist.length = 0; trail.length = 0; }; // don't nag
     a.querySelector('.yes').onclick = () => {
@@ -271,9 +308,48 @@
       L.openCard(word, why);
     };
   }
+  // ---------- pausing the question ----------
+  function paused() { return G.pagePause ? 'page' : G.snooze && Date.now() < G.snooze ? 'snooze' : ''; }
+  function resume() {
+    G.pagePause = false; hist.length = 0; trail.length = 0;
+    if (G.snooze) { G.snooze = 0; try { chrome.storage.local.set({ gazeSnooze: 0 }); } catch {} }
+    chip();
+  }
+
+  // ---------- "Linger lost track of where you're looking" ----------
+  // Webcam gaze has no confidence score, so use what the tracker does know: (1) it says you've sat far from where you
+  // were at setup ("moved") for 20 s straight, (2) most gaze points for 20 s land far outside this window even though
+  // the camera sees your face (calibration has drifted), or (3) several clicks in a row land far from the gaze point
+  // (tracker.js sends quality: 'poor'). Then offer to recalibrate, at most once every 10 minutes across all tabs.
+  const outs = [];
+  function checkQuality(d, now) {
+    const far = 300, out = d.x < -far || d.y < -far || d.x > innerWidth + far || d.y > innerHeight + far;
+    outs.push({ t: now, out });
+    while (outs.length && now - outs[0].t > 20000) outs.shift();
+    if (G.movedAt && now - G.movedAt > 20000) return offerRecal();
+    if (outs.length > 150 && now - outs[0].t > 18000 && outs.filter((o) => o.out).length / outs.length > 0.7) offerRecal();
+  }
+  function offerRecal() {
+    if (!api || dead || !G.on || paused() || L.askOpen || document.hidden || root.querySelector('.recal') || G.recalChecking) return;
+    G.recalChecking = true;
+    outs.length = 0; G.movedAt = 0;
+    try {
+      chrome.storage.local.get({ recalAskAt: 0 }, (v) => {
+        G.recalChecking = false;
+        if (Date.now() - (v.recalAskAt || 0) < 10 * 60 * 1000 || root.querySelector('.recal')) return;
+        chrome.storage.local.set({ recalAskAt: Date.now() });
+        const box = document.createElement('div'); box.className = 'recal';
+        box.innerHTML = '<span role="status">Linger lost track of where you’re looking. Recalibrate?</span><button type="button" class="no">Not now</button><button type="button" class="yes">Recalibrate</button>';
+        box.querySelector('.no').onclick = () => box.remove();
+        box.querySelector('.yes').onclick = () => { box.remove(); try { chrome.runtime.sendMessage({ type: 'eye-recal' }).catch(stale); } catch { stale(); } };
+        ui.appendChild(box);
+      });
+    } catch { G.recalChecking = false; }
+  }
+
   window.addEventListener('linger-card-closed', () => { G.cool = performance.now() + 4000; hist.length = 0; trail.length = 0; });
   // People look where they click, so every click on the page teaches the tracker a little more.
   document.addEventListener('click', (e) => { if (G.on && e.isTrusted) send({ type: 'learn', s: toScreen(e.clientX, e.clientY) }); }, true);
   // feed/simOn are for the noisy-gaze simulation on the test page (no extension there).
-  window.__lingerGaze = { alive: () => !dead && (!api || !!(chrome.runtime && chrome.runtime.id)), get on() { return G.on; }, setSecs: (s) => { G.secs = s; }, simOn: () => { attach(); G.on = true; G.status = 'ok'; chip(); }, feed: (x, y) => onGaze({ x, y }), swipe: (dir) => onSwipe(dir) };
+  window.__lingerGaze = { alive: () => !dead && (!api || !!(chrome.runtime && chrome.runtime.id)), get on() { return G.on; }, setSecs: (s) => { G.secs = s; }, simOn: () => { attach(); G.on = true; G.status = 'ok'; chip(); }, feed: (x, y) => onGaze({ x, y }), swipe: (dir) => onSwipe(dir), status: (s) => setStatus({ s }), quality: () => offerRecal(), get paused() { return paused(); } };
 })();

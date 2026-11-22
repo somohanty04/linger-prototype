@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import Network
 
 /// The live beta page in a web view, plus the bridge that hands it screenshots and text from the Share extension.
 @MainActor
@@ -13,10 +14,16 @@ final class WebModel: NSObject, ObservableObject {
     #endif
     static let host = home.host ?? "somohanty04.github.io"
 
+    /// A page that hasn't said ready by now counts as failed (e.g. a captive Wi-Fi portal, or a half-loaded page).
+    static let readyTimeout: Duration = .seconds(15)
+
     @Published var failed = false
+    @Published var retrying = false      // a retry is loading behind the offline screen
     let webView: WKWebView
     private var pageReady = false
     private var waiting: Inbox.Item?
+    private var watchdog: Task<Void, Never>?
+    private let network = NWPathMonitor()
 
     override init() {
         let config = WKWebViewConfiguration()
@@ -24,6 +31,7 @@ final class WebModel: NSObject, ObservableObject {
         config.mediaTypesRequiringUserActionForPlayback = []
         config.applicationNameForUserAgent = "Mobile/15E148 Safari/604.1 LingerApp/" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
         let controller = WKUserContentController()
+        controller.addUserScript(Self.shellScript)
         config.userContentController = controller
         webView = WKWebView(frame: .zero, configuration: config)
         super.init()
@@ -38,13 +46,59 @@ final class WebModel: NSObject, ObservableObject {
         #if DEBUG
         webView.isInspectable = true // Safari → Develop menu, for debugging
         #endif
-        webView.load(URLRequest(url: Self.home))
+        // Retry by itself when the connection comes back while the offline screen is up.
+        network.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor in self?.networkIsBack() }
+        }
+        network.start(queue: .main)
+        loadHome()
     }
 
+    /// window.LINGER_SHELL = { build, version } before the page's own scripts run,
+    /// so the page can tell testers on an older shell to update in TestFlight. A missing value means build 1.
+    private static var shellScript: WKUserScript {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let shell: [String: Any] = [
+            "build": Int(info["CFBundleVersion"] as? String ?? "") ?? 1,
+            "version": info["CFBundleShortVersionString"] as? String ?? "",
+        ]
+        // JSON keeps the version string safely quoted.
+        let json = (try? JSONSerialization.data(withJSONObject: shell)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        return WKUserScript(source: "window.LINGER_SHELL = \(json);", injectionTime: .atDocumentStart, forMainFrameOnly: true)
+    }
+
+    /// Try again. The offline screen stays up (showing progress) until the page says ready, so it doesn't flash blank.
     func reload() {
-        failed = false
+        retrying = failed
+        loadHome()
+    }
+
+    private func loadHome() {
         pageReady = false
         webView.load(URLRequest(url: Self.home))
+        watchdog?.cancel()
+        watchdog = Task { [weak self] in
+            try? await Task.sleep(for: Self.readyTimeout)
+            guard !Task.isCancelled, let self, !self.pageReady else { return }
+            self.loadFailed()
+        }
+    }
+
+    fileprivate func loadFailed() {
+        watchdog?.cancel()
+        retrying = false
+        failed = true
+    }
+
+    private func networkIsBack() {
+        if failed && !retrying { reload() }
+    }
+
+    /// The app's own page in Settings, where camera (and microphone) access can be turned back on.
+    fileprivate func openSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     /// linger://share?id=… from the Share extension.
@@ -83,6 +137,10 @@ final class WebModel: NSObject, ObservableObject {
 
     fileprivate func pageSaidReady() {
         pageReady = true
+        watchdog?.cancel()
+        // A load that worked (after a retry, or a slow one that beat the timeout late) hides the offline screen.
+        failed = false
+        retrying = false
         if let item = waiting { waiting = nil; deliver(item) } else { checkInbox() }
     }
 }
@@ -102,8 +160,19 @@ extension WebModel: WKNavigationDelegate, WKUIDelegate {
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { pageReady = false }
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { failed = true }
+    // These two only fire for main-frame navigations; a failing iframe or image doesn't reach here.
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { navigationFailed(error) }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { navigationFailed(error) }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { reload() }
+
+    private func navigationFailed(_ error: Error) {
+        let e = error as NSError
+        // A load replaced by another (a link tap, or Try again during a slow load) reports "cancelled": not a failure.
+        if e.domain == NSURLErrorDomain && e.code == NSURLErrorCancelled { return }
+        // WebKit's "frame load interrupted" (102): the load was handed elsewhere by a policy decision, also not a failure.
+        if e.domain == "WebKitErrorDomain" && e.code == 102 { return }
+        loadFailed()
+    }
 
     // target="_blank" links
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
@@ -143,7 +212,8 @@ extension WebModel: WKNavigationDelegate, WKUIDelegate {
     }
 }
 
-/// Messages from the page: { ready: true } once the app has started; { haptic: "light" | "medium" | "success" } for a tap you can feel.
+/// Messages from the page: { ready: true } once the app has started; { haptic: "light" | "medium" | "success" } for a tap you can feel;
+/// { listen: "start" | "stop" } for Say it; { open: "settings" } to open the app's page in Settings (e.g. to turn the camera back on).
 private final class WeakHandler: NSObject, WKScriptMessageHandler {
     weak var model: WebModel?
     init(_ model: WebModel) { self.model = model }
@@ -153,6 +223,7 @@ private final class WeakHandler: NSObject, WKScriptMessageHandler {
             if body["ready"] as? Bool == true { model?.pageSaidReady() }
             if let kind = body["haptic"] as? String { Haptics.play(kind) }
             if let listen = body["listen"] as? String { model?.listen(listen == "start") }
+            if body["open"] as? String == "settings" { model?.openSettings() } // only Settings: the page can't open arbitrary URLs
         }
     }
 }
