@@ -375,7 +375,7 @@
     saveProfile,
     available: () => !!backend(),
     mode: () => (testMode ? 'test' : hasFirebase() ? 'firebase' : 'off'),
-    state: () => ({ auth: A.auth, email: A.user && A.user.email, sync: A.sync, words: remote ? Object.keys(remote).length : 0, profile: A.profile || null }),
+    state: () => ({ auth: A.auth, email: A.user && A.user.email, sync: A.sync, words: remote ? Object.keys(remote).length : 0, profile: A.profile || null, formOpen: !!A.open, msg: A.note || A.err || '' }),
     card,
     localChanged,
     // adapter: { words(): { key: { w, m, s, p, place, date } }, apply({ add, remove }), render() }

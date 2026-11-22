@@ -773,12 +773,15 @@
     const tile = (n, l, cls = '') => `<div class="db-tile ${cls}"><strong>${n}</strong><span>${l}</span></div>`;
     const bests = [['match', 'Match up', '★'], ['bubbles', 'Bubble catch', ' pts'], ['scramble', 'Unscramble', '★'], ['say', 'Say it', '★'], ['city.' + S.city, city().name + ' quiz', '★']].map(([g, n, u]) => [n, best(g), u]).filter((x) => x[1]);
     const row = (k, v) => `<div class="acct-row"><span>${k}</span><span>${esc(v)}</span></div>`;
+    // Signed out: a Sign in button beside the picture; the Account section only shows once the sign-in form is open.
+    const acct = acctState(), canSignIn = !!(window.LingerAccount && LingerAccount.available() && acct && acct.auth === 'out');
     return `<header class="set-head prof-head"><button type="button" class="set-back" data-action="profile-back" aria-label="Back">‹</button><h1>Profile</h1></header>
     <div class="body set-body prof-body">
       <div class="prof-top">
         <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
-        <div><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Your Linger'}</div><div class="small">${email ? esc(email) : 'Not signed in · words are on this phone only'}</div>
+        <div class="prof-who"><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Your Linger'}</div>${email ? `<div class="small">${esc(email)}</div>` : canSignIn ? '<div class="small prof-cta">Sign in to back up your words and see them on your laptop too.</div>' : ''}
           ${lvl && lvl[0] !== 'unsure' ? `<span class="prof-level">${esc(LEVEL_NAME[lvl[0]])}</span>` : ''}</div>
+        ${!email && canSignIn ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
       </div>
 
       <p class="rv-label">Your progress</p>
@@ -798,8 +801,8 @@
       </div>
       ${bests.length ? `<div class="card db-best"><strong>Best scores</strong>${bests.map(([n, v, u]) => `<div class="acct-row"><span>${esc(n)}</span><span>${v}${u}</span></div>`).join('')}</div>` : ''}
 
-      <p class="rv-label">Account</p>
-      ${window.LingerAccount ? LingerAccount.card({ inSheet: true }) : ''}
+      ${email || (acct && acct.formOpen) ? `<p class="rv-label">Account</p>
+      ${LingerAccount.card({ inSheet: true })}` : ''}
 
       <p class="rv-label">Chrome extension and laptop</p>
       <div class="card prof-ext"><strong>${email ? '✓ Syncs with your account' : 'Sign in to sync'}</strong>
