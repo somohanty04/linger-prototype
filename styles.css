@@ -1390,3 +1390,84 @@ html[data-theme="dark"] .act .ic, html[data-theme="dark"] .rv-ic { background: v
 html[data-theme="dark"] .meta, html[data-theme="dark"] .kn-txt b, html[data-theme="dark"] .link-btn, html[data-theme="dark"] .card-addlang, html[data-theme="dark"] .wc-here .label, html[data-theme="dark"] .set-reset, html[data-theme="dark"] .rv-city { color: #9AA3FF; }
 html[data-theme="dark"] .meta.loc-meta { color: #6FD3DC; }
 html[data-theme="dark"] .db-ring span, html[data-theme="dark"] .db-n, html[data-theme="dark"] .prof-level { color: #C3C9FF; }
+
+/* Profile: "Finish setting up Linger" as one short strip at the very top */
+.setup-strip { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 12px; border: 1px solid var(--indigo-100); border-radius: 14px; background: var(--indigo-50); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+.setup-ic { flex: none; font-size: 18px; }
+.setup-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.setup-txt strong { font-size: calc(15px * var(--ts, 1)); font-weight: 800; color: var(--indigo-900); }
+.setup-txt span { font-size: calc(13px * var(--ts, 1)); color: var(--muted); }
+.setup-go { flex: none; font-size: calc(14px * var(--ts, 1)); font-weight: 800; color: var(--indigo-600); }
+html[data-theme="dark"] .setup-strip { background: #22263A; border-color: #2E3346; }
+html[data-theme="dark"] .setup-txt strong { color: #C3C9FF; }
+html[data-theme="dark"] .setup-go { color: #C3C9FF; }
+
+/* ---------- Unhappy paths ---------- */
+/* Camera blocked / busy / missing, and "couldn't read it" with the reason */
+.lh-blocked { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; text-align: center; color: var(--ink-2); overflow-y: auto; }
+.lh-blocked strong { font-size: calc(18px * var(--ts, 1)); color: var(--ink); }
+.lh-blocked p { margin: 0; font-size: calc(14px * var(--ts, 1)); line-height: 1.45; }
+.lh-blocked .small { color: var(--muted); }
+.lh-alt { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+.lh-thumb { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }
+.lh-cancel-page { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 3; padding: 6px 12px; border-radius: 99px; background: rgba(255, 255, 255, 0.92); }
+/* Last scan / didn't finish */
+.lh-resume { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--indigo-50); }
+.lh-resume > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lh-resume strong { font-size: calc(14px * var(--ts, 1)); color: var(--indigo-900); }
+.lh-x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 14px; cursor: pointer; }
+/* Result notices */
+.lh-notice, .lh-warn { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; font-size: calc(13px * var(--ts, 1)); line-height: 1.4; }
+.lh-notice { background: #FFF6E0; color: #5B4A1F; }
+.lh-warn { background: #FFE7DF; color: #A81F64; font-weight: 600; }
+.lh-acts, .lh-warn { align-items: flex-start; }
+.lh-acts { display: flex; flex-wrap: wrap; gap: 14px; }
+.lh-more { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.lh-forget { color: var(--muted) !important; font-weight: 600 !important; }
+/* "This looks important" */
+.imp-card { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; padding: 12px 14px; border: 1px solid #F2C9A8; border-radius: 14px; background: #FFF6EE; color: var(--ink-2); font-size: calc(14px * var(--ts, 1)); line-height: 1.45; }
+.imp-h { display: flex; align-items: center; gap: 8px; }
+.imp-h strong { color: #8A3B00; font-size: calc(16px * var(--ts, 1)); }
+.imp-help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: calc(13px * var(--ts, 1)); }
+.imp-help a { color: var(--indigo-600); font-weight: 700; }
+/* Privacy note before the first scan */
+.pv-points li { align-items: flex-start; }
+.pv-keep { display: flex; gap: 10px; align-items: flex-start; font-size: calc(14px * var(--ts, 1)); color: var(--ink-2); }
+.pv-keep input { width: 20px; height: 20px; flex: none; accent-color: var(--indigo-600); margin: 1px 0 0; }
+/* AI consent, nudge, rating, slow state */
+.ai-ask { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--indigo-50); color: var(--ink-2); font-size: calc(13px * var(--ts, 1)); line-height: 1.45; }
+.ai-ask strong { color: var(--indigo-900); font-size: calc(14px * var(--ts, 1)); }
+.ai-rate { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: calc(13px * var(--ts, 1)); color: var(--muted); }
+.ai-rate button:not(.link-btn) { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); font-size: 16px; cursor: pointer; }
+.ai-rate .link-btn { margin-left: auto; font-size: calc(13px * var(--ts, 1)); }
+.wc-fix { align-self: flex-start; margin-top: 6px; font-size: calc(13px * var(--ts, 1)); }
+.wc-fix-row { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+/* Toasts with Undo / Open */
+.toast.with-act { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
+.toast.with-act button { flex: none; border: 0; background: transparent; color: #FFFFFF; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; padding: 4px 2px; }
+/* Offline */
+.offline-bar { position: absolute; left: 16px; right: 16px; bottom: calc(108px + env(safe-area-inset-bottom, 0px)); z-index: 25; display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 14px; background: #252A39; color: #FFFFFF; font-size: calc(13px * var(--ts, 1)); line-height: 1.4; box-shadow: 0 8px 20px rgba(16, 20, 50, 0.25); }
+.offline-bar span { flex: 1; }
+.offline-bar button { flex: none; width: 32px; height: 32px; margin: -6px -6px -6px 0; border: 0; border-radius: 50%; background: transparent; color: #FFFFFF; cursor: pointer; }
+/* Old iPhone app: must update */
+.shell-block { position: absolute; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 32px; text-align: center; background: linear-gradient(163.52deg, #1F2DA8 1.41%, #4757CC 105.55%); color: #FFFFFF; }
+.shell-block strong { font-size: calc(24px * var(--ts, 1)); }
+/* Sync status on Words */
+.sync-line { display: flex; align-items: center; gap: 8px; margin: 0; font-size: calc(13px * var(--ts, 1)); font-weight: 600; color: var(--muted); }
+.sync-line .dot { width: 8px; height: 8px; border-radius: 50%; background: #868B99; }
+.sync-line.ok .dot { background: #1F8A57; } .sync-line.ok { color: #115940; }
+.sync-line.wait .dot { background: #B86E00; }
+.sync-line.bad .dot { background: #A81F64; } .sync-line.bad { color: #A81F64; }
+/* Empty states with a next step */
+.empty { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.empty strong { color: var(--ink); font-size: calc(16px * var(--ts, 1)); }
+.rv-tricky { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.city-none { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px; background: var(--indigo-50); }
+/* Confirm your email */
+.verify-box { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: #FFF6E0; color: #5B4A1F; font-size: calc(13px * var(--ts, 1)); line-height: 1.4; }
+.verify-box strong { color: #5B4A1F; }
+html[data-theme="dark"] .lh-resume, html[data-theme="dark"] .ai-ask, html[data-theme="dark"] .city-none { background: #22263A; }
+html[data-theme="dark"] .imp-card { background: #2A2118; border-color: #5A3A1E; color: var(--ink-2); }
+html[data-theme="dark"] .imp-h strong { color: #FFB37A; }
+html[data-theme="dark"] .lh-notice, html[data-theme="dark"] .verify-box { background: #2A2618; color: #F1DFAE; }
+html[data-theme="dark"] .verify-box strong { color: #F1DFAE; }
