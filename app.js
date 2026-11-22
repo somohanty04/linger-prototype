@@ -151,6 +151,8 @@
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   // Line icons for list cards (instead of emojis), in the design system's blue.
   const ICO = {
+    flame: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c4 0 7-2.7 7-6.8 0-3.2-2-5.6-4-7.7.2 2.2-.8 3.6-2 4C13 8 11.6 4.6 9 2c.3 3.5-4 6.5-4 12.2C5 18.6 8 22 12 22z"/></svg>',
+    check: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
     chart: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>',
     user: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
     laptop: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></svg>',
@@ -238,6 +240,36 @@
     ], { duration: 620, easing: 'cubic-bezier(.45,.05,.35,1)' });
     return Promise.race([anim.finished.catch(() => {}), new Promise((r) => setTimeout(r, 900))]).then(() => el.remove());
   }
+  // A wrong answer or a form problem: a short side-to-side shake.
+  function shake(el) { if (!el || calm()) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); el.addEventListener('animationend', () => el.classList.remove('shake'), { once: true }); }
+  // Numbers that count up from 0 the first time a page shows them.
+  function runCounts() {
+    const els = [...document.querySelectorAll('.count:not(.counted)')];
+    els.forEach((el) => {
+      el.classList.add('counted');
+      const n = Number(el.dataset.n) || 0;
+      if (calm() || !n) { el.textContent = n; return; }
+      const t0 = performance.now(), dur = Math.min(900, 350 + n * 40);
+      const step = (t) => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(n * e); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+  }
+  // Tap feedback: a soft ripple spreads from where the finger lands on buttons, cards and menu rows. It's drawn in its
+  // own layer over the element (clipped to its shape), so it keeps playing when the tap redraws the screen.
+  document.addEventListener('pointerdown', (ev) => {
+    if (calm() || ev.button > 0) return;
+    const el = ev.target.closest('.btn, .menu-row, .rv-act, .act, .item, .city-row, .loc-item, .lh-seg, .setup-strip');
+    if (!el || el.disabled) return;
+    const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+    const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    const box = document.createElement('span'); box.className = 'ripple-box'; box.setAttribute('aria-hidden', 'true');
+    box.style.cssText = `left:${r.left / z}px;top:${r.top / z}px;width:${r.width / z}px;height:${r.height / z}px;border-radius:${cs.borderRadius}`;
+    const size = Math.max(r.width, r.height) * 2.4 / z, dot = document.createElement('span'); dot.className = 'ripple';
+    dot.style.cssText = `width:${size}px;height:${size}px;left:${(ev.clientX - r.left) / z - size / 2}px;top:${(ev.clientY - r.top) / z - size / 2}px`;
+    if (el.matches('.btn.primary, .lh-seg.on')) dot.classList.add('light');
+    box.appendChild(dot); document.body.appendChild(box);
+    dot.addEventListener('animationend', () => box.remove(), { once: true });
+  }, { passive: true });
   function bump(el) { if (!el || calm()) return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); el.addEventListener('animationend', () => el.classList.remove('bump'), { once: true }); }
   function toggleSave(k) {
     const i = S.saved.indexOf(k);
@@ -251,7 +283,8 @@
   function persist() {
     const custom = {};
     S.saved.forEach((k) => { const e = D[k]; if (e && (e.scanned || e.imported || e.city)) { const { pending, ...rest } = e; custom[k] = rest; } });
-    try { localStorage.setItem(STORE, JSON.stringify({ saved: S.saved, savedDates: S.savedDates, custom })); } catch {}
+    try { localStorage.setItem(STORE, JSON.stringify({ saved: S.saved, savedDates: S.savedDates, custom })); }
+    catch { if (!persist.warned) { persist.warned = true; setTimeout(() => { showToast(signedInAs() ? 'This phone is out of space, but your words are safe in your account.' : 'Linger can’t save on this phone (private browsing or out of space). Sign in to keep your words.'); render(); }, 0); } }
     if (window.LingerAccount) LingerAccount.localChanged(); // signed in: account.js syncs the change
   }
   (function restore() {
@@ -881,62 +914,89 @@
     while (days.has(dayKey(d))) { streak++; d.setDate(d.getDate() - 1); }
     return { total: words.length, known, almost, learning: words.length - known - almost, right, wrong, days, streak, looked: all.filter((e) => e.n).length };
   }
-  const PROF_SECS = { progress: 'Your progress', account: 'Account', laptop: 'Laptop & extension', setup: 'Reading setup' };
-  function viewProfile() {
-    const email = signedInAs(), st = stats(), lvl = LEVELS.find((l) => l[0] === S.prefs.level) || null;
-    const sec = PROF_SECS[S.profSec] ? S.profSec : null;
-    const head = `<header class="set-head prof-head">${sec ? '<button type="button" class="set-back" data-action="prof-sec" data-v="" aria-label="Back to Profile">‹</button>' : '<button type="button" class="set-back" data-action="profile-back" aria-label="Back">‹</button>'}<h1>${sec ? PROF_SECS[sec] : 'Profile'}</h1></header>`;
-    const row = (k, v) => `<div class="acct-row"><span>${k}</span><span>${esc(v)}</span></div>`;
-    if (!sec) {
-      const setupDone = S.prefs.done && S.prefs.level;
-      // Signed out: a Sign in button beside the picture, and the sign-in form opens right under it.
-      const acct = acctState(), canSignIn = !!(window.LingerAccount && LingerAccount.available() && acct && acct.auth === 'out');
-      const rows = [
-        ['progress', ICO.chart, 'Your progress', st.total ? `${st.total} saved · ${st.known} known${st.streak ? ` · ${st.streak}-day streak` : ''}` : 'Save words to see your progress'],
-        ['account', ICO.user, 'Account', email ? esc(email) : 'Not signed in · sign in to keep your words'],
-        ['laptop', ICO.laptop, 'Laptop & extension', email ? 'Syncs with your account' : S.sync.status === 'on' ? 'Connected with a code' : 'Use Linger on your computer too'],
-        ['setup', ICO.book, 'Reading setup', setupDone ? esc([lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : '', S.langs.length ? langsLabel() : 'Simple English'].filter(Boolean).join(' · ')) : 'Not finished · 3 quick questions', setupDone ? '' : 'data-dot="1"']
-      ];
-      return `${head}<div class="body set-body prof-body">
-        ${!setupDone ? '<button type="button" class="setup-strip" data-action="onb-first"><span class="setup-ic" aria-hidden="true">' + ICO.spark + '</span><span class="setup-txt"><strong>Finish setting up Linger</strong><span>3 quick questions</span></span><span class="setup-go">Set up ›</span></button>' : ''}
-        <div class="prof-top">
-          <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
-          <div class="prof-who"><div class="prof-name">${email ? esc(email.split('@')[0]) : 'Guest User'}</div>${email ? `<div class="small">${esc(email)}</div>` : canSignIn ? '<div class="small prof-cta">Sign in to back up your words and see them on your laptop too.</div>' : ''}
-            ${lvl && lvl[0] !== 'unsure' ? `<span class="prof-level">${esc(LEVEL_NAME[lvl[0]])}</span>` : ''}</div>
-          ${!email && canSignIn && !acct.formOpen ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
-        </div>
-        ${!email && acct && acct.formOpen ? LingerAccount.card({ inSheet: true }) : ''}
-        ${menuList(rows, 'prof-sec')}
-        ${menuList([['', gear, 'Settings', 'Reading, display, accessibility'], ['privacy', ICO.lock, 'Privacy', 'What Linger keeps and how to delete it']], 'set-sec')}
-      </div>`;
-    }
-    let body = '';
-    if (sec === 'progress') {
-      const [nextId, target] = NEXT[S.prefs.level] || NEXT.intermediate, next = LEVELS.find((l) => l[0] === nextId);
-      const pts = st.known + st.almost * 0.5, pct = Math.min(100, Math.round(pts / target * 100));
-      const today = startOfDay(new Date()), counts = savedOn();
-      const week = Array.from({ length: 7 }, (_, i) => { const x = new Date(today); x.setDate(today.getDate() - 6 + i); return { d: x, n: counts[dayKey(x)] || 0, on: st.days.has(dayKey(x)) }; });
-      const peak = Math.max(1, ...week.map((w) => w.n));
-      const acc = st.right + st.wrong ? Math.round(st.right / (st.right + st.wrong) * 100) : 0;
-      const tile = (n, l, cls = '') => `<div class="db-tile ${cls}"><strong>${n}</strong><span>${l}</span></div>`;
-      const bests = [['match', 'Match up', '★'], ['bubbles', 'Bubble catch', ' pts'], ['scramble', 'Unscramble', '★'], ['say', 'Say it', '★'], ['city.' + S.city, city().name + ' quiz', '★']].map(([g, n, u]) => [n, best(g), u]).filter((x) => x[1]);
-      body = `<div class="card db-level">
+  // Settings and Profile pages: the same Linger header as the tabs (gradient, turning rings, logo), with a back arrow.
+  const pageHero = (title, back, backLabel) => `<header class="hero wh lh2 set-hero">
+      <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
+      ${logo}
+      <div class="wh-title"><div class="wh-row set-title"><button type="button" class="set-back" ${back} aria-label="${backLabel}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><h1>${title}</h1></div></div>
+    </header>`;
+  // Your name (shown on Profile). Kept on this device, and in your account when you're signed in.
+  const NAME_KEY = 'linger.name';
+  S.name = (() => { try { return localStorage.getItem(NAME_KEY) || ''; } catch { return ''; } })();
+  S.nameFromAcct = (() => { try { return localStorage.getItem(NAME_KEY + '.acct') === '1'; } catch { return false; } })();
+  const displayName = () => S.name || (signedInAs() ? signedInAs().split('@')[0] : 'Guest User');
+  // A number that counts up when the page opens (only the first time it's shown, and never with Reduce motion).
+  const countUp = (n) => `<span class="count" data-n="${n}">${calm() ? n : 0}</span>`;
+  const PROF_SECS = { account: 'Account', laptop: 'Laptop & extension', setup: 'Reading setup' };
+  function progressBlock(st) {
+    const [nextId, target] = NEXT[S.prefs.level] || NEXT.intermediate, next = LEVELS.find((l) => l[0] === nextId);
+    const pts = st.known + st.almost * 0.5, pct = Math.min(100, Math.round(pts / target * 100));
+    const today = startOfDay(new Date()), counts = savedOn();
+    const week = Array.from({ length: 7 }, (_, i) => { const x = new Date(today); x.setDate(today.getDate() - 6 + i); return { d: x, n: counts[dayKey(x)] || 0, on: st.days.has(dayKey(x)) }; });
+    const peak = Math.max(1, ...week.map((w) => w.n));
+    const acc = st.right + st.wrong ? Math.round(st.right / (st.right + st.wrong) * 100) : 0;
+    const tile = (n, l, cls = '') => `<div class="db-tile ${cls}"><strong>${countUp(n)}</strong><span>${l}</span></div>`;
+    const bests = [['match', 'Match up', '★'], ['bubbles', 'Bubble catch', ' pts'], ['scramble', 'Unscramble', '★'], ['say', 'Say it', '★'], ['city.' + S.city, city().name + ' quiz', '★']].map(([g, n, u]) => [n, best(g), u]).filter((x) => x[1]);
+    return `<div class="card db-level">
         <div class="db-lh"><div><span class="label">${next ? `Next: ${esc(LEVEL_NAME[next[0]])}` : 'Top level'}</span><strong>${esc(LEVEL_NAME[S.prefs.level] || LEVEL_NAME.intermediate)}</strong></div>
-          <div class="db-ring" style="--p:${pct}" role="img" aria-label="${pct}% of the way"><span>${pct}%</span></div></div>
+          <div class="db-ring" style="--p:${pct}" role="img" aria-label="${pct}% of the way"><span>${countUp(pct)}%</span></div></div>
         <div class="db-bar" aria-hidden="true"><span style="width:${pct}%"></span></div>
-        <div class="small">${next ? `Know ${target} of your saved words to move up. You know ${st.known}${st.almost ? `, and ${st.almost} more ${st.almost === 1 ? 'is' : 'are'} almost there` : ''}.` : `You know ${st.known} of your saved words. Keep it up!`}</div>
+        <div class="small">${!st.total ? 'Save words from Lens or Local, then practice them in Review. Your progress shows up here.' : next ? `Know ${target} of your saved words to move up. You know ${st.known}${st.almost ? `, and ${st.almost} more ${st.almost === 1 ? 'is' : 'are'} almost there` : ''}.` : `You know ${st.known} of your saved words. Keep it up!`}</div>
         ${pct >= 100 && next ? '<button type="button" class="btn primary small-btn" data-action="level-check">Ready to move up? Change your level</button>' : ''}
       </div>
       <div class="db-tiles">${tile(st.total, 'saved')}${tile(st.known, 'known', 'k')}${tile(st.almost, 'almost', 'a')}${tile(st.learning, 'learning', 'l')}</div>
       <div class="db-split" aria-hidden="true">${st.total ? `<span class="k" style="flex:${st.known}"></span><span class="a" style="flex:${st.almost}"></span><span class="l" style="flex:${st.learning}"></span>` : '<span class="e"></span>'}</div>
       <div class="card db-week">
-        <div class="db-wh"><strong>${st.streak}-day streak</strong><span class="small">Words saved, last 7 days</span></div>
-        <div class="db-bars">${week.map((w) => `<div class="db-col${w.on ? ' on' : ''}"><span class="db-n">${w.n || ''}</span><span class="db-b" style="height:${Math.round(w.n / peak * 100)}%"></span><span class="db-d">${'SMTWTFS'[w.d.getDay()]}</span></div>`).join('')}</div>
+        <div class="db-wh"><strong><span class="streak-ic${st.streak ? ' lit' : ''}" aria-hidden="true">${ICO.flame}</span>${st.streak}-day streak</strong><span class="small">Words saved, last 7 days</span></div>
+        <div class="db-bars">${week.map((w, i) => `<div class="db-col${w.on ? ' on' : ''}" style="--i:${i}"><span class="db-n">${w.n || ''}</span><span class="db-b" style="height:${Math.round(w.n / peak * 100)}%"></span><span class="db-d">${'SMTWTFS'[w.d.getDay()]}</span></div>`).join('')}</div>
         <div class="small">${st.right + st.wrong ? `Practice: ${st.right} right, ${st.wrong} to try again (${acc}%). ` : ''}Days with a dot under them are days you used Linger.</div>
       </div>
       ${bests.length ? `<div class="card db-best"><strong>Best scores</strong>${bests.map(([n, v, u]) => `<div class="acct-row"><span>${esc(n)}</span><span>${v}${u}</span></div>`).join('')}</div>` : ''}`;
-    } else if (sec === 'account') {
-      body = window.LingerAccount ? LingerAccount.card({ inSheet: true }) : '<p class="small">Accounts aren’t available right now.</p>';
+  }
+  function viewProfile() {
+    const email = signedInAs(), st = stats(), lvl = LEVELS.find((l) => l[0] === S.prefs.level) || null;
+    const sec = PROF_SECS[S.profSec] ? S.profSec : null;
+    const head = sec ? pageHero(PROF_SECS[sec], 'data-action="prof-sec" data-v=""', 'Back to Profile') : pageHero('Profile', 'data-action="profile-back"', 'Back');
+    const row = (k, v) => `<div class="acct-row"><span>${k}</span><span>${esc(v)}</span></div>`;
+    const acct = acctState();
+    if (!sec) {
+      const setupDone = S.prefs.done && S.prefs.level;
+      // Signed out: a Sign in button beside the picture, and the sign-in form opens right under it.
+      const canSignIn = !!(window.LingerAccount && LingerAccount.available() && acct && acct.auth === 'out');
+      const learn = [
+        ['setup', ICO.book, 'Reading setup', setupDone ? esc([lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : '', readsLabel()].filter(Boolean).join(' · ')) : 'Not finished · 3 quick questions', setupDone ? '' : 'data-dot="1"']
+      ];
+      const devices = [
+        ['account', ICO.user, 'Account', email ? esc(email) : acct && acct.auth === 'loading' ? 'Checking…' : 'Not signed in · sign in to keep your words'],
+        ['laptop', ICO.laptop, 'Laptop & extension', email ? 'Syncs with your account' : S.sync.status === 'on' ? 'Connected with a code' : 'Use Linger on your computer too']
+      ];
+      return `${head}<div class="body set-body prof-body">
+        ${!setupDone ? '<button type="button" class="setup-strip" data-action="onb-first"><span class="setup-ic" aria-hidden="true">' + ICO.spark + '</span><span class="setup-txt"><strong>Finish setting up Linger</strong><span>3 quick questions</span></span><span class="setup-go">Set up ›</span></button>' : ''}
+        <div class="prof-top">
+          <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
+          <div class="prof-who"><div class="prof-name">${esc(displayName())}</div>${email ? `<div class="small">${esc(email)}</div>` : canSignIn ? '<div class="small prof-cta">Sign in to back up your words and see them on your laptop too.</div>' : ''}
+            ${lvl && lvl[0] !== 'unsure' ? `<span class="prof-level">${esc(LEVEL_NAME[lvl[0]])}</span>` : ''}</div>
+          ${!email && canSignIn && !acct.formOpen ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
+        </div>
+        ${!email && acct && acct.formOpen ? LingerAccount.card({ inSheet: true }) : ''}
+        <p class="set-label">Your progress</p>
+        ${progressBlock(st)}
+        <p class="set-label">Learning</p>
+        ${menuList([...learn, ['', ICO.globe, 'My languages', esc(S.langs.length ? langsLabel() + ' + English' : 'Simple English'), 'data-action="lang-open"'], ['', ICO.check, 'English check', S.prefs.test ? `Last result: about ${esc(S.prefs.test.cefr || '')}` : 'A 2-minute check to find your level', 'data-action="level-test"']], 'prof-sec')}
+        <p class="set-label">Account and devices</p>
+        ${menuList(devices, 'prof-sec')}
+        <p class="set-label">App</p>
+        ${menuList([['', gear, 'Settings', 'Reading, display, accessibility'], ['privacy', ICO.lock, 'Privacy', 'What Linger keeps and how to delete it']], 'set-sec')}
+      </div>`;
+    }
+    let body = '';
+    if (sec === 'account') {
+      const nameCard = `<form class="card name-card" id="nameForm" novalidate><label class="name-l" for="nameIn"><strong>Your name</strong><span class="small">Shown on your profile. ${email ? 'You sign in with your email, not your name.' : 'Kept on this phone.'}</span></label>
+        <div class="name-row"><input id="nameIn" type="text" maxlength="40" autocomplete="name" placeholder="${esc(email ? email.split('@')[0] : 'Your name')}" value="${esc(S.name)}" aria-describedby="nameMsg"><button type="submit" class="btn primary small-btn" ${S.nameBusy ? 'disabled' : ''}>${S.nameBusy ? 'Saving…' : 'Save'}</button></div>
+        <div class="small name-msg${S.nameMsg && S.nameMsg.bad ? ' bad' : ''}" id="nameMsg" role="status">${S.nameMsg ? (S.nameMsg.bad ? '' : '<span class="ok-tick" aria-hidden="true">' + ICO.check + '</span>') + esc(S.nameMsg.t) : ''}</div></form>`;
+      if (!window.LingerAccount || !LingerAccount.available()) body = nameCard + '<div class="card warn-card"><strong>Accounts aren’t available right now</strong><span class="small">Your words are still saved on this phone. Check your connection, then reopen Linger.</span></div>';
+      else if (acct && acct.auth === 'loading') body = nameCard + LingerAccount.card({ inSheet: true });
+      else body = nameCard + (email ? LingerAccount.security() : '') + LingerAccount.card({ inSheet: true });
     } else if (sec === 'laptop') {
       body = `<div class="card prof-ext"><strong>${email ? 'Syncs with your account' : 'Sign in to sync'}</strong>
         <span class="small">${email ? 'Sign in to the Linger Chrome extension with this same account, and words you save there show up here by themselves. No code needed.' : 'Sign in here and in the Linger Chrome extension with the same account, and your words sync by themselves.'}</span>
@@ -1220,14 +1280,13 @@
   // A list of sections (iOS-style): each row opens its own page, so there's never a wall of switches at once.
   // rows: [section id, icon, title, one-line summary]; act: the data-action each row uses.
   const menuList = (rows, act) => `<nav class="menu card" aria-label="Sections">${rows.map(([id, ic, t, sub, attrs]) =>
-    `<button type="button" class="menu-row" data-action="${act}" data-v="${id}" ${attrs || ''}><span class="menu-ic" aria-hidden="true">${ic}</span><span class="menu-txt"><strong>${t}</strong><span class="small">${sub}</span></span><span class="go" aria-hidden="true">›</span></button>`).join('')}</nav>`;
+    `<button type="button" class="menu-row" ${/data-action=/.test(attrs || '') ? '' : `data-action="${act}" data-v="${id}"`} ${attrs || ''}><span class="menu-ic" aria-hidden="true">${ic}</span><span class="menu-txt"><strong>${t}</strong><span class="small">${sub}</span></span><span class="go" aria-hidden="true">›</span></button>`).join('')}</nav>`;
   const SET_SECS = { reading: 'Reading', display: 'Display', access: 'Accessibility', privacy: 'Privacy', beta: 'Beta' };
   // Settings (the gear on Lens, or from Profile): a menu of sections, then one section at a time.
   function viewSettings() {
     const sec = SET_SECS[S.setSec] ? S.setSec : null;
-    const back = sec ? `<button type="button" class="set-back" data-action="set-sec" data-v="" aria-label="Back to Settings">‹</button>`
-      : `<button type="button" class="set-back" data-action="set-close" aria-label="Back to ${S.setFrom === 'profile' ? 'Profile' : 'Lens'}">‹</button>`;
-    const head = `<header class="set-head">${back}<h1>${sec ? SET_SECS[sec] : 'Settings'}</h1></header>`;
+    const head = sec ? pageHero(SET_SECS[sec], 'data-action="set-sec" data-v=""', 'Back to Settings')
+      : pageHero('Settings', 'data-action="set-close"', `Back to ${S.setFrom === 'profile' ? 'Profile' : 'Lens'}`);
     if (!sec) {
       const theme = { system: 'Match phone', light: 'Light', dark: 'Dark' }[A11Y.theme] || 'Match phone';
       const size = { 0.9: 'Small', 1: 'Default', 1.15: 'Large', 1.3: 'Largest' }[A11Y.text] || 'Default';
@@ -1629,6 +1688,11 @@
     const deck = [...(c.order || practiceOrder()), ...(c.again || [])]; // flagged or missed words come back once at the end
     const deco = rings([['ring', 'width:240px;height:240px;left:-110px;top:-70px'], ['dot', 'width:76px;height:76px;left:-10px;top:0'], ['ring', 'width:240px;height:240px;right:-90px;bottom:-60px'], ['dot', 'width:90px;height:90px;right:-4px;bottom:20px']]);
     const top = `<div class="topbar"><button type="button" class="x" data-action="quit" aria-label="Close flashcards">${xIcon}</button><span class="t">Flashcards</span><span class="n">${Math.min(c.idx + 1, deck.length)} of ${deck.length}</span></div>`;
+    if (!deck.length) {
+      return `<div class="full-view cards-view">${deco}<div class="topbar"><button type="button" class="x" data-action="quit" aria-label="Close flashcards">${xIcon}</button><span class="t">Flashcards</span><span class="n"></span></div>
+        <div class="flash" style="justify-content: center; align-items: center; text-align: center"><div class="big empty-float" style="margin: 0">No cards yet</div><div class="small">Flashcards are made from the words you save. Save a few from Lens or Local, then come back. Or warm up with a game that uses Linger’s own words.</div></div>
+        <div class="actions"><button type="button" class="btn white" data-action="play" data-v="match">Play Match up</button><button type="button" class="btn primary" data-action="cards-empty-lens">Find words on Lens</button></div></div>`;
+    }
     if (c.idx >= deck.length) {
       return `<div class="full-view cards-view">${deco}${top}
         <div class="flash" style="justify-content: center; align-items: center; text-align: center"><div class="big" style="margin: 0">${(c.rest || []).length ? 'Round done!' : 'All caught up'}</div><div class="small">You reviewed ${(c.done || 0) + deck.length} ${(c.done || 0) + deck.length === 1 ? 'word' : 'words'}.${(c.rest || []).length ? ` ${c.rest.length} more ${c.rest.length === 1 ? 'is' : 'are'} waiting, whenever you’re ready.` : ' Try Fill in the story next.'}</div></div>
@@ -2394,11 +2458,13 @@
     screenEl.classList.toggle('on-lens', S.tab === 'lens');
     const camEl = document.getElementById('cam');
     if (camEl && camStream && camEl.srcObject !== camStream) { camEl.srcObject = camStream; camEl.play().catch(() => {}); }
-    document.querySelectorAll('.tabbar button').forEach((b) => {
-      if (b.dataset.tab === S.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    document.querySelectorAll('.tabbar button').forEach((b, i) => {
+      if (b.dataset.tab === S.tab) { b.setAttribute('aria-current', 'page'); b.parentNode.style.setProperty('--tab', i); } else b.removeAttribute('aria-current');
     });
+    const bar = document.querySelector('.tabbar'); if (bar) bar.classList.toggle('no-tab', !['lens', 'words', 'local', 'review'].includes(S.tab));
     if (focusQ) { const q = document.getElementById('q'); if (q) { q.focus(); q.setSelectionRange(caret, caret); } }
     sheetSetup();
+    runCounts();
   }
 
   // ---------- pull-up sheet ----------
@@ -2458,7 +2524,7 @@
   }
   // Words, Local and Review: scrolling the drawer down tucks the header away (the drawer stops at the top of the
   // screen), scrolling back up brings the header back. Pages too short to scroll keep their header.
-  const AUTO_TABS = new Set(['words', 'local', 'review']);
+  const AUTO_TABS = new Set(['words', 'local', 'review', 'settings', 'profile']);
   let sLast = 0, sAcc = 0, sLock = 0;
   scroll.addEventListener('scroll', () => {
     const st = scroll.scrollTop, dy = st - sLast; sLast = st;
@@ -2544,7 +2610,7 @@
     dismiss: () => { track(S.pending, 'dismiss'); S.pending = null; },
     'acct-open': () => { S.coach = false; S.sheet = null; S.phrase = null; S.pending = null; S.profSec = null; if (S.tab !== 'profile') { S.prevTab = S.tab === 'settings' ? 'lens' : S.tab; S.tab = 'profile'; } },
     'profile-back': () => { S.tab = S.prevTab || 'lens'; S.profSec = null; },
-    'prof-sec': (d) => { if (S.tab !== 'profile') { S.prevTab = S.tab === 'settings' ? S.setFrom || 'lens' : S.tab; S.tab = 'profile'; } S.profSec = d.v || null; S.pvClear = false; scroll.scrollTop = 0; },
+    'prof-sec': (d) => { if (S.tab !== 'profile') { S.prevTab = S.tab === 'settings' ? S.setFrom || 'lens' : S.tab; S.tab = 'profile'; } S.profSec = d.v || null; S.pvClear = false; S.nameMsg = null; scroll.scrollTop = 0; },
     'set-sec': (d) => { if (S.tab !== 'settings') { stopSpeaking(); closeCamera(); S.setFrom = S.tab; S.tab = 'settings'; S.pending = null; S.sheet = null; S.explain = false; } S.setSec = d.v || null; S.pvClear = false; scroll.scrollTop = 0; },
     'set-close': () => { S.tab = S.setFrom === 'profile' ? 'profile' : 'lens'; S.setFrom = null; S.setSec = null; },
     'pv-clear': (d) => {
@@ -2719,6 +2785,7 @@
     capture: () => { capture(); },
     quit: () => { stopBubbles(); stopListening(); S.activity = null; S.game = null; S.match = null; S.bubbles = null; S.scramble = null; S.say = null; S.cq = null; },
     'card-reveal': () => revealCard(),
+    'cards-empty-lens': () => { S.activity = null; S.tab = 'lens'; },
     'card-next': (d) => {
       const c = S.cards, deck = [...(c.order || practiceOrder()), ...(c.again || [])], k = deck[c.idx];
       if (k && d.v) track(k, 'review', d.v === 'knew'); // their answer feeds the learning model
@@ -2774,11 +2841,30 @@
     if (b.classList.contains('switch')) justSwitched = b.dataset.action;
     if (actions[b.dataset.action](b.dataset, b) !== false) render(); // false: the action animates first, then redraws itself
   });
+  // Profile → Account → Your name.
+  document.addEventListener('submit', async (ev) => {
+    if (ev.target.id !== 'nameForm') return;
+    ev.preventDefault();
+    const el = document.getElementById('nameIn'), v = (el ? el.value : '').replace(/\s+/g, ' ').trim();
+    if (v.length > 40) { S.nameMsg = { bad: true, t: 'Use 40 letters or fewer.' }; shake(ev.target); render(); return; }
+    if (/[<>{}]/.test(v)) { S.nameMsg = { bad: true, t: 'Use letters, numbers and spaces only.' }; shake(ev.target); render(); return; }
+    if (v === S.name) { S.nameMsg = { bad: false, t: v ? 'That’s already your name.' : 'No name set. Your email name is shown.' }; render(); return; }
+    S.name = v; try { if (v) localStorage.setItem(NAME_KEY, v); else localStorage.removeItem(NAME_KEY); } catch {}
+    if (!signedInAs()) { S.nameMsg = { bad: false, t: v ? 'Saved on this phone.' : 'Name removed.' }; render(); return; }
+    S.nameBusy = true; render();
+    const ok = navigator.onLine && await LingerAccount.saveProfile({ name: v });
+    S.nameBusy = false;
+    S.nameMsg = ok ? { bad: false, t: v ? 'Saved to your account.' : 'Name removed.' } : { bad: true, t: 'Saved on this phone. It will go to your account when you’re back online.' };
+    if (!ok) S.namePending = true;
+    render();
+  });
   document.addEventListener('change', async (ev) => {
     if (ev.target.id === 'acctPhoto') {
       const pf = ev.target.files && ev.target.files[0], email = signedInAs();
       ev.target.value = '';
       if (!pf || !email) return;
+      if (pf.type && !/^image\//.test(pf.type)) { showToast('That file isn’t a picture. Choose a photo instead.'); render(); return; }
+      if (pf.size > 25 * 1024 * 1024) { showToast('That picture is too big. Choose one under 25 MB.'); render(); return; }
       try { S.photo = await squarePhoto(await fileToDataURL(pf)); } catch { showToast('That picture couldn’t be opened. Try another one.'); render(); return; }
       photoCache(email, S.photo); render();
       const ok = await LingerAccount.saveProfile({ photo: S.photo });
@@ -2856,7 +2942,7 @@
   }
   S.offline = !navigator.onLine;
   window.addEventListener('offline', () => { S.offline = true; S.offlineHidden = false; render(); });
-  window.addEventListener('online', () => { S.offline = false; showToast('Back online'); render(); });
+  window.addEventListener('online', () => { S.offline = false; showToast('Back online'); if (S.namePending && signedInAs()) { S.namePending = false; LingerAccount.saveProfile({ name: S.name }); } render(); });
   // The iPhone app is older than the newest shell in TestFlight: say so once a day.
   if (SHELL_BUILD && SHELL_BUILD < LATEST_SHELL) { let t = 0; try { t = Number(localStorage.getItem('linger.shellNag') || 0); } catch {} if (Date.now() - t > 86400000) { try { localStorage.setItem('linger.shellNag', String(Date.now())); } catch {} setTimeout(() => { showToast('A newer Linger app is ready in TestFlight', { label: 'Open', action: 'open-testflight' }); render(); }, 2500); } }
   const params = new URLSearchParams(location.search);
@@ -2881,9 +2967,13 @@
     notify: (m) => { showToast(m); render(); },
     // Signed in: the account's reading setup and profile picture. (null: signed out.)
     profile: (p) => {
-      if (!p) { S.photo = ''; render(); return; }
+      if (!p) { S.photo = ''; if (S.nameFromAcct) { S.name = ''; S.nameFromAcct = false; try { localStorage.removeItem(NAME_KEY); localStorage.removeItem(NAME_KEY + '.acct'); } catch {} } render(); return; } // signed out: the account's name leaves this phone too
       const email = signedInAs();
       if (typeof p.photo === 'string') { S.photo = p.photo; photoCache(email, p.photo); }
+      // Name: the account's wins; if the account has none yet, send this phone's.
+      S.nameFromAcct = true; try { localStorage.setItem(NAME_KEY + '.acct', '1'); } catch {}
+      if (typeof p.name === 'string' && p.name && !S.namePending) { S.name = p.name; try { localStorage.setItem(NAME_KEY, p.name); } catch {} }
+      else if (S.name && (!p.name || S.namePending)) { S.namePending = false; LingerAccount.saveProfile({ name: S.name }); }
       // Learning progress: keep the newest copy of each word, then send back anything this device knows better.
       if (L) { L.merge(p.learn); if (L.newerThan(p.learn)) LingerAccount.saveProfile({ learn: L.all() }); }
       const r = p.prefs && typeof p.prefs === 'object' ? p.prefs : null;
@@ -2918,6 +3008,9 @@
 
   // Shrink the phone frame to fit shorter desktop windows.
   function fit() {
+    // Phones show the app full screen (no frame to shrink). And never refit while typing: the keyboard shrinks the
+    // window, which used to zoom the whole app in and out.
+    if (window.innerWidth <= 520 || (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) return;
     const f = Math.min(1, Math.max(0.55, (window.innerHeight - 48) / 868));
     document.documentElement.style.setProperty('--fit', f.toFixed(3));
   }

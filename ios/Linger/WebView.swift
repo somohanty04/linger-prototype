@@ -42,6 +42,12 @@ final class WebModel: NSObject, ObservableObject {
         webView.backgroundColor = UIColor(named: "LaunchBackground")
         webView.scrollView.contentInsetAdjustmentBehavior = .never // the page handles the notch itself
         webView.scrollView.bounces = false
+        // No pinch or double-tap zoom: the app has its own Text size and Display zoom settings, and a stray zoom
+        // used to leave the whole page magnified.
+        webView.scrollView.minimumZoomScale = 1
+        webView.scrollView.maximumZoomScale = 1
+        webView.scrollView.bouncesZoom = false
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         webView.allowsBackForwardNavigationGestures = false
         #if DEBUG
         webView.isInspectable = true // Safari → Develop menu, for debugging
