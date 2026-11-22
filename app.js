@@ -872,7 +872,8 @@
     const tile = (n, l, cls = '') => `<div class="db-tile ${cls}"><strong>${n}</strong><span>${l}</span></div>`;
     const bests = [['match', 'Match up', '★'], ['bubbles', 'Bubble catch', ' pts'], ['scramble', 'Unscramble', '★'], ['say', 'Say it', '★'], ['city.' + S.city, city().name + ' quiz', '★']].map(([g, n, u]) => [n, best(g), u]).filter((x) => x[1]);
     const row = (k, v) => `<div class="acct-row"><span>${k}</span><span>${esc(v)}</span></div>`;
-    // Signed out: a Sign in button beside the picture; the Account section only shows once the sign-in form is open.
+    // Signed out: a Sign in button beside the picture, and the sign-in form opens right under it. Signed in: the
+    // account card (sync status, Sign out, Delete account) is at the bottom, styled like "Connect with a code".
     const acct = acctState(), canSignIn = !!(window.LingerAccount && LingerAccount.available() && acct && acct.auth === 'out');
     return `<header class="set-head prof-head"><button type="button" class="set-back" data-action="profile-back" aria-label="Back">‹</button><h1>Profile</h1></header>
     <div class="body set-body prof-body">
@@ -883,7 +884,7 @@
           ${lvl && lvl[0] !== 'unsure' ? `<span class="prof-level">${esc(LEVEL_NAME[lvl[0]])}</span>` : ''}</div>
         ${!email && canSignIn && !acct.formOpen ? '<button type="button" class="btn primary small-btn prof-signin" data-acct="open">Sign in</button>' : ''}
       </div>
-      ${email || (acct && acct.formOpen) ? `<p class="rv-label rv-first">Account</p>
+      ${!email && acct && acct.formOpen ? `<p class="rv-label rv-first">Account</p>
       ${LingerAccount.card({ inSheet: true })}` : ''}
 
       <p class="rv-label">Your progress</p>
@@ -918,6 +919,8 @@
           ${row('English level', lvl && lvl[0] !== 'unsure' ? LEVEL_NAME[lvl[0]] : 'Not set yet')}
           <button type="button" class="link-btn acct-test" data-action="level-test">${S.prefs.test ? 'Retake the English check' : 'Not sure? Take the English check'}</button></div>`}
       <button type="button" class="act share-card" data-action="tab" data-tab="settings"><span class="ic">${gear}</span><span><strong>Settings</strong><span class="small">Text size, dark mode, high contrast, color filters, motion</span></span><span class="go">›</span></button>
+      ${email ? `<p class="rv-label">Account</p>
+      ${LingerAccount.card({ inSheet: true })}` : ''}
     </div>`;
   }
 
