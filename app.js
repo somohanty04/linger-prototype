@@ -1235,7 +1235,7 @@
     return `<header class="hero wh">
       <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
       ${logo}${avatarBtn()}
-      <div class="wh-title"><div class="wh-row"><h1>${esc(day)},<br>${esc(date)}</h1><button type="button" class="cal" data-action="cal-open" aria-label="Open the calendar" aria-haspopup="dialog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button></div>
+      <div class="wh-title"><div class="wh-row"><h1>${esc(day)},<br> ${esc(date)}</h1><button type="button" class="cal" data-action="cal-open" aria-label="Open the calendar" aria-haspopup="dialog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button></div>
         <div class="hsub">${S.calDay ? `${onDay ? `${onDay} ${onDay === 1 ? 'word' : 'words'} saved this day` : 'No words saved this day'} · <button type="button" class="hsub-link" data-action="cal-all">Show all</button>` : `${n === 1 ? '1 word saved' : n + ' words saved'}${known ? ` · ${known} known` : ''}`}</div></div>
       ${weekStrip(counts)}
     </header>
@@ -2134,7 +2134,7 @@
   // ---------- pull-up sheet ----------
   // The handle at the top of each white sheet works like a phone's bottom sheet: drag it up and the sheet covers
   // the page (the header shrinks to a thin strip), drag it down to bring the header back. Tapping it toggles.
-  const SHEET_TOP = 40; // header height when the sheet is up (plus the phone's status bar)
+  const SHEET_TOP = 56; // the sticky banner's height when the header is tucked away (plus the phone's status bar)
   let safeTop = null;
   const statusBar = () => {
     if (safeTop === null) { const p = document.createElement('div'); p.style.cssText = 'position:absolute;visibility:hidden;padding-top:env(safe-area-inset-top,0px)'; document.body.appendChild(p); safeTop = p.offsetHeight; p.remove(); }

@@ -548,8 +548,22 @@ a.share-card { text-decoration: none; color: inherit; }
 .hero { transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .hero > :not(.wh-rings):not(.ring):not(.dot) { opacity: var(--fade, 1); transition: opacity 0.2s; }
 .screen.sheet-drag .hero, .screen.sheet-drag .hero > * { transition: none; }
-.screen.sheet-up .hero { height: calc(40px + env(safe-area-inset-top, 0px)); padding-top: 0; padding-bottom: 0; }
+.screen.sheet-up .hero { height: calc(56px + env(safe-area-inset-top, 0px)); padding-top: 0; padding-bottom: 0; }
 .screen.sheet-up .hero > :not(.wh-rings):not(.ring):not(.dot) { opacity: var(--fade, 0); pointer-events: none; }
+/* Tucked away, the header becomes a sticky banner: the page title on the left, the account (and on Lens, Language
+   and Settings) on the right, always at the top while the drawer scrolls under it. */
+.screen.sheet-up .hero { position: sticky; top: 0; z-index: 6; }
+.screen.sheet-up .hero.wh > :is(.wh-title, .av-btn, .lh-topbar):not(.ring):not(.dot) { opacity: 1; pointer-events: auto; }
+.screen.sheet-up .hero.wh .wh-title { top: calc(12px + var(--sa)); right: 72px; padding: 0 0 0 20px; }
+.screen.sheet-up .hero.wh:has(.lh-topbar) .wh-title { right: 250px; }
+.screen.sheet-up .hero.wh .wh-title :is(.hsub, .cal, .lh-gear) { display: none; }
+.screen.sheet-up .hero.wh h1 { width: auto; max-width: 100%; min-width: 0; font-size: calc(22px * var(--ts, 1)); line-height: 32px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.screen.sheet-up .hero.wh .loc-city { max-width: 100%; }
+.screen.sheet-up .hero.wh h1 br { display: none; }
+.screen.sheet-up .hero.wh .loc-city svg { width: 16px; height: 16px; }
+.screen.sheet-up .hero.wh .av-btn, .screen.sheet-up .hero.wh .lh-topbar { top: calc(4px + var(--sa)); }
+/* Settings and Profile: their header stays at the top too */
+.set-head { position: sticky; top: 0; z-index: 6; }
 
 /* ---------- My language ---------- */
 .lh-tools { display: flex; align-items: center; gap: 8px; }
