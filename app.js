@@ -287,6 +287,10 @@
     catch { if (!persist.warned) { persist.warned = true; setTimeout(() => { showToast(signedInAs() ? 'This phone is out of space, but your words are safe in your account.' : 'Linger can’t save on this phone (private browsing or out of space). Sign in to keep your words.'); render(); }, 0); } }
     if (window.LingerAccount) LingerAccount.localChanged(); // signed in: account.js syncs the change
   }
+  // Older versions started everyone with three example words, and some of those copies were sent to a pairing code
+  // or an account. They're recognized by their exact example dates, so a word someone really saved is never touched.
+  const SEED = { arrears: 'Oct 24', jitney: 'Oct 23', nebby: 'Oct 22' };
+  const isSeed = (k, date) => SEED[k] !== undefined && SEED[k] === date;
   (function restore() {
     let data = null;
     try { data = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch {}
@@ -294,9 +298,7 @@
     Object.entries(data.custom || {}).forEach(([k, e]) => { if (!D[k]) D[k] = e; });
     S.saved = data.saved.filter((k) => D[k]);
     S.savedDates = data.savedDates || {};
-    // Older versions started everyone with three example words. Drop them (only if they still have those exact dates).
-    const SEED = { arrears: 'Oct 24', jitney: 'Oct 23', nebby: 'Oct 22' };
-    const seeded = Object.keys(SEED).filter((k) => S.savedDates[k] === SEED[k] && S.saved.includes(k));
+    const seeded = Object.keys(SEED).filter((k) => isSeed(k, S.savedDates[k]) && S.saved.includes(k));
     if (seeded.length) {
       S.saved = S.saved.filter((k) => !seeded.includes(k)); seeded.forEach((k) => delete S.savedDates[k]);
       try { localStorage.setItem(STORE, JSON.stringify({ ...data, saved: S.saved, savedDates: S.savedDates })); } catch {}
@@ -316,6 +318,7 @@
     let n = 0;
     Object.entries(map || {}).forEach(([k, it]) => {
       if (!it || !it.w) return;
+      if (isSeed(k, it.date)) { if (syncConn) syncConn.remove(k); return; } // an old example word: take it off the shared list
       if (!D[k]) D[k] = { word: String(it.w).toLowerCase(), kind: 'hard', meaning: String(it.m || ''), ctx: it.p ? 'In plain English: ' + it.p : 'Saved on your laptop.', sentence: String(it.s || ''), place: String(it.place || 'Laptop · Linger Reader'), imported: true };
       if (!isSaved(k)) { S.saved.unshift(k); S.savedDates[k] = it.date || today(); n++; }
     });
@@ -2954,6 +2957,7 @@
   // Learning progress follows the account (debounced inside learn.js; one small map in the profile).
   if (L && window.LingerAccount) L.onChange(() => { if (signedInAs()) LingerAccount.saveProfile({ learn: L.all() }); });
   if (window.LingerAccount) LingerAccount.attach({
+    skip: (k, it) => isSeed(k, it && it.date), // old example words in the account are deleted, not restored
     words: () => Object.fromEntries(S.saved.filter((k) => D[k]).map((k) => [k, wordData(k)])),
     apply: ({ add = {}, remove = [], quiet = false }) => {
       Object.entries(add).forEach(([k, it]) => {

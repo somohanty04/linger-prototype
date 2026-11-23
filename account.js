@@ -182,6 +182,7 @@
       if (remote[k]) b.remove(uid, k).catch(onErr); else pending.delete(k);
     }
     for (const [k, r] of Object.entries(remote)) {
+      if (adapter.skip && adapter.skip(k, r)) { if (!L[k]) { b.remove(uid, k).catch(onErr); delete remote[k]; } continue; } // e.g. old example words: remove from the account
       if (L[k] || pending.has(k)) continue;
       add[k] = Object.fromEntries(FIELDS.map((f) => [f, String(r[f] || '')]));
     }
