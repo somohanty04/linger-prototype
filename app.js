@@ -592,7 +592,7 @@
   const camErrKind = (e) => { const n = e && e.name; return n === 'NotAllowedError' || n === 'SecurityError' ? 'denied' : n === 'NotFoundError' || n === 'OverconstrainedError' || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? 'nocam' : n === 'NotReadableError' || n === 'AbortError' ? 'busy' : 'other'; };
   // The iPhone app (shell build 2+) can open its own page in Settings, where camera access is turned back on.
   const SHELL_BUILD = BETA && BETA.native ? Number((window.LINGER_SHELL && LINGER_SHELL.build) || 1) : 0;
-  const LATEST_SHELL = 2, REQUIRED_SHELL = 1;
+  const LATEST_SHELL = 3, REQUIRED_SHELL = 1; // build 3: current app icon, no pinch zoom
   // A photo Linger couldn't read: work out the likely reason from the picture itself (light, glare, focus).
   const RETAKE = {
     dark: ['Too dark to read', 'Turn on a light or move closer to a window, then take it again.'],
@@ -1297,7 +1297,7 @@
         ['access', ICO.access, 'Accessibility', on.length ? on.join(', ') : 'Contrast, motion and color filters'],
         ['privacy', ICO.lock, 'Privacy', signedInAs() ? 'Your data, your account and deleting it' : 'What Linger keeps and what it sends']
       ];
-      if (BETA) rows.push(['beta', ICO.flask, 'Beta', 'Send feedback, add to Home Screen']);
+      if (BETA) rows.push(SHELL_BUILD && SHELL_BUILD < LATEST_SHELL ? ['beta', ICO.flask, 'Beta', 'App update ready in TestFlight', 'data-dot="1"'] : ['beta', ICO.flask, 'Beta', 'Send feedback, add to Home Screen']);
       return `${head}<div class="body set-body">${menuList(rows, 'set-sec')}
         <p class="small set-foot">Linger keeps these settings on this ${BETA && BETA.native ? 'iPhone' : 'device'}.</p></div>`;
     }
