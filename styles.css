@@ -1677,3 +1677,63 @@ html[data-motion="reduce"] .tabbar::before { transition: none; }
 .rv-ic { transition: transform 0.2s var(--soft); }
 html[data-motion="reduce"] .empty-float, html[data-motion="reduce"] .btn.primary::after { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .empty-float, .btn.primary::after, .toast { animation: none !important; } }
+
+/* ---------- Local: pictures and emoji so the guide isn't a wall of text ---------- */
+/* Header: the city's emoji as a badge, and a skyline along the bottom */
+.loc-sky { position: absolute; left: 0; right: 0; bottom: 18px; width: 100%; height: 46px; fill: rgba(255, 255, 255, 0.14); pointer-events: none; }
+.loc-badge { right: 76px; top: calc(70px + var(--sa)); width: 56px; height: 56px; display: grid; place-items: center; border-radius: 18px; background: rgba(255, 255, 255, 0.95); box-shadow: 0 8px 20px rgba(4, 50, 56, 0.3); font-size: 32px; line-height: 1; transform: rotate(-6deg); animation: badge-in 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+@keyframes badge-in { from { opacity: 0; transform: rotate(-30deg) scale(0.4); } }
+.screen.sheet-up .loc-hero .loc-badge, .screen.sheet-up .loc-hero .loc-sky { opacity: 0; }
+.loc-h { margin: 0 2px 8px; font-size: calc(17px * var(--ts, 1)); font-weight: 800; color: var(--teal-900); }
+/* Good to know: four tiles */
+.gk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gk-tile { display: flex; flex-direction: column; gap: 3px; padding: 12px; border-radius: 16px; border: 1px solid transparent; transition: transform 0.18s var(--soft); }
+.gk-tile:active { transform: scale(0.97); }
+.gk-ic { width: 38px; height: 38px; margin-bottom: 4px; display: grid; place-items: center; border-radius: 12px; background: #FFFFFF; font-size: 21px; line-height: 1; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); }
+.gk-tile strong { font-size: calc(16px * var(--ts, 1)); color: var(--ink); }
+.gk-tile > span:last-child { font-size: calc(12.5px * var(--ts, 1)); line-height: 1.35; color: var(--ink-2); }
+.gk-tile.red { background: #FFF0F0; border-color: #FBD5D5; } .gk-tile.red strong { color: #A3262C; }
+.gk-tile.blue { background: #EEF2FF; border-color: #D6DEFF; } .gk-tile.blue strong { color: var(--indigo-900); }
+.gk-tile.teal { background: var(--teal-50); border-color: #CDEBEE; } .gk-tile.teal strong { color: var(--teal-900); }
+.gk-tile.gold { background: #FFF8E6; border-color: #F6E2AE; } .gk-tile.gold strong { color: #7A5300; }
+/* Section note: a small emoji in front */
+.loc-note { display: flex; align-items: flex-start; gap: 8px; }
+.loc-note-ic { flex: none; font-size: 18px; line-height: 20px; }
+/* Slang: a colorful letter sticker for each word */
+.loc-sticker { flex: none; align-self: center; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; font-size: calc(17px * var(--ts, 1)); font-weight: 800; color: #FFFFFF; transform: rotate(-5deg); transition: transform 0.25s var(--soft); }
+.loc-slang:hover .loc-sticker, .loc-slang:active .loc-sticker { transform: rotate(4deg) scale(1.08); }
+.loc-sticker.s0 { background: linear-gradient(140deg, #14A3B0, #0A5560); }
+.loc-sticker.s1 { background: linear-gradient(140deg, #F28C38, #D2551F); }
+.loc-sticker.s2 { background: linear-gradient(140deg, #8B7CF6, #5B47D6); }
+.loc-sticker.s3 { background: linear-gradient(140deg, #E5568A, #B32D62); }
+.loc-slang .loc-wl { align-items: center; }
+/* Customs and transit: the tip's emoji in a tile beside it */
+.loc-tiled { flex-direction: row; align-items: flex-start; gap: 12px; }
+.loc-tx { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.loc-emo { flex: none; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; font-size: 24px; line-height: 1; transition: transform 0.25s var(--soft); }
+.loc-tiled:active .loc-emo, .loc-stop:active .loc-emo { transform: rotate(-8deg) scale(1.1); }
+.loc-emo.t0 { background: var(--teal-100); } .loc-emo.t1 { background: #FFEBDD; } .loc-emo.t2 { background: #ECE8FF; } .loc-emo.t3 { background: #FFF4D6; }
+/* Transit: tips as stops on a route line */
+.loc-route { gap: 0; padding: 6px 14px; }
+.loc-stop { position: relative; display: flex; gap: 12px; padding: 10px 0; }
+.loc-stop:not(:last-child)::after { content: ""; position: absolute; left: 22px; top: 54px; bottom: -12px; width: 3px; border-radius: 2px; background: repeating-linear-gradient(to bottom, var(--teal-500) 0 6px, transparent 6px 11px); }
+.loc-emo.stop { background: var(--teal-100); border: 2px solid var(--teal-500); }
+/* Mix-ups: topic emoji */
+.mx-emo { margin-right: 8px; font-size: 18px; }
+/* Small talk: a chat bubble */
+.loc-talk { flex-direction: row; gap: 12px; align-items: flex-start; background: linear-gradient(135deg, var(--teal-50), #FFFFFF); border-color: #CDEBEE; }
+.talk-ic { flex: none; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: var(--teal-700); font-size: 20px; }
+.talk-bubble { position: relative; margin-top: 4px; padding: 10px 12px; border-radius: 4px 16px 16px 16px; background: #FFFFFF; border: 1px solid #CDEBEE; font-size: calc(14px * var(--ts, 1)); line-height: 1.45; color: var(--ink); }
+/* Dark mode */
+html[data-theme="dark"] .loc-badge { background: #1E2A33; }
+html[data-theme="dark"] .gk-tile { background: #1C2230; border-color: #2C3446; }
+html[data-theme="dark"] .gk-tile strong, html[data-theme="dark"] .loc-h { color: #8FDDE4; }
+html[data-theme="dark"] .gk-ic { background: #283041; box-shadow: none; }
+html[data-theme="dark"] .loc-emo.t0, html[data-theme="dark"] .loc-emo.stop { background: #163A40; }
+html[data-theme="dark"] .loc-emo.t1 { background: #3A2A1F; } html[data-theme="dark"] .loc-emo.t2 { background: #2A2647; } html[data-theme="dark"] .loc-emo.t3 { background: #3A321A; }
+html[data-theme="dark"] .loc-talk { background: #172227; border-color: #24434A; }
+html[data-theme="dark"] .talk-bubble { background: #1E2A33; border-color: #2C4A52; }
+html[data-motion="reduce"] .loc-badge { animation: none; }
+@media (prefers-reduced-motion: reduce) { .loc-badge { animation: none; } }
+.loc-badge { right: 66px; top: calc(16px + var(--sa)); width: 42px; height: 42px; border-radius: 14px; font-size: 24px; }
+html[data-theme="dark"] .body.wb .loc-switch .lh-seg:not(.on) { color: #BDEFF3; } /* was dark teal on dark teal */
