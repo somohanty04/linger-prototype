@@ -1737,3 +1737,81 @@ html[data-motion="reduce"] .loc-badge { animation: none; }
 @media (prefers-reduced-motion: reduce) { .loc-badge { animation: none; } }
 .loc-badge { right: 66px; top: calc(16px + var(--sa)); width: 42px; height: 42px; border-radius: 14px; font-size: 24px; }
 html[data-theme="dark"] .body.wb .loc-switch .lh-seg:not(.on) { color: #BDEFF3; } /* was dark teal on dark teal */
+
+/* Language picker: tap a row to make it the main language, ✕ to remove one */
+.lang-rowwrap { display: flex; align-items: stretch; gap: 8px; }
+.lang-rowwrap .city-row { flex: 1; min-width: 0; }
+.lang-rowwrap .tick { font-size: calc(13px * var(--ts, 1)); text-transform: uppercase; letter-spacing: .04em; margin-left: auto; }
+.lang-rowwrap .tick-2 { color: var(--muted); }
+.lang-rm { flex: none; width: 44px; border-radius: 14px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 16px; }
+
+/* ======================================================================
+   Dark mode, WCAG 2.2 AA. Brand indigo/teal are dark inks made for white paper, so in dark mode the text tokens
+   switch to light tints (every pair below is ≥ 4.5:1 on --surface #171A26 and --indigo-50 #1C2142), and the few
+   places that use them as a fill behind white text get a deep fill instead (≥ 4.5:1 with white).
+   ====================================================================== */
+html[data-theme="dark"] {
+  --indigo-900: #C3C9FF; --indigo-700: #B1B8FF; --indigo-600: #A5AEFF;
+  --teal-700: #6FD3DC; --teal-900: #8FDDE4;
+  --ok-ink: #C3C9FF; --ok-bg: #23295A; --bad-ink: #FFA3C8; --bad-bg: #3A1A28;
+  --muted: #B0B6C8; --idle: #A4AABD; --fill-deep: #3A46CC; --teal-deep: #0B6F7A;
+}
+/* Fills that carry white text */
+html[data-theme="dark"] .side-link, html[data-theme="dark"] .ext-steps li::before, html[data-theme="dark"] .ext-copy button, html[data-theme="dark"] .dark,
+html[data-theme="dark"] .prompt, html[data-theme="dark"] .wchip.sel, html[data-theme="dark"] .story-view .wchip.sel, html[data-theme="dark"] .kn-tick,
+html[data-theme="dark"] .mc i, html[data-theme="dark"] .cq-opt.right .cq-l, html[data-theme="dark"] .mx-yes .mx-ic { background: var(--fill-deep); border-color: var(--fill-deep); color: #FFFFFF; }
+html[data-theme="dark"] .ltab.on, html[data-theme="dark"] .phrase .save, html[data-theme="dark"] .body.wb .loc-switch .lh-seg.on, html[data-theme="dark"] .talk-ic { background: var(--teal-deep); border-color: var(--teal-deep); color: #FFFFFF; }
+html[data-theme="dark"] .local-dark { background: #0A3E46; }
+/* Headers and full-screen games: white text on the lighter end of a gradient was under 4.5:1 */
+html[data-theme="dark"] .hero .hsub, html[data-theme="dark"] .hero.wh .hsub, html[data-theme="dark"] .cards-view .topbar .n, html[data-theme="dark"] .fc-top .n, html[data-theme="dark"] .st-tt .n, html[data-theme="dark"] .g-right, html[data-theme="dark"] .g-hint, html[data-theme="dark"] .say-verdict { color: #FFFFFF; }
+html[data-theme="dark"] .hero { background: linear-gradient(160deg, #18218A 0%, #3A46B8 100%); }
+html[data-theme="dark"] .local-hero { background: linear-gradient(160deg, #08434C 0%, #0A6570 100%); }
+html[data-theme="dark"] .scramble-view, html[data-theme="dark"] .city-view { background: linear-gradient(170deg, #08434C 0%, #0A6570 60%, #0B6F7A 100%); }
+html[data-theme="dark"] .say-view { background: linear-gradient(170deg, #2C1670 0%, #43289E 55%, #5A3FC0 100%); }
+html[data-theme="dark"] .bubble-view { background: linear-gradient(180deg, #0E1458 0%, #222E96 55%, #34409E 100%); }
+/* Fill in the story: the page went dark but its words stayed near-black */
+html[data-theme="dark"] .story h2, html[data-theme="dark"] .story-view .story p, html[data-theme="dark"] .story-view .tray .hint,
+html[data-theme="dark"] .story-view .result .sub, html[data-theme="dark"] .story-view .explain > div:last-child { color: var(--ink); }
+html[data-theme="dark"] .st-tt .t, html[data-theme="dark"] .story-view .result h3, html[data-theme="dark"] .story-view .tray .hint b, html[data-theme="dark"] .story-view .result .sub b { color: #C3C9FF; }
+html[data-theme="dark"] .story-view .blank { border-color: #8A90A6; color: var(--ink); }
+html[data-theme="dark"] .story-view .blank.wrong { background: var(--bad-bg); border-color: var(--bad-ink); color: var(--bad-ink); }
+html[data-theme="dark"] .story-view .wchip { background: var(--surface); border-color: var(--line); color: var(--ink); }
+html[data-theme="dark"] .story-view .wchip.used { background: #1E2130; border-color: var(--line); color: transparent; }
+html[data-theme="dark"] .story-view .left { background: #23295A; color: #DDE1FF; }
+html[data-theme="dark"] .story-view .tray .grid2 .btn:not(.deep) { background: var(--surface); border-color: var(--line); color: var(--ink); }
+/* Misc text that kept a light-mode color */
+html[data-theme="dark"] .badge.b-loc { background: #173A3F; color: #8FDDE4; }
+html[data-theme="dark"] .loc-say { color: #6FD3DC; }
+html[data-theme="dark"] .mx-no .mx-t, html[data-theme="dark"] .mx-t { color: #FFD0C4; }
+html[data-theme="dark"] .bb-was { color: #FFB4A3; }
+html[data-theme="dark"] .lh-tip, html[data-theme="dark"] .small { color: var(--muted); }
+html[data-theme="dark"] .tok.hard { text-decoration-color: var(--dotted); }
+html[data-theme="dark"] .hero.wh.loc-hero { background: linear-gradient(163.52deg, #08434C 1.41%, #0A6570 105.55%); }
+html[data-theme="dark"] .fc-word, html[data-theme="dark"] .say-word { color: #C3C9FF; }
+html[data-theme="dark"] .lh-chip { background: #23295A; color: #DDE1FF; }
+html[data-theme="dark"] .week .d.on { color: #2B36B0; } /* white day pill */
+html[data-theme="dark"] .us-tile { color: #0A5560; } /* white letter tile */
+html[data-theme="dark"] .bubble span { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55); }
+html[data-theme="dark"] .week .d.on .dl, html[data-theme="dark"] .week .d.on .dn { color: #2B36B0; }
+html[data-theme="dark"] .bb-hearts i.on { color: #FF9EB1; }
+
+/* Sign-in: "Welcome back" when this device remembers the account */
+.auth-back { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--indigo-50); border: 1px solid var(--indigo-100); }
+.auth-back > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.auth-back strong { color: var(--indigo-900); font-size: calc(15px * var(--ts, 1)); }
+.auth-back .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auth-av { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--indigo-fill); color: #FFFFFF; font-weight: 800; }
+.keep-row { align-items: flex-start; }
+.keep-row input { margin-top: 2px; flex: none; }
+
+/* Onboarding: why the English level matters, and the "make your profile" pop-up at the end of setup */
+.onb-why { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; background: var(--indigo-50); border: 1px solid var(--indigo-100); color: var(--ink-2); font-size: calc(14px * var(--ts, 1)); }
+.onb-why strong { color: var(--indigo-900); font-size: calc(15px * var(--ts, 1)); }
+.onb-why ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.onb-why > span { color: var(--muted); font-size: calc(13px * var(--ts, 1)); }
+.acct-why { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.acct-why li { display: flex; gap: 10px; align-items: flex-start; font-size: calc(14px * var(--ts, 1)); color: var(--ink-2); }
+.acct-why li > span:first-child { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: var(--indigo-50); font-size: 16px; }
+.acct-later { width: 100%; }
+html[data-theme="dark"] .onb-why { background: #1C2142; border-color: #2E3560; }
+html[data-theme="dark"] .onb-hero p { color: #FFFFFF; }
