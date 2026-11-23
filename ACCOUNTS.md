@@ -12,10 +12,25 @@ The Linger menu has a **Your Linger account** section: sign in or create an acco
 the phone app. `extension/background.js` talks to Firebase over REST (no SDK): Identity Toolkit for sign-in, Secure
 Token to refresh the ID token, and Firestore for `users/{uid}/words/{key}`, with the same fields as the phone app.
 
-- **Signing in** uploads the extension's saved list. A word already in the account keeps the account's text and progress.
+- **Two-way sync.** The account is the source of truth and the extension's `saved` list is its offline copy. The
+  background worker pulls the account when the menu opens, when a word card opens (at most every 15 s) and every minute
+  (`chrome.alarms`), and pushes saves and deletes as they happen. It remembers which words it has seen in the account
+  (`acctSynced[uid]`), so a word missing from the account is told apart: seen before → deleted elsewhere, removed here;
+  never seen → saved here (offline or before signing in), uploaded. Deletes made here wait in `acctDeleted[uid]` until
+  they reach Firestore, so an offline delete can't come back. All sync steps run one at a time (no races or loops).
+- **Removing a word**: tap the bookmark on a saved word's card, or ✕ in the menu's saved list. It's deleted from the
+  account (and the paired phone), and the phone app removes it too.
+- **Signing in** merges: the account's words come down, words only on this laptop go up. A word already in the account
+  keeps the account's text and progress.
+- **Signing out** takes the account's words off the laptop (they stay in the account), like the phone app. Signing into
+  a different account does the same first, so two people's words never mix.
 - **Saving a word** (the bookmark on a card) writes it to the account. Saving it again updates `w, m, s, p, place, date`
   and `updatedAt` only, so `status` and learning progress from the phone stay.
-- A pairing code still works alongside an account.
+- A pairing code still works alongside an account, synced the same way against `pairs/{code}.words` (`pairSynced`,
+  `pairDeleted`). For a laptop that was paired before this version, words only on the laptop stay there but aren't sent
+  to the phone (`pairIgnore`), since Linger can't tell "saved before pairing" from "deleted on the phone".
+- The phone app trusts an empty word list from the server (not its offline cache) when the account still exists, so
+  deleting the last word on the laptop doesn't get uploaded back by the phone.
 - If the account is deleted or its password changed, the next save signs the extension out.
 - Test against the emulators: `node tests/extension-account.test.mjs` (see Testing locally).
 

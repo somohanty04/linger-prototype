@@ -81,7 +81,7 @@
     async listen(uid, cb, onError) {
       const b = await firebase();
       return b.F.onSnapshot(b.F.collection(b.db, 'users', uid, 'words'), (snap) => {
-        const map = {}; snap.forEach((d) => { map[d.id] = d.data(); }); cb(map, snap.metadata.hasPendingWrites);
+        const map = {}; snap.forEach((d) => { map[d.id] = d.data(); }); cb(map, snap.metadata.hasPendingWrites, snap.metadata.fromCache);
       }, onError);
     },
     // New word: its fields plus createdAt. merge: true, so fields another device or a later feature added stay.
@@ -172,7 +172,7 @@
   const inflight = new Set(); // creates sent, not yet seen in the account
 
   // Compare this device's saved words with the account and fix both sides (see the notes at the top).
-  function reconcile() {
+  function reconcile(trustEmpty) {
     if (!adapter || A.auth !== 'in' || !remote || A.deleting) return;
     const b = backend(), uid = A.user.uid, L = adapter.words();
     const synced = new Set(store.get(syncedKey(), [])), pending = new Set(store.get(pendingKey(), []));
@@ -187,7 +187,7 @@
     }
     // In the account before and not now: deleted on another device. (If the whole account came back empty while
     // this device had synced words, don't trust it: upload instead of deleting everything here.)
-    const wipe = !Object.keys(remote).length && synced.size > 0;
+    const wipe = !trustEmpty && !Object.keys(remote).length && synced.size > 0;
     for (const [k, w] of Object.entries(L)) {
       const r = remote[k];
       if (!r) {
@@ -213,8 +213,9 @@
     // First sign-in on this device for this account: keep a copy of the saved words before merging.
     if (!store.get('linger.acct.' + uid + '.synced', null)) { try { const cur = localStorage.getItem('linger.words.v1'); if (cur) localStorage.setItem('linger.words.v1.backup.' + uid, JSON.stringify({ at: new Date().toISOString(), data: JSON.parse(cur) })); } catch {} }
     A.sync = 'syncing'; paint();
-    const onRemote = async (map) => {
+    const onRemote = async (map, pendingWrites, fromCache) => {
       if (!A.user || A.user.uid !== uid || A.deleting) return;
+      let trustEmpty = false;
       // Every word gone while this device had synced some: if the profile is gone too, the account was deleted on
       // another device. Then forget it here instead of uploading this device's copy back into it.
       if (!Object.keys(map).length && store.get(syncedKey(), []).length) {
@@ -222,8 +223,11 @@
         try { gone = !(await backend().profileExists(uid)); } catch {}
         if (!A.user || A.user.uid !== uid) return;
         if (gone) { await forgetAccount(uid, A.user.email, false); A.note = 'This account was deleted on another device, so it was removed from this one too.'; try { await backend().signOut(); } catch {} paint(); return; }
+        // The server (not this phone's offline cache) says the account is there with no words: the last ones were
+        // deleted on another device (the laptop, say). Believe it instead of uploading this phone's copy back.
+        trustEmpty = !fromCache;
       }
-      remote = map; A.sync = 'on'; A.msg = ''; reconcile(); paint();
+      remote = map; A.sync = 'on'; A.msg = ''; reconcile(trustEmpty); paint();
     };
     onRemoteRef = onRemote;
     try { unlisten = await backend().listen(uid, onRemote, onErr); } catch (e) { onErr(e); }

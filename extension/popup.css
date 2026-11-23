@@ -74,6 +74,11 @@ h2 { align-self: stretch; margin: 0; font-size: 16px; font-weight: 700; line-hei
 .saved-h { display: flex; align-items: center; gap: 4px; }
 .count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 9999px; background: var(--indigo-100); color: var(--indigo-900); font-size: 12px; font-weight: 700; }
 #saved { align-self: stretch; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+#saved li:not(.empty) { display: flex; align-items: flex-start; gap: 8px; }
+#saved .sv-txt { flex: 1; min-width: 0; }
+#saved .sv-x { flex: none; width: 28px; height: 28px; margin: -4px -6px -4px 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); font-size: 13px; cursor: pointer; }
+#saved .sv-x:hover { background: var(--indigo-100); color: var(--indigo-900); }
+#saved .sv-x:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 1px; }
 #saved li { padding: 10px 12px; border-radius: 12px; background: var(--surface-soft); font-size: 14px; line-height: 20px; }
 #saved li b { color: var(--indigo-900); }
 #saved li span { color: var(--text-muted); }

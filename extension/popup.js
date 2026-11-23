@@ -61,7 +61,7 @@ function problemText(why) {
 // through the background worker) and kept in chrome.storage, shared with the page script.
 const UI = {};
 const L = (t) => UI[t] || t;
-const EXTRA = ['Not available here', 'Reload this page to start Linger here.', 'Reload this page to use the new version of Linger.', 'The code has 12 letters and numbers.', 'Checking…',
+const EXTRA = ['Remove', 'Not available here', 'Reload this page to start Linger here.', 'Reload this page to use the new version of Linger.', 'The code has 12 letters and numbers.', 'Checking…',
   'Couldn’t reach Linger. Check your internet connection.', 'Show the original page', 'Translate this page', 'Starting…', 'Couldn’t translate this page. Reload it and try again.',
   'Click on an underlined word, then the bookmark icon.', 'My language (pick one below)', 'Eye tracking finds hard words through the underlines. Turn on Underline hard words.', 'Ask Linger needs AI explanations turned on.', 'Linger is off for this site, so the ✦ button is hidden.', 'Linger is off on every website. Turn on the Linger switch to use it.', 'The ✦ button should be at the bottom right of this page. If it isn’t, reload the page.',
   ...Object.values(PAIR_MSG), ...Object.values(DENSITY_HINT), 'Sending…', 'Thanks. The Linger team will look at this site.', 'Couldn’t send it. You’re offline: connect to the internet and try again.', 'Couldn’t send it right now. Try again in a minute.',
@@ -353,10 +353,17 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
     $('transMsg').textContent = (r && r.why) || L('Couldn’t translate this page. Reload it and try again.');
   };
 
-  $('savedCount').textContent = st.saved.length;
-  $('saved').innerHTML = st.saved.length
-    ? st.saved.slice(0, 12).map((w) => `<li><b>${esc(w.w)}</b> <span>· ${esc(w.m || '')}</span></li>`).join('')
-    : `<li class="empty"><span>${esc(L('Click on an underlined word, then the bookmark icon.'))}</span></li>`;
+  // Saved words: redrawn whenever the list changes (a save on a page, a sync with the phone, a remove here).
+  const drawSaved = (list) => {
+    $('savedCount').textContent = list.length;
+    $('saved').innerHTML = list.length
+      ? list.slice(0, 12).map((w) => `<li><span class="sv-txt"><b>${esc(w.w)}</b> <span>· ${esc(w.m || '')}</span></span><button type="button" class="sv-x" data-key="${esc(w.key)}" aria-label="${esc(L('Remove') + ' ' + w.w)}" title="${esc(L('Remove'))}">✕</button></li>`).join('')
+      : `<li class="empty"><span>${esc(L('Click on an underlined word, then the bookmark icon.'))}</span></li>`;
+  };
+  drawSaved(st.saved);
+  chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.saved) drawSaved(ch.saved.newValue || []); });
+  $('saved').addEventListener('click', (e) => { const b = e.target.closest('.sv-x'); if (b) { b.disabled = true; chrome.runtime.sendMessage({ type: 'unsave', key: b.dataset.key }).catch(() => {}); } });
+  chrome.runtime.sendMessage({ type: 'sync-now', force: true }).catch(() => {}); // catch up with the phone now
   askWhy();
-  localize(transLang).then(() => { askWhy(); pageBtn(); if (!st.saved.length) $('saved').innerHTML = `<li class="empty"><span>${esc(L('Click on an underlined word, then the bookmark icon.'))}</span></li>`; });
+  localize(transLang).then(() => { askWhy(); pageBtn(); chrome.storage.local.get({ saved: [] }).then((v) => drawSaved(v.saved)); });
 })();
