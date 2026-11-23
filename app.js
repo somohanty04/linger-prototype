@@ -1587,14 +1587,17 @@
   // Local: the same layout as Lens and Words (gradient header, white sheet, a switch, plain cards), in teal.
   const bookmarkIcon = (on) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
   const locateIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="#FFFFFF"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+  // Local: a simple city skyline along the bottom of the header (one drawing for every city).
+  const skyline = '<svg class="loc-sky" viewBox="0 0 400 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70V52h14V38h10v-8h8v8h10v14h12V24h6V14h4v10h6v46h8V44h18V30h8v-8h6v8h8v40h10V48h14V20l10-8 10 8v50h8V40h16v-6h10v6h6v30h10V28h6V16h8v12h6v42h10V46h20V36h12v34h8V52h14V30h10v-8h6v8h8v40h10V48h22v22z"/></svg>';
+  const MIX_IC = { Letters: '📅', Weather: '🌡️', Buildings: '🏢', 'Eating out': '🍽️', 'Small talk': '👋', School: '✏️', Clothes: '👖', Sports: '🏈' };
   function viewLocal() {
     const c = city(), id = CITIES[S.city] ? S.city : 'pgh';
     const segs = [['slang', 'Slang'], ['customs', 'Customs'], ['around', 'Transit'], ['mixups', 'Mix-ups']];
     let note = '', items = '';
     if (S.localSeg === 'slang') {
       note = `Words you’ll hear around ${esc(c.name)}.`;
-      items = citySlang(id).map((k) => { const e = D[k], sv = isSaved(k); return `<article class="loc-item">
-        <div class="item-head"><div class="loc-wl"><span class="word loc-word">${esc(e.word)}</span>${e.say ? `<span class="loc-say">/${esc(e.say)}/</span>` : ''}</div>
+      items = citySlang(id).map((k, i) => { const e = D[k], sv = isSaved(k); return `<article class="loc-item loc-slang">
+        <div class="item-head"><div class="loc-wl"><span class="loc-sticker s${i % 4}" aria-hidden="true">${esc((e.word || '?').charAt(0).toUpperCase())}</span><span class="word loc-word">${esc(e.word)}</span>${e.say ? `<span class="loc-say">/${esc(e.say)}/</span>` : ''}</div>
           <div class="loc-acts"><button type="button" class="loc-ic" data-action="hear" data-k="${k}" aria-label="Hear ${esc(e.word)}">${speaker}</button>
           <button type="button" class="loc-ic ${sv ? 'on' : ''}" data-action="save" data-k="${k}" aria-pressed="${sv}" aria-label="${sv ? 'Saved to Words' : 'Save to Words'}">${bookmarkIcon(sv)}</button></div></div>
         <span class="mean">${esc(e.meaning)}</span>
@@ -1602,32 +1605,34 @@
         ${e.local ? `<span class="meta loc-meta">${pin}${esc(e.local)}</span>` : ''}</article>`; }).join('');
     } else if (S.localSeg === 'customs') {
       note = 'Unwritten rules that help you fit in.';
-      items = cityCustoms(id).map((t) => `<article class="loc-item"><div class="item-head"><span class="loc-title">${esc(t.title)}</span><span class="badge b-loc">${esc(t.tag)}</span></div><span class="mean">${esc(t.body)}</span></article>`).join('');
+      items = cityCustoms(id).map((t, i) => `<article class="loc-item loc-tiled"><span class="loc-emo t${i % 4}" aria-hidden="true">${esc(t.ic || '📌')}</span><div class="loc-tx"><div class="item-head"><span class="loc-title">${esc(t.title)}</span><span class="badge b-loc">${esc(t.tag)}</span></div><span class="mean">${esc(t.body)}</span></div></article>`).join('');
     } else if (S.localSeg === 'around') {
       note = `How people get around ${esc(c.name)}, and the words on the signs.`;
-      items = `<article class="loc-item loc-list">${(c.around || []).map((r) => `<div class="loc-row"><span class="loc-title">${esc(r.title)}</span><span class="mean">${esc(r.body)}</span></div>`).join('')}</article>`;
+      items = `<article class="loc-item loc-route">${(c.around || []).map((r) => `<div class="loc-stop"><span class="loc-emo stop" aria-hidden="true">${esc(r.ic || '🧭')}</span><div class="loc-tx"><span class="loc-title">${esc(r.title)}</span><span class="mean">${esc(r.body)}</span></div></div>`).join('')}</article>`;
     } else {
       note = 'Common mistakes newcomers make with everyday English in the US, and what to say instead.';
-      items = MIXUPS.map((m) => `<article class="loc-item mx-item"><div class="item-head"><span class="loc-title">${esc(m.title)}</span><span class="badge b-loc">${esc(m.tag)}</span></div>
+      items = MIXUPS.map((m) => `<article class="loc-item mx-item"><div class="item-head"><span class="loc-title"><span class="mx-emo" aria-hidden="true">${MIX_IC[m.tag] || '💡'}</span>${esc(m.title)}</span><span class="badge b-loc">${esc(m.tag)}</span></div>
           <div class="mx-row mx-no"><span class="mx-ic" aria-hidden="true">✕</span><span><span class="sr-only">Not quite: </span><span class="mx-t">${esc(m.no)}</span></span></div>
           <div class="mx-row mx-yes"><span class="mx-ic" aria-hidden="true">✓</span><span><span class="sr-only">In the US: </span>${esc(m.yes)}</span></div>
           <span class="mean">${esc(m.why)}</span></article>`).join('');
     }
-    const ess = [['🚨', '911', 'Emergencies: police, fire, ambulance'], ['☎️', '311', 'City help: trash, noise, potholes'], ['🚌', 'Transit', c.transit], ['💵', 'Tipping', '18–20% at sit-down restaurants']];
+    const ess = [['🚨', '911', 'Emergencies: police, fire, ambulance', 'red'], ['☎️', '311', 'City help: trash, noise, potholes', 'blue'], ['🚌', 'Transit', c.transit, 'teal'], ['💵', 'Tipping', '18–20% at sit-down restaurants', 'gold']];
+    const segIc = { slang: '💬', customs: '🤝', around: '🚌', mixups: '🔀' };
     return `<header class="hero wh lh2 loc-hero">
       <div class="wh-rings" aria-hidden="true"><img src="icons/figma/rings-words.svg" width="351.387" height="351.387" alt=""></div>
+      ${skyline}<span class="loc-badge" aria-hidden="true">${esc(c.emoji || '📍')}</span>
       ${logo}${avatarBtn()}
       <div class="wh-title"><div class="wh-row"><button type="button" class="loc-city" data-action="city-pick" aria-haspopup="dialog" aria-label="City: ${esc(cityName(c))}. Change city"><h1>${esc(c.name)}</h1><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
           <button type="button" class="lh-gear" data-action="city-locate" aria-label="Use my location">${locateIcon}</button></div>
         <div class="hsub">${esc(c.state)} · ${esc(c.nick)}</div></div>
     </header>
     <div class="body wb loc-body">
-      <article class="loc-item loc-gk"><span class="loc-title">Good to know</span>
-        ${ess.map(([ic, t, d]) => `<div class="gk-row"><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</article>
+      <section class="loc-gk2" aria-labelledby="gkH"><h2 class="loc-h" id="gkH">Good to know</h2>
+        <div class="gk-grid">${ess.map(([ic, t, d, col]) => `<div class="gk-tile ${col}"><span class="gk-ic" aria-hidden="true">${ic}</span><strong>${esc(t)}</strong><span>${esc(d)}</span></div>`).join('')}</div></section>
       <div class="lh-switch loc-switch" role="group" aria-label="City guide sections">${segs.map(([v, l]) => `<button type="button" class="lh-seg ${S.localSeg === v ? 'on' : ''}" data-action="seg" data-v="${v}" aria-pressed="${S.localSeg === v}">${l}</button>`).join('')}</div>
-      <p class="loc-note">${note}${c.ai && S.localSeg !== 'mixups' ? ' <span class="ai-note">Written by Linger AI. Double-check anything important.</span>' : ''}</p>
+      <p class="loc-note"><span class="loc-note-ic" aria-hidden="true">${segIc[S.localSeg] || '💡'}</span>${note}${c.ai && S.localSeg !== 'mixups' ? ' <span class="ai-note">Written by Linger AI. Double-check anything important.</span>' : ''}</p>
       <div class="wlist">${items}</div>
-      <article class="loc-item"><span class="badge b-loc">Small talk</span><span class="mean">${esc(c.talk)}</span></article>
+      <article class="loc-item loc-talk"><span class="talk-ic" aria-hidden="true">💬</span><div class="loc-tx"><span class="loc-title">Small talk starter</span><span class="talk-bubble">${esc(c.talk)}</span></div></article>
     </div>`;
   }
 
