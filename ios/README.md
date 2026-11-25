@@ -55,10 +55,23 @@ to that Apple ID in Xcode → Settings → Accounts. The App Group `group.com.so
 | `listen` | `"start"` \| `"stop"` | Say it: speech recognition for one word; result via `LingerNative.heard`. |
 | `open` | `"settings"` | Opens the app's page in Settings (e.g. to turn camera access back on). Other values are ignored. |
 
+## Getting page updates
+
+The page is served with a 10-minute cache, so from build 4 the shell makes sure testers see a new version right away:
+
+- **Every load** asks the server whether the page changed (`.reloadRevalidatingCacheData`). An unchanged page still
+  comes from the cache, so this costs a quick check, not a download.
+- **Coming back to the app** (it was in the background) fetches the page's HTML and compares its `app.js?v=` number
+  with the one that's loaded. Only if they differ does the page reload; otherwise nothing happens and the reader stays
+  where they were. It's skipped for 10 seconds after a Share item was handed over, so that item isn't lost.
+- Bump `app.js?v=` in `index.html` and `beta/index.html` with every app change, as before: that number is what the
+  shell compares.
+
 ## Offline screen
 
-Shown when a main-frame load fails (cancelled loads are ignored) or the page doesn't say ready in time.
-"Try again" reloads; the app also retries by itself when the network comes back.
+Shown when a main-frame load fails (cancelled loads are ignored) or the page doesn't say ready in time. Before showing
+it, the shell tries the saved copy of the page once (`.returnCacheDataDontLoad`), so Linger still opens offline if it
+has been opened before. "Try again" reloads; the app also retries by itself when the network comes back.
 
 ## Testing against a local page (Debug builds)
 
