@@ -81,7 +81,7 @@
     async listen(uid, cb, onError) {
       const b = await firebase();
       return b.F.onSnapshot(b.F.collection(b.db, 'users', uid, 'words'), (snap) => {
-        const map = {}; snap.forEach((d) => { map[d.id] = d.data(); }); cb(map, snap.metadata.hasPendingWrites);
+        const map = {}; snap.forEach((d) => { map[d.id] = d.data(); }); cb(map, snap.metadata.hasPendingWrites, snap.metadata.fromCache);
       }, onError);
     },
     // New word: its fields plus createdAt. merge: true, so fields another device or a later feature added stay.
@@ -164,6 +164,10 @@
 
   // ---------- state ----------
   // auth: 'loading' | 'out' | 'in'.  sync: '' | 'syncing' | 'on' | 'error'
+  // "Remember my account": keeps them signed in, and fills in their email on the sign-in form next time.
+  const REM_KEY = 'linger.rememberAcct';
+  const remembered = () => { try { const r = JSON.parse(localStorage.getItem(REM_KEY) || 'null'); return r && r.email ? r : null; } catch { return null; } };
+  const remember = (mail) => { try { if (mail) localStorage.setItem(REM_KEY, JSON.stringify({ email: mail, at: Date.now() })); else localStorage.removeItem(REM_KEY); } catch {} };
   const A = { mode: 'in', view: '', keep: true, sec: { open: '', newEmail: '', pw: '', err: '', sent: null }, loadingSince: Date.now(), confirmOut: false, resetSent: null, firstSync: false, verifyNote: '', auth: 'loading', user: null, sync: '', msg: '', open: false, busy: false, email: '', pw: '', err: '', note: '', del: false, delPw: '', delDevice: false, delStep: '', deleting: false };
   // After an account is deleted the page reloads (to clear what's in memory); this note says what happened.
   try { const n = sessionStorage.getItem('linger.acct.deletedNote'); if (n) { A.note = n; sessionStorage.removeItem('linger.acct.deletedNote'); } } catch {}
@@ -172,7 +176,7 @@
   const inflight = new Set(); // creates sent, not yet seen in the account
 
   // Compare this device's saved words with the account and fix both sides (see the notes at the top).
-  function reconcile() {
+  function reconcile(trustEmpty) {
     if (!adapter || A.auth !== 'in' || !remote || A.deleting) return;
     const b = backend(), uid = A.user.uid, L = adapter.words();
     const synced = new Set(store.get(syncedKey(), [])), pending = new Set(store.get(pendingKey(), []));
@@ -188,7 +192,7 @@
     }
     // In the account before and not now: deleted on another device. (If the whole account came back empty while
     // this device had synced words, don't trust it: upload instead of deleting everything here.)
-    const wipe = !Object.keys(remote).length && synced.size > 0;
+    const wipe = !trustEmpty && !Object.keys(remote).length && synced.size > 0;
     for (const [k, w] of Object.entries(L)) {
       const r = remote[k];
       if (!r) {
@@ -214,8 +218,9 @@
     // First sign-in on this device for this account: keep a copy of the saved words before merging.
     if (!store.get('linger.acct.' + uid + '.synced', null)) { try { const cur = localStorage.getItem('linger.words.v1'); if (cur) localStorage.setItem('linger.words.v1.backup.' + uid, JSON.stringify({ at: new Date().toISOString(), data: JSON.parse(cur) })); } catch {} }
     A.sync = 'syncing'; paint();
-    const onRemote = async (map) => {
+    const onRemote = async (map, pendingWrites, fromCache) => {
       if (!A.user || A.user.uid !== uid || A.deleting) return;
+      let trustEmpty = false;
       // Every word gone while this device had synced some: if the profile is gone too, the account was deleted on
       // another device. Then forget it here instead of uploading this device's copy back into it.
       if (!Object.keys(map).length && store.get(syncedKey(), []).length) {
@@ -223,8 +228,11 @@
         try { gone = !(await backend().profileExists(uid)); } catch {}
         if (!A.user || A.user.uid !== uid) return;
         if (gone) { await forgetAccount(uid, A.user.email, false); A.note = 'This account was deleted on another device, so it was removed from this one too.'; try { await backend().signOut(); } catch {} paint(); return; }
+        // The server (not this phone's offline cache) says the account is there with no words: the last ones were
+        // deleted on another device (the laptop, say). Believe it instead of uploading this phone's copy back.
+        trustEmpty = !fromCache;
       }
-      remote = map; A.sync = 'on'; A.msg = ''; reconcile(); paint();
+      remote = map; A.sync = 'on'; A.msg = ''; reconcile(trustEmpty); paint();
     };
     onRemoteRef = onRemote;
     try { unlisten = await backend().listen(uid, onRemote, onErr); } catch (e) { onErr(e); }
@@ -297,6 +305,7 @@
     stopListening();
     const keys = ['linger.acct.' + uid + '.synced', 'linger.acct.' + uid + '.deleted', 'linger.words.v1.backup.' + uid, 'linger.photo.' + email];
     if (device) keys.push('linger.prefs.v1', 'linger.learn.v1', 'linger.langs', 'linger.lang');
+    const r = remembered(); if (r && email && r.email.toLowerCase() === String(email).toLowerCase()) keys.push(REM_KEY);
     keys.forEach((k) => { try { localStorage.removeItem(k); } catch {} });
   }
   async function deleteAccount() {
@@ -331,7 +340,8 @@
   const ACT = {
     delopen: () => { A.del = true; A.err = ''; A.delPw = ''; A.delDevice = false; paint(); setTimeout(() => { const el = document.getElementById('acctDelPw'); if (el) el.focus(); }, 0); },
     delcancel: () => { if (A.busy) return; A.del = false; A.err = ''; A.delPw = ''; paint(); },
-    open: () => { A.open = true; A.err = ''; paint(); setTimeout(() => { const el = document.getElementById('acctEmail'); if (el) el.focus(); }, 0); },
+    open: () => { A.open = true; A.err = ''; const r = remembered(); if (r && !A.email && A.mode === 'in') A.email = r.email; paint(); setTimeout(() => { const el = document.getElementById(r && A.email === r.email ? 'acctPw' : 'acctEmail'); if (el) el.focus(); }, 0); },
+    notme: () => { remember(''); A.email = ''; A.pw = ''; A.err = ''; paint(); setTimeout(() => { const el = document.getElementById('acctEmail'); if (el) el.focus(); }, 0); },
     close: () => { A.open = false; A.view = ''; A.err = ''; A.note = ''; paint(); },
     signup: () => { A.mode = 'up'; submitAuth(); },
     'mode-in': () => { A.mode = 'in'; A.err = ''; paint(); },
@@ -378,6 +388,7 @@
       try { await backend().keep(A.keep); } catch {}
       if (up) await backend().signUp(mail, pw); else await backend().signIn(mail, pw);
       saveCred(mail, pw);
+      remember(A.keep ? mail : '');
     }, () => { A.pw = ''; A.open = false; A.view = ''; A.mode = 'in'; A.showPw = false; });
   }
   async function secRun(fn, done) {
@@ -480,14 +491,16 @@
         <li>Still not sure? Send a reset link to each email you might have used. Only the right one gets it.</li>
       </ul>
       <div class="sync-acts"><button type="button" class="btn primary small-btn" data-acct="forgot">Reset my password</button><button type="button" class="link-btn" data-acct="resetdone">Back to sign in</button></div></div>`;
-    const up = A.mode === 'up';
+    const up = A.mode === 'up', rem = remembered();
+    if (!up && rem && !A.email && !A.err) A.email = rem.email;
     return `<form class="sync-card auth-card" id="acctForm" novalidate aria-label="${up ? 'Create a Linger account' : 'Sign in to Linger'}">
       <div class="auth-tabs" role="tablist" aria-label="Sign in or create an account"><span class="auth-pill${up ? ' up' : ''}" aria-hidden="true"></span>
         <button type="button" role="tab" aria-selected="${!up}" class="${up ? '' : 'on'}" data-acct="mode-in">Sign in</button><button type="button" role="tab" aria-selected="${up}" class="${up ? 'on' : ''}" data-acct="mode-up">Create account</button></div>
+      ${!up && rem && A.email === rem.email ? `<div class="auth-back"><span class="auth-av" aria-hidden="true">${esc(rem.email.charAt(0).toUpperCase())}</span><span><strong>Welcome back</strong><span class="small">${esc(rem.email)}</span></span><button type="button" class="link-btn" data-acct="notme">Not you?</button></div>` : ''}
       <label class="auth-field"><span>Email</span><input id="acctEmail" name="email" type="email" inputmode="email" autocapitalize="off" spellcheck="false" autocomplete="username" placeholder="you@example.com" value="${esc(A.email)}" required></label>
       <label class="auth-field"><span>Password</span><span class="pw-wrap"><input id="acctPw" name="password" type="${A.showPw ? 'text' : 'password'}" autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="${up ? 'At least 6 characters' : 'Your password'}" value="${esc(A.pw)}" required minlength="6"><button type="button" class="pw-eye${A.showPw ? ' on' : ''}" data-acct="eye" aria-pressed="${!!A.showPw}" aria-label="${A.showPw ? 'Hide' : 'Show'} password">${eyeIcon}</button></span></label>
       ${up ? `<div class="pw-meter" data-n="0" aria-live="polite"><span class="pw-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="pw-meter-t small"></span></div>` : ''}
-      <label class="keep-row small"><input type="checkbox" id="acctKeep" ${A.keep ? 'checked' : ''}> Keep me signed in on this device</label>
+      <label class="keep-row small"><input type="checkbox" id="acctKeep" ${A.keep ? 'checked' : ''}> <span><b>Remember my account</b> on this device: stay signed in, and your email is filled in next time</span></label>
       ${errLine(A.err)}${A.note ? `<div class="small" role="status">${esc(A.note)}</div>` : ''}
       <button type="submit" class="btn primary small-btn auth-go" ${A.busy ? 'disabled' : ''}>${A.busy ? `<span class="spin" aria-hidden="true"></span>${up ? 'Creating your account…' : 'Signing in…'}` : up ? 'Create account' : 'Sign in'}</button>
       <div class="sync-acts">${up ? '' : '<button type="button" class="link-btn" data-acct="forgot">Forgot password?</button><button type="button" class="link-btn" data-acct="whichemail">Forgot which email?</button>'}<button type="button" class="link-btn" data-acct="close">Cancel</button></div>
@@ -556,6 +569,7 @@
   // ---------- start ----------
   window.LingerAccount = {
     saveProfile,
+    openForm(mode) { A.mode = mode === 'up' ? 'up' : 'in'; A.open = true; A.view = ''; A.err = ''; },
     available: () => !!backend(),
     mode: () => (testMode ? 'test' : hasFirebase() ? 'firebase' : 'off'),
     state: () => ({ auth: A.auth, email: A.user && A.user.email, sync: A.sync, words: remote ? Object.keys(remote).length : 0, profile: A.profile || null, formOpen: !!A.open || !!A.resetSent, verified: !!(A.user && A.user.verified),

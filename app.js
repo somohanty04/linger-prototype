@@ -452,26 +452,54 @@
   }
   // Words met in scanned text get an entry on the fly: a plain swap if we have one, otherwise a dictionary lookup.
   function makeEntry(k, text, place) {
+    if (D[k] && D[k].lookFail && !D[k].pending) { delete D[k].lookFail; D[k].meaning = 'Looking up…'; D[k].pending = lookup(k); } // try again
     if (D[k]) return D[k];
-    const sentence = sentencesOf(text).find((s) => s.toLowerCase().includes(k)) || '';
+    const wre = new RegExp(`(^|[^a-z'])${k.replace(/[^a-z']/g, '')}($|[^a-z'])`, 'i'), sents = sentencesOf(text);
+    const sentence = sents.find((s) => wre.test(s)) || (text.length < 400 ? text.trim() : '');
     const p = PLAIN[k];
     D[k] = { word: k, kind: isHard(k) ? 'hard' : 'common', meaning: p ? cap(p) + '.' : 'Looking up…', ctx: sentence ? 'In plain English: ' + plainify(sentence) : 'A word you looked up.', sentence, place, scanned: true };
     if (!p) D[k].pending = lookup(k);
     return D[k];
   }
+  // Wiktionary's free API. Definitions come as HTML, so strip tags. Scanned words are often inflected ("payments",
+  // "received", "leasing"), and Wiktionary only says "plural of payment" for those, so follow the form to its base
+  // word and use that word's main meaning. A word it doesn't know at all is retried without a common ending.
+  const FORM_RE = /\b(?:plural|participle|past tense|simple past|third-person singular|gerund|comparative|superlative|inflection|alternative (?:form|spelling)|misspelling|obsolete form|archaic form)\b[^.;]*? of ([a-z][a-z'-]+)/i;
+  async function wikDefs(w) {
+    const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(w));
+    if (r.status === 404) return [];
+    if (!r.ok) throw new Error('http');
+    const j = await r.json();
+    return ((j && j.en) || []).map((x) => ({ pos: x.partOfSpeech, defs: (x.definitions || []).map((d) => {
+      const doc = new DOMParser().parseFromString(d.definition || '', 'text/html');
+      doc.querySelectorAll('style, sup, .usage-label-sense').forEach((n) => n.remove());
+      return doc.body.textContent.replace(/\s+/g, ' ').trim();
+    }).filter((t) => t && !/^(obsolete|archaic|dated)\b/i.test(t)) })).filter((e) => e.defs.length && !/^(proper noun|symbol|letter)$/i.test(e.pos));
+  }
+  const firstDef = (entries) => { const defs = entries.flatMap((e) => e.defs).filter((t) => !FORM_RE.test(t)); return defs.find((t) => t.length <= 140) || defs[0] || ''; };
+  const baseGuesses = (k) => [...new Set([
+    k.replace(/ies$/, 'y'), k.replace(/es$/, ''), k.replace(/s$/, ''), k.replace(/ied$/, 'y'), k.replace(/ed$/, ''), k.replace(/d$/, ''),
+    k.replace(/ing$/, ''), k.replace(/ing$/, 'e'), k.replace(/([b-df-hj-np-tv-z])\1(ed|ing)$/, '$1'), k.replace(/ly$/, ''), k.replace(/er$/, ''),
+  ])].filter((b) => b !== k && b.length >= 3);
+  async function define(k) {
+    const entries = await wikDefs(k);
+    const form = entries.flatMap((e) => e.defs).map((t) => t.match(FORM_RE)).find(Boolean);
+    if (form && form[1].toLowerCase() !== k) { // an inflected form: explain the base word
+      const base = form[1].toLowerCase(), d = firstDef(await wikDefs(base));
+      if (d) return { meaning: d, base };
+    }
+    const own = firstDef(entries);
+    if (own) return { meaning: own };
+    if (!entries.length) for (const b of baseGuesses(k).slice(0, 4)) { const d = firstDef(await wikDefs(b)); if (d) return { meaning: d, base: b }; }
+    return null;
+  }
   async function lookup(k) {
     try {
-      // Wiktionary's free API; definitions come as HTML, so strip tags and pick a short one.
-      const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(k));
-      const j = r.ok ? await r.json() : null;
-      const defs = ((j && j.en) || []).flatMap((x) => x.definitions || []).map((d) => {
-        const doc = new DOMParser().parseFromString(d.definition || '', 'text/html');
-        doc.querySelectorAll('style, sup').forEach((n) => n.remove());
-        return doc.body.textContent.replace(/\s+/g, ' ').trim();
-      }).filter((t) => t && !/^(obsolete|archaic|plural of|alternative)/i.test(t));
-      const def = defs.find((t) => t.length <= 140) || defs[0];
-      D[k].meaning = def ? def.charAt(0).toUpperCase() + def.slice(1) : 'Not in the dictionary yet.';
-    } catch { D[k].meaning = 'Couldn’t look this word up right now.'; }
+      const r = await define(k);
+      const m = r && r.meaning.replace(/^\(.*?\)\s*/, '');
+      if (!m) D[k].meaning = 'Not in the dictionary yet.';
+      else { D[k].meaning = m.charAt(0).toUpperCase() + m.slice(1); if (r.base) D[k].base = r.base; }
+    } catch { D[k].meaning = navigator.onLine ? 'Couldn’t look this word up right now.' : 'You’re offline. Open this word again when you’re back online.'; D[k].lookFail = true; }
     delete D[k].pending;
     render();
   }
@@ -543,9 +571,11 @@
         const b = x.bbox, box = { x: b.x0 / p.w * 100, y: b.y0 / p.h * 100, w: (b.x1 - b.x0) / p.w * 100, h: (b.y1 - b.y0) / p.h * 100 };
         cleanText(x.text).split(' ').filter(Boolean).forEach((t) => words.push({ t, box }));
       }));
+      // A word split across two lines ("pay-" then "ment") is one word again.
+      for (let i = words.length - 2; i >= 0; i--) if (/[a-z]-$/i.test(words[i].t) && /^[a-z]/.test(words[i + 1].t)) { words[i].t = words[i].t.slice(0, -1) + words[i + 1].t; words.splice(i + 1, 1); }
       const kept = words.slice(0, 180);
       if (kept.length >= 3) return { text: kept.map((x) => x.t).join(' '), conf: Math.round(r.conf), boxes: kept.map((x) => x.box) };
-      return { text: cleanText(r.text), conf: Math.round(r.conf), boxes: null };
+      return { text: cleanText(r.text.replace(/([a-z])-\s*\n\s*([a-z])/gi, '$1$2')), conf: Math.round(r.conf), boxes: null };
     }
     finally { onOcr = () => {}; }
   }
@@ -857,11 +887,13 @@
     const list = LANGS.filter((l) => l.code !== 'en' && (!q || l.name.toLowerCase().includes(q) || l.own.toLowerCase().includes(q)))
       .sort((a, b) => (S.langs.includes(b.code) - S.langs.includes(a.code)) || (S.langs.indexOf(a.code) - S.langs.indexOf(b.code))); // picked ones first
     const on = (code) => (code ? S.langs.includes(code) : !S.langs.length);
-    const row = (code, own, name) => `<button type="button" class="city-row ${on(code) ? 'on' : ''}" role="checkbox" aria-checked="${on(code)}" data-action="lang-set" data-v="${code}"><span class="city-txt"><strong ${code ? `lang="${code}" dir="auto"` : ''}>${esc(own)}</strong>${name ? `<small>${esc(name)}</small>` : ''}</span>${on(code) ? `<span class="tick">${code && S.langs.length > 1 ? S.langs.indexOf(code) + 1 : '✓'}</span>` : ''}</button>`;
+    // Tapping a language makes it the main one (summaries, scans and the Lens button use it); ✕ removes one.
+    const row = (code, own, name) => { const main = code ? S.langs[0] === code : !S.langs.length, extra = code && on(code) && !main;
+      return `<div class="lang-rowwrap"><button type="button" class="city-row ${on(code) ? 'on' : ''}" role="radio" aria-checked="${main}" data-action="lang-set" data-v="${code}"><span class="city-txt"><strong ${code ? `lang="${code}" dir="auto"` : ''}>${esc(own)}</strong>${name ? `<small>${esc(name)}</small>` : ''}</span>${main ? `<span class="tick">${code ? 'Main' : '✓'}</span>` : extra ? '<span class="tick tick-2">Also</span>' : ''}</button>${code && on(code) ? `<button type="button" class="lang-rm" data-action="lang-rm" data-v="${code}" aria-label="Remove ${esc(own)}">✕</button>` : ''}</div>`; };
     return `<div class="sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
       <div class="panel" role="dialog" aria-label="Choose your languages"><div class="grab"></div>
         <div class="lang-head"><div class="sum-title">Your languages</div><button type="button" class="btn primary small-btn" data-action="close">Done</button></div>
-        <div class="small">Pick up to 3. Word meanings show in each, and summaries in the first. Linger still teaches the English.</div>
+        <div class="small">Tap a language to read your scans and summaries in it. Word meanings also show in up to 2 more. Linger still teaches the English.</div>
         <label class="search"><input id="langQ" type="search" placeholder="Search languages" value="${esc(S.langQuery)}" aria-label="Search languages"></label>
         <div class="city-list lang-list">${!q ? row('', 'English only', 'No translation') : ''}${list.map((l) => row(l.code, l.own, l.own === l.name ? '' : l.name)).join('')}
           ${list.length ? '' : '<div class="small">No language matches. Try its English name.</div>'}</div></div></div>`;
@@ -871,6 +903,7 @@
   const personIcon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
   const camSmall = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
   const acctState = () => (window.LingerAccount ? LingerAccount.state() : null);
+  const remembered = () => { try { const r = JSON.parse(localStorage.getItem('linger.rememberAcct') || 'null'); return r && r.email ? r : null; } catch { return null; } };
   const signedInAs = () => { const st = acctState(); return st && st.auth === 'in' ? st.email || '' : ''; };
   // The profile picture: the photo they added, else the first letter of their email, else a person outline.
   function avatar(size) {
@@ -881,17 +914,21 @@
   const avatarBtn = () => { const e = signedInAs(); return `<button type="button" class="av-btn" data-action="acct-open" aria-haspopup="dialog" aria-label="${e ? 'Your account: ' + esc(e) : 'Sign in or create an account'}${S.prefs.done ? '' : '. Setup not finished'}">${avatar('av-sm')}${S.prefs.done ? '' : '<span class="av-dot" aria-hidden="true"></span>'}</button>`; };
   const readsLabel = () => S.prefs.reads.map((id) => (id === 'other' && S.prefs.other ? S.prefs.other : (READS.find((r) => r[0] === id) || [])[2])).filter(Boolean).join(', ');
   function acctSheet() {
-    const email = signedInAs(), lvl = LEVELS.find((l) => l[0] === S.prefs.level);
+    const email = signedInAs(), pitch = S.acctPitch && !email, lvl = LEVELS.find((l) => l[0] === S.prefs.level);
     const row = (k, v, attrs = '') => `<div class="acct-row"><span>${k}</span><span ${attrs}>${esc(v)}</span></div>`;
     return `<div class="sheet acct-sheet"><button type="button" class="scrim" aria-label="Close" data-action="close"></button>
       <div class="panel" role="dialog" aria-label="Your account"><div class="grab"></div>
         <div class="acct-head">
           <div class="acct-pic">${avatar('av-lg')}${email ? `<label class="acct-cam" title="${S.photo ? 'Change' : 'Add a'} profile picture"><input type="file" id="acctPhoto" accept="image/*" aria-label="${S.photo ? 'Change' : 'Add a'} profile picture">${camSmall}</label>` : ''}</div>
-          <div class="acct-who"><div class="sum-title">${email ? 'Your account' : 'Guest User'}</div>
-            <div class="small">${email ? esc(email) : 'Not signed in. Your words are saved on this phone only.'}</div></div>
+          <div class="acct-who"><div class="sum-title">${pitch ? 'Make your free profile' : email ? 'Your account' : 'Guest User'}</div>
+            <div class="small">${email ? esc(email) : pitch ? 'Last step. It takes 30 seconds, and you can skip it.' : 'Not signed in. Your words are saved on this phone only.'}</div></div>
         </div>
+        ${pitch ? `<ul class="acct-why">
+          <li><span aria-hidden="true">💾</span><span><b>Keep your words</b> if you lose or change your phone.</span></li>
+          <li><span aria-hidden="true">💻</span><span><b>Use Linger on your laptop</b> with the same words and progress.</span></li>
+          <li><span aria-hidden="true">🔒</span><span><b>Just an email and password.</b> No ads, and you can delete it anytime.</span></li></ul>` : ''}
         ${window.LingerAccount ? LingerAccount.card({ inSheet: true }) : ''}
-        ${!S.prefs.done || !S.prefs.level ? `<div class="acct-setup acct-start"><strong>Finish setting up Linger</strong>
+        ${pitch ? '<button type="button" class="btn acct-later" data-action="acct-later">Not now, keep words on this phone</button>' : !S.prefs.done || !S.prefs.level ? `<div class="acct-setup acct-start"><strong>Finish setting up Linger</strong>
           <span>3 quick questions: what you read, your languages, and your English level (with an optional English check).</span>
           <button type="button" class="btn primary small-btn" data-action="onb-first">Set up now</button></div>` : `<div class="acct-setup">
           <div class="acct-setup-h"><strong>Reading setup</strong><button type="button" class="link-btn" data-action="onb-edit">Change</button></div>
@@ -1068,7 +1105,10 @@
     S.onb = null;
     if (o.edit) { showToast('Reading setup saved'); return; }
     S.tab = 'lens';
-    showToast(skipped ? 'Set it up anytime from your picture ↗' : signedInAs() || !window.LingerAccount ? 'All set!' : 'All set! Sign in from your picture ↗');
+    // New here and not signed in: the last part of setup is the "make a profile" pop-up (they can say Not now).
+    const st = acctState();
+    if (window.LingerAccount && LingerAccount.available() && st && st.auth !== 'in') { LingerAccount.openForm(remembered() ? 'in' : 'up'); S.acct = true; S.acctPitch = true; return; }
+    showToast(skipped ? 'Set it up anytime from your picture ↗' : 'All set!');
   }
   const levelName = (id) => (LEVELS.find((l) => l[0] === id) || [])[2] || '';
   const LEVEL_SAYS = {
@@ -1119,7 +1159,12 @@
       title = 'Your English level'; sub = 'It sets which words Linger underlines. You can change it anytime.';
       // The English check comes first, as its own card with a button, so people who don't know their level find it.
       const picked = o.level && o.level !== 'unsure' ? o.level : '';
-      body = `<div class="onb-test-card onb-test-top"><strong>Not sure? Take the English check</strong>
+      body = `<div class="onb-why" role="note"><strong>Why Linger asks</strong>
+          <ul><li>It decides <b>which words get underlined</b>, so you don’t see every word marked, or miss the hard ones.</li>
+          <li>It sets <b>how simply</b> meanings and summaries are written.</li>
+          <li>It picks <b>which words to practice</b> in Review.</li></ul>
+          <span>It isn’t a grade. Nobody else sees it, and you can change it anytime.</span></div>
+        <div class="onb-test-card onb-test-top"><strong>Not sure? Take the English check</strong>
           <span>About 4 minutes: tap whether you know some words, then answer 10 questions about meanings. Linger suggests a level, and you decide.</span>
           <button type="button" class="btn primary small-btn" data-action="test-start">Take the English check</button></div>
         ${o.suggested ? `<p class="onb-hint">The check suggested <b>${esc(levelName(o.suggested))}</b>. Pick the one that fits you.</p>` : ''}
@@ -1531,7 +1576,7 @@
         <span class="meta"><img src="icons/figma/pin.svg" width="12" height="12" alt="">${esc(placeOf(e))}</span>${progress(k)}</button>`; }).join('')
         : `<div class="empty">${q ? `<strong>No saved words match “${esc(S.query)}”</strong><button type="button" class="link-btn" data-action="clear-search">Clear search</button>` : S.calDay ? 'You didn’t save any words this day. Days with a dot have words.' : S.saved.length && S.wordFilter !== 'all' ? `<strong>No ${S.wordFilter === 'hard' ? 'hard words' : 'slang or customs'} saved yet</strong><button type="button" class="link-btn" data-action="filter" data-v="all">Show all words</button>` : '<strong>No saved words yet</strong><span>Scan or paste a letter, sign or message, tap a hard word, then tap Save. It shows up here.</span><button type="button" class="btn primary small-btn" data-action="tab" data-tab="lens">Go to Lens</button>'}</div>`}
 </div>
-      <div class="start-wrap"><button type="button" class="btn primary start" data-action="play" data-v="story"><img src="icons/figma/sparkle.svg" width="19.534" height="20.078" alt="">Start Activity</button></div>
+      <div class="start-wrap"><button type="button" class="btn primary start" data-action="tab" data-tab="review"><img src="icons/figma/sparkle.svg" width="19.534" height="20.078" alt="">Start Activity</button></div>
     </div>`;
   }
 
@@ -2269,7 +2314,7 @@
       ${e && e.say ? `<div class="wc-say">/${esc(e.say)}/</div>` : ''}
       ${cardLangs()}
       ${wT && wT.status === 'ok' ? `<div class="wc-tr" ${langAttrs(L)}>${esc(wT.t)}</div>` : ''}
-      <div class="wc-sec"><div class="label">Meaning</div><div class="meaning">${dict ? inLang(dict, L) : ok ? inLang(ai.meaning, L) : e && e.pending ? thinking('Looking it up…') : '<span class="small">No dictionary entry. See what it means here, below.</span>'}</div></div>
+      <div class="wc-sec"><div class="label">Meaning</div>${e && e.base && dict ? `<div class="small wc-base">A form of “${esc(e.base)}”</div>` : ''}<div class="meaning">${dict ? inLang(dict, L) : ok ? inLang(ai.meaning, L) : e && e.pending ? thinking('Looking it up…') : '<span class="small">No dictionary entry. See what it means here, below.</span>'}</div></div>
       <div class="wc-sec wc-here"><div class="label">In this sentence</div>
         ${ok ? `<div>${inLang(ai.meaning, L)}</div>${aiRate('word|' + word)}` : ai && ai.status === 'off' ? aiAsk('word') : slow(ai) ? thinking('Still working on it. This is taking longer than usual.') + (dict ? '<div class="small">The dictionary meaning is above in the meantime.</div>' : '') : ai && ai.status === 'wait' ? thinking('Linger is reading the sentence…') : `<div class="small">${e && e.ctx ? inLang(e.ctx, L) : navigator.onLine ? 'Couldn’t reach Linger AI. Open the word again in a moment.' : 'You’re offline. Open the word again when you’re back online.'}</div>`}
         ${S.sheetI != null && S.source === 'camera' && S.scan.status === 'done' ? (S.fixing ? `<div class="wc-fix-row"><label class="small" for="fixWord">What does the word really say?</label><input id="fixWord" class="paste-box" style="min-height:0;height:40px" value="${esc(word)}" autocomplete="off" autocapitalize="off" spellcheck="false"><span class="sync-acts"><button type="button" class="btn small-btn" data-action="fix-cancel">Cancel</button><button type="button" class="btn primary small-btn" data-action="fix-save">Fix it</button></span></div>` : '<button type="button" class="link-btn wc-fix" data-action="fix-open">Misread? Fix this word</button>') : ''}
@@ -2658,7 +2703,8 @@
     'test-agree': () => { const o = S.onb, r = o.test.res; o.level = r.level; o.testResult = { cefr: r.cefr, level: r.level, right: r.right, total: r.total, words: r.words, agreed: true, at: Date.now() }; o.test = null; finishOnb(false); },
     'test-disagree': () => { const o = S.onb, r = o.test.res; o.suggested = r.level; o.level = ''; o.testResult = { cefr: r.cefr, level: r.level, right: r.right, total: r.total, words: r.words, agreed: false, at: Date.now() }; o.test = null; },
     'onb-signin': () => { S.acct = true; S.acctFromOnb = true; },
-    close: () => { S.cityPickFor = null; S.phrase = null; S.acct = false; S.acctFromOnb = false; S.paste = false; S.shareHelp = false; S.cityPick = false; S.langPick = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
+    'acct-later': () => { S.acct = false; S.acctPitch = false; if (window.LingerAccount) LingerAccount.openForm('in'); showToast('All set! Make a profile anytime from your picture ↗'); },
+    close: () => { if (S.langPick && S.langBack === 'explain' && S.tab === 'lens' && TEXTS[S.source]) { S.langPick = false; S.langBack = null; S.explain = true; return; } S.langBack = null; S.cityPickFor = null; S.phrase = null; S.acct = false; S.acctPitch = false; S.acctFromOnb = false; S.paste = false; S.shareHelp = false; S.cityPick = false; S.langPick = false; if (S.speaking === 'summary' || S.speaking === 'word') stopSpeaking(); S.sheet = null; S.explain = false; },
     explain: () => { stopSpeaking(); S.explain = true; S.pending = null; S.sheet = null; },
     read: () => { readLens(); },
     'speak-summary': () => { speak('summary', summaryText(SUMMARY[S.source])); },
@@ -2667,15 +2713,20 @@
     a11y: (d) => { const v = ['text', 'zoom'].includes(d.k) ? Number(d.v) : d.v; setA11y(d.k, v); buzz(6); },
     'a11y-toggle': (d) => { setA11y(d.k, !A11Y[d.k]); },
     'a11y-reset': () => { Object.assign(A11Y, A11Y_DEF); setA11y('theme', 'system'); showToast('Display and accessibility reset'); },
-    'lang-open': () => { S.langPick = true; S.langQuery = ''; S.sheet = null; S.explain = false; },
+    'lang-open': () => { S.langPick = true; S.langQuery = ''; S.langBack = S.explain ? 'explain' : null; S.sheet = null; S.explain = false; },
+    // The language they tap becomes the main one (first), so the scan's translation and summary switch to it right away.
     'lang-set': (d) => {
       const before = S.langs.slice(), name = d.v && langOf(d.v) ? langOf(d.v).own : '';
-      setTimeout(() => { if (S.langs.join() !== before.join()) { S.langUndo = before; showToast(!d.v ? 'Languages cleared' : S.langs.includes(d.v) ? `Added ${name}` : `Removed ${name}`, { label: 'Undo', action: 'lang-undo' }); render(); } }, 0);
       if (!d.v) setLangs([]);
-      else if (S.langs.includes(d.v)) setLangs(S.langs.filter((c) => c !== d.v));
-      else if (S.langs.length >= 3) { showToast('Up to 3 languages. Remove one first.'); return; }
-      else setLangs([...S.langs, d.v]);
+      else if (S.langs[0] === d.v) return;
+      else setLangs([d.v, ...S.langs.filter((c) => c !== d.v)].slice(0, 3));
       if (S.prefs.done) savePrefs({});
+      if (S.langs.join() !== before.join()) { S.langUndo = before; TTR.forEach((v, k) => { if (v.status === 'fail') TTR.delete(k); }); showToast(!d.v ? 'English only' : `Now reading in ${name}`, { label: 'Undo', action: 'lang-undo' }); }
+    },
+    'lang-rm': (d) => {
+      const before = S.langs.slice(), name = langOf(d.v) ? langOf(d.v).own : '';
+      setLangs(S.langs.filter((c) => c !== d.v)); if (S.prefs.done) savePrefs({});
+      S.langUndo = before; showToast(`Removed ${name}`, { label: 'Undo', action: 'lang-undo' });
     },
     'speak-tr': (d) => { speak('tr', d.t, null, d.l || S.lang); },
     auto: () => { S.autoHard = !S.autoHard; },
@@ -2916,7 +2967,7 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
     if (S.feedback || S.installHelp) { S.feedback = null; S.installHelp = false; render(); return; }
-    if (S.acct) { S.acct = false; S.acctFromOnb = false; render(); return; }
+    if (S.acct) { S.acct = false; S.acctPitch = false; S.acctFromOnb = false; render(); return; }
     if (S.onb) { if (S.onb.edit) { S.onb = null; render(); } return; } // first-time setup: use Skip
     if (S.sheet || S.pending || S.explain || S.paste || S.shareHelp || S.cityPick || S.langPick) { S.sheet = null; S.pending = null; S.explain = false; S.paste = false; S.shareHelp = false; S.cityPick = false; S.langPick = false; render(); }
     else if (S.activity) { S.activity = null; S.game = null; render(); }
@@ -2998,6 +3049,7 @@
         LingerAccount.saveProfile({ prefs: prefsOut() });
       }
       if (S.acctFromOnb && S.onb) S.acct = false; // signed in from onboarding: back to the questions
+      if (S.acctPitch) { S.acctPitch = false; S.acct = false; showToast('All set! Your words now save to your account.'); } // made a profile at the end of setup
       S.acctFromOnb = false;
       render();
     }

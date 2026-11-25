@@ -19,6 +19,20 @@
   const api = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id ? chrome : null;
   const alive = () => !api || !!(chrome.runtime && chrome.runtime.id);
   let dead = false;
+  // The card's bookmark: pressed = saved. Tapping a saved word's bookmark removes it (here, from the account and the
+  // paired phone). An open card follows changes made elsewhere (the phone, the menu) through chrome.storage.
+  function bookmark(cardEl, on, label) {
+    const b = cardEl.querySelector('#save'); if (!b) return;
+    cardEl.querySelector('#saved').hidden = !on; b.setAttribute('aria-pressed', String(on));
+    b.title = on ? 'Saved to Linger. Click to remove it' : 'Save to Linger';
+    b.setAttribute('aria-label', on ? `Remove ${label} from your saved words` : `Save ${label} to Linger`);
+  }
+  async function unsaveFromCard(cardEl, key, stillOpen) {
+    const r = await send({ type: 'unsave', key });
+    if (!stillOpen()) return;
+    bookmark(cardEl, false, cardEl.dataset.label || 'this');
+    cardEl.querySelector('#note').textContent = r && r.queued ? 'Removed from your saved words, here and on your phone.' : 'Removed from your saved words.';
+  }
   function send(msg) {
     if (!api) return Promise.resolve(null);
     if (!alive()) { retire(true); return Promise.resolve(null); }
@@ -719,9 +733,12 @@
       card.querySelector('.wc-words').insertAdjacentHTML('beforeend', '<p class="wc-msg">Not in the dictionary yet.</p>');
       place(card, sp.getBoundingClientRect());
     }
-    const showSaved = () => { card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true'); card.querySelector('#save').title = 'Saved to Linger'; };
+    card.dataset.key = k; card.dataset.label = raw;
+    const showSaved = () => bookmark(card, true, raw);
     store({ saved: [] }, (v) => { if (card && cardSpan === sp && v.saved.some((x) => x.key === k)) showSaved(); });
+    send({ type: 'sync-now' }); // catch up with the phone (at most every 15 s); the bookmark follows through storage
     card.querySelector('#save').onclick = async () => {
+      if (card.querySelector('#save').getAttribute('aria-pressed') === 'true') return unsaveFromCard(card, k, () => card && cardSpan === sp);
       const r = await send({ type: 'save', key: k, word: { w: raw.toLowerCase(), m: meaning, s: sentence, p: plain !== sentence ? plain : '', place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
       if (!card || cardSpan !== sp) return;
       showSaved(); savedFx(card.querySelector('#save'), cap(raw), r && r.synced);
@@ -943,9 +960,12 @@
     if (aiOK()) aiP.then(useAI);
     else if (aiUndecided()) consentPrompt(card.querySelector('#ai'), () => askAI('phrase', text, aiCtx).then(useAI));
     const key = 'phrase-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
-    const showSaved = () => { card.querySelector('#saved').hidden = false; card.querySelector('#save').setAttribute('aria-pressed', 'true'); card.querySelector('#save').title = 'Saved to Linger'; };
+    card.dataset.key = key; card.dataset.label = 'this highlight';
+    const showSaved = () => bookmark(card, true, 'this highlight');
     store({ saved: [] }, (v) => { if (card && cardRange === range && v.saved.some((x) => x.key === key)) showSaved(); });
+    send({ type: 'sync-now' });
     card.querySelector('#save').onclick = async () => {
+      if (card.querySelector('#save').getAttribute('aria-pressed') === 'true') return unsaveFromCard(card, key, () => card && cardRange === range);
       const m = ai ? ai.meaning : changed ? plain : hard.filter((x) => x.meaning).map((x) => `${x.raw}: ${x.meaning}`).join(' ');
       const p = ai ? ai.plain : changed ? plain : '';
       const r = await send({ type: 'save', key, word: { w: text, m, s: fromText || text, p, place: host, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } });
@@ -1516,6 +1536,7 @@
     chrome.storage.local.get({ off: false, highlight: false, paused: [], bigger: false, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '', density: 'normal' }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       if (dead) return;
+      if (ch.saved && card && card.dataset.key) bookmark(card, (ch.saved.newValue || []).some((x) => x.key === card.dataset.key), card.dataset.label || 'this');
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
       // A new density: take the underlines off and find the hard words again with the new line.

@@ -110,6 +110,11 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; border: 1px solid 
 #saved { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
 #saved li { padding: 8px 12px; border-radius: 10px; background: var(--surface-soft); font-size: 13px; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #saved li b { color: var(--indigo-900); }
+#saved li:not(.empty) { display: flex; align-items: center; gap: 8px; }
+#saved .sv-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#saved .sv-x { flex: none; width: 24px; height: 24px; margin: -2px -6px -2px 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; }
+#saved .sv-x:hover { background: var(--indigo-100); color: var(--indigo-900); }
+#saved .sv-x:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 1px; }
 #saved li span { color: var(--text-muted); }
 #saved li.empty { white-space: normal; text-align: center; padding: 14px 12px; border: 1px dashed var(--indigo-300); background: transparent; }
 
