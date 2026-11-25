@@ -1,4 +1,4 @@
-// Linger toolbar menu: settings, Explain this page, eye tracking, phone pairing and saved words.
+// Linger toolbar menu: settings, Explain this page, translation, phone sync and saved words.
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const tidy = (c) => String(c || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -15,7 +15,6 @@ const PAIR_MSG = {
   error: 'Linger’s server didn’t answer. Wait a minute, then press Connect again.',
   new: 'Connected. Your phone hasn’t saved a word with this code yet, so Linger can’t check it. If words you save here don’t reach your phone, press Disconnect and check the code (Words → Turn on live sync).'
 };
-const DENSITY_HINT = { fewer: 'Fewer: only the hardest words', normal: 'Normal: words outside the 10,000 most common', more: 'More: also shorter and less common words' };
 // Newer version check: the published manifest on the Linger website, at most every 6 hours.
 const SITE = 'https://somohanty04.github.io/linger-prototype/';
 const newer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0; } return false; };
@@ -44,18 +43,6 @@ async function isPdf(tab, url, status) {
   const looks = /\.pdf$/i.test(url.pathname) || /\/pdf\//i.test(url.pathname) || /[?&](format|type|output)=pdf\b/i.test(url.search);
   return looks && (!status || /\.pdf$/i.test(url.pathname));
 }
-// What a gazeProblem's "why" means, in plain words.
-function problemText(why) {
-  const w = String(why || '');
-  if (w === 'noface') return 'Linger couldn’t see your face for a while';
-  if (/^camera NotAllowedError/.test(w)) return 'camera access is turned off';
-  if (/^camera NotReadableError/.test(w)) return 'the camera is busy (another app may be using it)';
-  if (/^camera NotFoundError/.test(w)) return 'no camera was found';
-  if (/^camera/.test(w)) return 'the camera didn’t start';
-  if (/^model/.test(w)) return 'eye tracking couldn’t load';
-  if (/^hand swipes/.test(w)) return 'hand tracking couldn’t load';
-  return w;
-}
 
 // The menu in the reader's language ("My language"): each language is translated once (Chrome's translator, or Claude
 // through the background worker) and kept in chrome.storage, shared with the page script.
@@ -63,9 +50,8 @@ const UI = {};
 const L = (t) => UI[t] || t;
 const EXTRA = ['Not available here', 'Reload this page to start Linger here.', 'Reload this page to use the new version of Linger.', 'The code has 12 letters and numbers.', 'Checking…',
   'Couldn’t reach Linger. Check your internet connection.', 'Show the original page', 'Translate this page', 'Starting…', 'Couldn’t translate this page. Reload it and try again.',
-  'Click on an underlined word, then the bookmark icon.', 'My language (pick one below)', 'Eye tracking finds hard words through the underlines. Turn on Underline hard words.', 'Ask Linger needs AI explanations turned on.', 'Linger is off for this site, so the ✦ button is hidden.', 'Linger is off on every website. Turn on the Linger switch to use it.', 'The ✦ button should be at the bottom right of this page. If it isn’t, reload the page.',
-  ...Object.values(PAIR_MSG), ...Object.values(DENSITY_HINT), 'Sending…', 'Thanks. The Linger team will look at this site.', 'Couldn’t send it. You’re offline: connect to the internet and try again.', 'Couldn’t send it right now. Try again in a minute.',
-  'It looks dark where you are. Add light in front of you (a lamp or window), not behind you.', 'Linger sees more than one face. Only one person should be in front of the camera.', 'Fix it'];
+  'Click on an underlined word, then the bookmark icon.', 'in my language (pick one above)', 'On', 'Off', 'Reload this page to use Ask Linger.', 'Ask Linger needs AI explanations turned on.', 'Linger is off for this site, so the ✦ button is hidden.', 'Linger is off on every website. Turn on the Linger switch to use it.', 'The ✦ button should be at the bottom right of this page. If it isn’t, reload the page.',
+  ...Object.values(PAIR_MSG), 'Sending…', 'Thanks. The Linger team will look at this site.', 'Couldn’t send it. You’re offline: connect to the internet and try again.', 'Couldn’t send it right now. Try again in a minute.'];
 async function localize(lang) {
   if (!lang || lang === 'en') return;
   const skip = (el) => el.closest('[translate="no"], #transLang, script, style, textarea, input'); // language names stay as written
@@ -97,9 +83,6 @@ async function localize(lang) {
   document.documentElement.dir = self.lingerRTL(lang) ? 'rtl' : 'ltr';
 }
 
-// The bar's filled part shows the pause time.
-function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min) * 100) + '%'); }
-
 (async () => {
   // Words already translated for this language, so messages set below are in it right away.
   const { transLang: mine } = await chrome.storage.local.get({ transLang: '' });
@@ -110,13 +93,13 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
   const host = url ? url.hostname || 'file' : '';
   $('siteLabel').textContent = usable ? host : L('Not available here');
   const status = usable ? await chrome.tabs.sendMessage(tab.id, { type: 'status' }).catch(() => null) : null;
-  if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain'].forEach((id) => { $(id).disabled = true; }); }
+  if (!usable || !status) { $('blocked').hidden = false; ['site', 'explain', 'askOpen'].forEach((id) => { $(id).disabled = true; }); }
   if (usable && !status) $('blocked').textContent = L('Reload this page to start Linger here.');
   // A PDF: say why instead of the generic message, and offer the app's Paste screen.
   const pdf = await isPdf(tab, url, status);
   if (pdf) {
     $('blocked').hidden = true; $('pdf').hidden = false;
-    ['site', 'explain'].forEach((id) => { $(id).disabled = true; });
+    ['site', 'explain', 'askOpen'].forEach((id) => { $(id).disabled = true; });
     if (/Mac/i.test(navigator.platform)) $('pdfTip').textContent = 'Select all (Cmd+A), copy, then paste.';
   }
   checkUpdate();
@@ -147,50 +130,21 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
     el.hidden = !text; el.textContent = L(text);
   };
 
-  const st = await chrome.storage.local.get({ highlight: false, paused: [], bigger: false, aiOn: false, aiConsent: '', assistant: true, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, pairCode: '', saved: [], gazeProblem: null, eyeOn: false, gazeModel: null, handOn: false, handSecs: 2, density: 'normal', gazeEnv: null, gazeSnooze: 0 });
-  // Eye tracking problems: the last one (30 min), and light / faces the tracker is seeing now (fresh in the last 3 min).
-  const problem = st.gazeProblem && Date.now() - st.gazeProblem.t < 30 * 60 * 1000 ? 'Last problem: ' + problemText(st.gazeProblem.why) + '.' : '';
-  const envFresh = st.eyeOn && st.gazeEnv && Date.now() - st.gazeEnv.t < 3 * 60 * 1000;
-  const envText = !envFresh ? '' : [st.gazeEnv.dark ? 'It looks dark where you are. Add light in front of you (a lamp or window), not behind you.' : '', st.gazeEnv.faces > 1 ? 'Linger sees more than one face. Only one person should be in front of the camera.' : ''].filter(Boolean).map(L).join(' ');
-  if (problem || envText) {
-    $('eyeProblem').hidden = !problem; $('eyeProblemText').textContent = problem;
-    $('eyeEnv').hidden = !envText; $('eyeEnv').textContent = envText;
-    $('fixProblem').hidden = !problem; $('fixProblem').textContent = problem;
-    $('fixEnv').hidden = !envText; $('fixEnv').textContent = envText;
-    if (!problem) { $('eyeEnv').appendChild(document.createTextNode(' ')); const b = $('eyeFix'); $('eyeEnv').appendChild(b); $('eyeEnv').classList.add('has-fix'); }
-  }
-  // Troubleshooting view: a checklist and Recalibrate, in place of the rest of the menu.
-  const fixView = (open) => {
-    $('fixView').hidden = !open; document.body.classList.toggle('fixing', open);
-    if (open) { scrollTo(0, 0); $('fixH').focus(); } else $('eyeFix').focus();
-  };
-  $('eyeFix').onclick = () => fixView(true);
-  $('fixBack').onclick = () => fixView(false);
-  $('fixRecal').onclick = async () => { await chrome.runtime.sendMessage({ type: 'eye-recal', tabId: tab && tab.id }); window.close(); };
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('fixView').hidden) { e.preventDefault(); fixView(false); } });
-  // "Pause for 30 minutes" from the page's "Want help with this word?" question.
-  if (st.gazeSnooze > Date.now()) {
-    $('eyeSnooze').hidden = false;
-    $('eyeSnoozeText').textContent = 'Eye tracking questions are paused until ' + new Date(st.gazeSnooze).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '.';
-    $('eyeResume').onclick = () => { chrome.storage.local.set({ gazeSnooze: 0 }); $('eyeSnooze').hidden = true; };
-  }
-  // How many words to underline.
-  $('density').value = DENSITY_HINT[st.density] ? st.density : 'normal';
-  const densityHint = () => { $('densityHint').textContent = L(DENSITY_HINT[$('density').value]); };
-  densityHint();
-  $('density').onchange = (e) => { chrome.storage.local.set({ density: e.target.value }); densityHint(); };
+  const st = await chrome.storage.local.get({ highlight: false, paused: [], bigger: false, aiOn: false, aiConsent: '', assistant: true, pairCode: '', saved: [], density: 'normal' });
   $('highlight').checked = st.highlight;
   $('site').checked = !st.paused.includes(host);
   // The main switch: Linger off on every website (the "On this site" switch is for this one site only).
   const { off } = await chrome.storage.local.get({ off: false });
-  $('power').checked = !off; document.body.classList.toggle('all-off', off);
-  $('power').onchange = (e) => { chrome.storage.local.set({ off: !e.target.checked }); document.body.classList.toggle('all-off', !e.target.checked); $('askWhy').hidden = true; };
+  const powerShow = (on) => { document.body.classList.toggle('all-off', !on); $('powerTxt').textContent = L(on ? 'On' : 'Off'); };
+  $('power').checked = !off; powerShow(!off);
+  $('power').onchange = (e) => { chrome.storage.local.set({ off: !e.target.checked }); powerShow(e.target.checked); $('askWhy').hidden = true; };
   $('bigger').checked = st.bigger;
   // AI explanations: on only with explicit consent (aiConsent: 'yes'), kept apart from the switch itself. An older
   // aiOn: true without consent shows as off, and turning it on asks first.
   const aiOK = () => st.aiConsent === 'yes' && st.aiOn === true;
   $('aiOn').checked = aiOK();
-  const aiAsk = (show) => { $('aiAsk').hidden = !show; if (show) $('aiNo').focus(); }; // focus the safe choice; the group's text is read first
+  const aiAsk = (show) => { $('aiAsk').hidden = !show; if (show) { $('aiNo').focus(); $('aiAsk').scrollIntoView({ block: 'nearest' }); } };
+  let askAfter = false; // they pressed Ask Linger with AI off: open the chat once they allow it // focus the safe choice; the group's text is read first
   $('aiOn').onchange = (e) => {
     if (!e.target.checked) { st.aiOn = false; aiAsk(false); chrome.storage.local.set({ aiOn: false }); return; }
     if (st.aiConsent === 'yes') { st.aiOn = true; chrome.storage.local.set({ aiOn: true }); return; }
@@ -200,67 +154,37 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
     Object.assign(st, { aiOn: yes, aiConsent: yes ? 'yes' : 'no' });
     chrome.storage.local.set({ aiOn: yes, aiConsent: st.aiConsent, aiConsentAt: Date.now() });
     $('aiOn').checked = yes; aiAsk(false); $('aiOn').focus();
+    if (yes && askAfter) openChat();
+    askAfter = false;
   };
   $('aiYes').onclick = () => choose(true);
   $('aiNo').onclick = () => choose(false);
   $('assistant').checked = st.assistant;
   $('assistant').onchange = (e) => chrome.storage.local.set({ assistant: e.target.checked });
-  $('showGaze').checked = st.showGaze;
-  $('spread').checked = st.spread;
-  $('handSwipe').checked = st.handSwipe;
-  $('secs').value = st.pauseSecs; $('secsOut').textContent = st.pauseSecs; fill();
-  $('eye').checked = st.eyeOn;
-  $('recal').hidden = !st.gazeModel;
-  const acc = st.gazeModel && st.gazeModel.acc;
-  if (acc) $('recal').title = `Set up ${new Date(st.gazeModel.at).toLocaleDateString()}: lands about ${acc.err}px from where you look`;
-
-  // Eye tracking looks for underlined words, so it needs "Underline hard words" (which now starts off).
-  const eyeHint = () => {
-    const need = $('eye').checked && !$('highlight').checked;
-    $('eyeNeed').hidden = !need;
-    $('eyeNeed').textContent = need ? L('Eye tracking finds hard words through the underlines. Turn on Underline hard words.') : '';
-  };
-  eyeHint();
-  $('highlight').onchange = (e) => { chrome.storage.local.set({ highlight: e.target.checked }); eyeHint(); };
+  $('highlight').onchange = (e) => chrome.storage.local.set({ highlight: e.target.checked });
   $('bigger').onchange = (e) => chrome.storage.local.set({ bigger: e.target.checked });
-  $('showGaze').onchange = (e) => chrome.storage.local.set({ showGaze: e.target.checked });
-  $('spread').onchange = (e) => chrome.storage.local.set({ spread: e.target.checked });
-  $('handSwipe').onchange = (e) => chrome.storage.local.set({ handSwipe: e.target.checked });
   $('site').onchange = async (e) => {
     const { paused } = await chrome.storage.local.get({ paused: [] });
     chrome.storage.local.set({ paused: e.target.checked ? paused.filter((h) => h !== host) : [...new Set([...paused, host])] });
   };
   $('explain').onclick = async () => { await chrome.tabs.sendMessage(tab.id, { type: 'explain' }).catch(() => {}); window.close(); };
-
-  // Eye tracking runs once for the whole browser; the first time, it opens the setup page.
-  $('eye').onchange = async (e) => {
-    const r = await chrome.runtime.sendMessage({ type: e.target.checked ? 'eye-on' : 'eye-off', tabId: tab && tab.id });
-    if (r && r.setup) e.target.checked = false;
-    window.close();
+  // Ask Linger: opens the chat on the page. It needs AI explanations, so ask for that first if it's off.
+  const openChat = async () => {
+    if ($('power').checked === false) { chrome.storage.local.set({ off: false }); $('power').checked = true; powerShow(true); }
+    const r = await chrome.tabs.sendMessage(tab.id, { type: 'ask' }).catch(() => null);
+    if (r && r.ok) return window.close();
+    $('askWhy').hidden = false; $('askWhy').textContent = L('Reload this page to use Ask Linger.');
   };
-  $('practice').onclick = async () => { await chrome.runtime.sendMessage({ type: 'open-practice' }); window.close(); };
-  $('recal').onclick = async () => { await chrome.runtime.sendMessage({ type: 'eye-recal', tabId: tab && tab.id }); window.close(); };
-  $('secs').oninput = (e) => { $('secsOut').textContent = e.target.value; fill(); };
-  $('secs').onchange = (e) => chrome.storage.local.set({ pauseSecs: Number(e.target.value) });
-
-  // Hand gestures: a feature of its own (no eye-tracking setup needed). The camera has to be allowed once, on the
-  // practice page (Chrome only asks on a page you can see), so the first time the switch opens that page.
-  $('hand').checked = st.handOn;
-  $('handSecs').value = st.handSecs; $('handSecsOut').textContent = st.handSecs; fill('handSecs');
-  const camOK = async () => { try { return (await navigator.permissions.query({ name: 'camera' })).state === 'granted'; } catch { return false; } };
-  $('hand').onchange = async (e) => {
-    if (!e.target.checked) { chrome.storage.local.set({ handOn: false }); return; }
-    if (await camOK()) { chrome.storage.local.set({ handOn: true }); return; }
-    e.target.checked = false;
-    await chrome.runtime.sendMessage({ type: 'hand-setup' }); window.close();
-  };
-  $('handPractice').onclick = async () => { await chrome.runtime.sendMessage({ type: 'hand-setup' }); window.close(); };
-  $('handSecs').oninput = (e) => { $('handSecsOut').textContent = e.target.value; fill('handSecs'); };
-  $('handSecs').onchange = (e) => chrome.storage.local.set({ handSecs: Number(e.target.value) });
+  $('askOpen').onclick = () => { if (aiOK()) openChat(); else { askAfter = true; aiAsk(true); } };
 
   // Phone pairing: the same 12-character code the phone app shows under Words → live sync.
-  const showPair = (code) => { $('paired').hidden = !code; $('pairForm').hidden = !!code; $('pairHint').hidden = !!code; $('codeShow').textContent = pretty(code); };
+  const showPair = (code) => { $('paired').hidden = !code; $('codeOpen').hidden = !!code; if (code) $('codeBox').hidden = true; $('codeShow').textContent = pretty(code); };
   showPair(st.pairCode);
+  $('codeOpen').onclick = () => {
+    const open = $('codeBox').hidden;
+    $('codeBox').hidden = !open; $('codeOpen').setAttribute('aria-expanded', String(open));
+    if (open) $('code').focus();
+  };
   const pairMsg = (key, bad) => {
     $('pairMsg').textContent = key ? L(PAIR_MSG[key] || key) : '';
     $('code').setAttribute('aria-invalid', bad ? 'true' : 'false');
@@ -316,7 +240,7 @@ function fill(id = 'secs') { const r = $(id); r.style.setProperty('--p', ((r.val
   // Hard words show as: original, easier English, or My language (needs a language picked below).
   const { swap } = await chrome.storage.local.get({ swap: '' });
   const mineLang = self.lingerLang(transLang);
-  $('swapMine').textContent = mineLang && transLang !== 'en' ? mineLang.own : L('My language (pick one below)');
+  $('swapMine').textContent = mineLang && transLang !== 'en' ? `in ${mineLang.own}` : L('in my language (pick one above)');
   $('swapMine').disabled = !(mineLang && transLang !== 'en');
   if (!$('swapMine').disabled) $('swapMine').setAttribute('translate', 'no');
   $('swap').value = swap === 'mine' && $('swapMine').disabled ? '' : swap;

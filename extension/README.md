@@ -1,90 +1,54 @@
 # Linger for Chrome
 
-Underlines hard English words on any website, explains them in plain words, and saves them to the Linger phone app. Optional webcam eye tracking offers help when you pause on a line.
+Underlines hard English words on any website, explains them in plain words, translates them, and saves them to the Linger phone app.
 
-## Install (developer mode, for class testing)
+## Install (developer mode)
 
-1. Download `linger-extension.zip` from https://somohanty04.github.io/linger-prototype/linger-extension.zip and unzip it.
-2. In Chrome, open `chrome://extensions` and turn on **Developer mode** (top right).
-3. Click **Load unpacked** and choose the unzipped `linger-extension` folder.
-4. Pin Linger: click the puzzle-piece icon in the toolbar, then the pin next to Linger.
-5. Reload any tabs that were already open.
+1. Download and unzip https://somohanty04.github.io/linger-prototype/linger-extension.zip.
+2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick the unzipped folder.
+3. Pin Linger from the puzzle-piece menu.
 
-## What it does
+Tabs that were already open get Linger automatically.
 
-- **Underlines hard words** (turn on **Underline hard words** in the Linger menu; it starts off, so a new install doesn't change any page until you ask) on every page with Linger's orange dotted line: words outside the ~10,000 most common English words, Linger's legal, lease and billing words, and local slang from the city guides. Names, acronyms, links, buttons and text boxes are skipped.
-- **Hard words show as** (Linger menu, or **Alt+Shift+L** on any page to cycle): the original words, **easier English**, or **your language**, swapped right in the text with a green underline (hover to see the original; click for the original word's card). Linger's own plain-word list answers many words instantly, Chrome's on-device translator does your language when it can, and the rest go to Claude in batches of 60 words, what's on screen first. Answers are remembered, so the next page is faster.
-- **Highlight any word, phrase or sentence** (works with underlines on or off) and click the **✦ Explain** button that appears. One word opens the word card below. A phrase or sentence opens the same card with the text in plain words (Linger's phrase rules and easy-word swaps), the sentence it came from with the highlight in bold, and each hard word in it with its meaning and an easier word when there is one. The speaker reads it aloud and the bookmark saves it to the phone app.
-- **AI explanations (Claude):** off until you allow them. The first word card or highlight asks "Explain this with AI?" and says what is sent (the text you select and the paragraph around it, plus page text when you use Ask Linger, translate a page or switch hard words into your language) before anything goes to Claude; "Not now" keeps the dictionary-only cards, and the choice is remembered (`aiConsent` in chrome.storage, kept apart from the `aiOn` switch, so an older `aiOn: true` doesn't count as consent). The AI explanations switch in the menu asks the same question when turned on. Every AI request, including hover prefetch, eye tracking, word swaps, translation and Ask Linger, is checked in `background.js` (`aiAllowed`). With the Linger AI server running (see `functions/README.md`), cards also ask Claude what the text means *where it appears*. The word card's meaning becomes the meaning in that sentence, with easier words that fit there. The phrase card gets "What it means here", a plain-English version, and hard words explained in context. Until the answer arrives (or if AI is off or unreachable), the cards show Linger's dictionary version. To keep cards fast, Linger starts the lookup while your pointer rests on an underlined word (and when eye tracking asks "Want help with this word?"), and keeps the last 500 AI answers on the laptop, so words you've met before open instantly. Only the highlighted text and its sentence or paragraph are sent. Turn it off with **AI explanations** in the Linger menu.
-- **In your language:** with **My language** set, the Linger menu and the Ask Linger panel show their buttons and messages in that language (translated once, then remembered), and Ask Linger answers in that language, giving the page's key English words in brackets so you can find them.
-- **Ask Linger (page assistant):** a small ✦ button in the bottom-right corner opens a chat about the page. People can ask anything, tap a suggestion ("What is this page about?", "What do I need to do, and by when?", "Help me decide what to do"), and follow up. If they highlight text before opening it, the highlight becomes the topic. Claude answers in plain English from the page's text only, lays out choices, deadlines and what happens if you do nothing, leaves the decision to the reader, and suggests who to ask for legal, money or medical decisions. Each answer has a Read aloud button. Turn the button off with **Ask Linger button** in the Linger menu (it's also hidden when AI explanations are off or Linger is off for the site).
-- **Click an underlined word** (or double-click any word) for a card (Linger design system word card): meaning, the word in a sentence (from the page, or a dictionary example when the page only has a heading or label), the same sentence with an easier synonym when there is one (Linger's own word list, or a thesaurus word that the meaning also uses, so it's the right sense), a local note for slang, the speaker icon to hear the word, and the bookmark icon to save it. Words with no dictionary entry get a short red card that says "Not in the dictionary yet." (you can still hear and save them).
-- **Translation** (toolbar menu → Translation): pick **My language** (40+ languages, including Arabic, Dari, Pashto, Somali, Tigrinya, Haitian Creole, Karen and Burmese). Every word and highlight card also has a **🌐 language menu**, so you can pick or switch the language right on the card (it becomes your My language too). Word cards and highlight cards then add an **In <your language>** box: the word and its sentence (or the highlighted text) translated. **Translate this page** swaps the page's text for your language and puts a **Show original** bar at the top; underlines come off while it's translated and come back after. If the page is already in your language, it translates into English instead. Translation uses Chrome's built-in translator (Chrome 138+): it runs on the laptop, is free, and nothing is sent anywhere. The first time you use a language Chrome downloads it (a few seconds; the menu shows progress). When Chrome's translator can't do a language here, Claude translates instead (only when **AI explanations** is on): cards one at a time, whole pages in batches. Claude also explains idioms and official terms. **Highlight text in any language** (a page Linger translated, or one written in another language) and press **✦ Explain**: the card shows it in English, the original English from the page when Linger translated it, and what it means, also in your language.
-- **Explain this page** (toolbar menu): "What this page wants from you" with key dates and amounts. Select text first to explain only that part.
-- **The bookmark (Save to Linger)** keeps the word in the menu's Saved list and, once paired, sends it to the phone app's Words tab right away (Firebase).
-- **Eye tracking** (toolbar menu, off by default): uses the webcam with Google's MediaPipe face and iris model. It runs **once for the whole browser**, so it works on every tab and website (even ones that block cameras), and you set it up only once. The first time, a setup page opens: check your face and lighting, then follow a dot full screen through 20 spots, plus 5 green check spots that measure accuracy (about 35 seconds). It measures where the iris sits inside each eye *and* how your head is turned and positioned, so small head movements don't throw it off. Reading normally won't trigger it: Linger looks at the last few seconds as a whole, and only asks "Want help with this word?" when your eyes stay in one place (no sweeping across or moving down) for the pause time, or go clearly back up to re-read. It keeps learning: every click (people look at what they click) corrects drift right away and improves the model, and so does every "Yes, explain". The chip at the bottom left says when it can't see your eyes or when you've moved far from where you sat during setup. **Hand swipes**: while it asks "Want help with this word?", swipe your hand to your right for *Yes, explain* or to your left for *No* (the hand tracker only runs while the question is open). Options: **Answer with a hand swipe**, **Show where I'm looking** (a soft dot where it thinks you’re looking) and **More space between lines**. The video never leaves the laptop.
-- **Hand gestures** (toolbar menu → Hand gestures, off by default; a feature of its own, no eye-tracking setup needed): uses the webcam with MediaPipe's hand model, in the same hidden camera page as eye tracking, so it works on every tab. The first time, the switch opens **Practice hand gestures**, which asks Chrome for the camera and ticks off each gesture as you try it. With one hand in front of the webcam:
-  - **👆 Point** with your index finger: a dot follows it on the page. Hold it on any word (underlined or not) for 2 seconds (1–4 s in the menu) and a ring fills, then Linger asks **"Want help with this word?"**.
-  - **✋ Swipe** an open hand to your right for yes (the word's card opens) or your left for no, or click.
-  - **✋ Swipe** an open hand up to scroll down, or down to scroll up, by most of a screen. It scrolls a scrolling panel in the middle of the page (like webmail) if there is one.
-  - **🤏 Pinch** (thumb on your index fingertip), hold a moment, then move up to zoom in or down to zoom out, using Chrome's zoom steps for that tab. Open your fingers to stop. A held pinch is used instead of a phone-style spread because the camera can't tell a spread from someone relaxing a pointing hand.
-  - Only the tab you're looking at reacts. A pointing hand that moves never scrolls; only an open hand swipes. A chip at the bottom of the page shows what Linger sees and has **Turn off**. Answers are logged on the laptop (`handLog`), like eye tracking's.
-- **Toolbar menu**: the main **Linger** switch (off on every website: no underlines, swapped words, ✦ button or eye tracking, the camera turns off, and the toolbar icon shows OFF), underline on/off, translation language and Translate this page, turn off for this site, bigger words, eye tracking with sensitivity and recalibrate, phone pairing, saved words.
+## Features
 
-## If eye tracking doesn't start
+- **Underlines hard words** (off until you turn it on): words outside the ~10,000 most common, Linger's legal/lease/billing words, and city slang. Names, acronyms, links, buttons and text boxes are skipped. **How many** picks Fewer, Normal or More.
+- **Word cards**: click an underlined word (or double-click any word) for its meaning, an example sentence, an easier synonym, a local note for slang, read-aloud and save.
+- **✦ Explain**: highlight any word, phrase or sentence for a card in plain words, with each hard word explained.
+- **Hard words show as** (or **Alt+Shift+L**): the original, easier English, or your language, swapped into the text with a green underline.
+- **AI explanations (Claude)**: off until you allow them. Cards then give the meaning *in that sentence*. Only the selected text and its paragraph are sent (plus page text for Ask Linger, page translation and swaps). Every request is checked in `background.js` (`aiAllowed`).
+- **Ask Linger**: a ✦ button in the corner opens a chat about the page: what it's about, what to do and by when, help deciding.
+- **Translation**: pick **My language** (40+ languages). Cards add a translated box, and **Translate this page** swaps the page text, with **Show original** to undo. Uses Chrome's on-device translator (Chrome 138+), falling back to Claude when AI is on.
+- **Explain this page**: what the page wants from you, with key dates and amounts.
+- **Save**: the bookmark keeps the word in the menu's Saved list and syncs it to the phone.
+- **Menu**: the main Linger switch (off everywhere, toolbar shows OFF), On this site, Bigger words, and a **Not working on this site?** report.
 
-- **Camera access was blocked** (on the setup page): click the camera icon in the address bar → Allow, then press Turn on camera again. On a Mac, also check System Settings → Privacy & Security → Camera → Google Chrome.
-- **The camera is busy**: close Zoom, FaceTime or other apps using it.
-- **"Linger couldn't see your eyes well enough"**: add light in front of you (a window or lamp), sit about an arm's length away, and calibrate again.
-- **"Sit like you did when you set it up"**: you've moved a lot closer, farther or to the side. Move back, or press Recalibrate.
-The menu shows the last problem under Eye tracking, with **Fix it**: a checklist (light in front of you, face the screen, glasses glare, one face in view, camera not used by another app) and Recalibrate. The menu also warns when the camera picture is dark or shows more than one face (the tracker measures the frame's average brightness and asks MediaPipe for up to 2 faces; it follows the biggest one).
-- **"Linger lost track of where you're looking. Recalibrate?"** appears on the page (at most once every 10 minutes) when you've sat far from your setup position for 20 seconds, when most of your gaze lands far outside the window for 20 seconds, or when 4 of your last 5 clicks landed far from where Linger thought you were looking. Webcam gaze has no confidence score, so these are the signals it uses.
-- **Pause** on "Want help with this word?": **Pause on this page** (until you leave or reload it) or **Pause for 30 minutes** (every tab). The chip at the bottom left says it's paused and has **Resume**.
+## Sync with your phone
 
-## If Linger stops working on a page
+Sign in with your Linger app account, or tap **Use a code from the app instead** and enter the 12-character code (app → profile picture → Get a code). The menu explains bad codes (wrong length, letters codes never use: 0, O, 1, I, L) and offline errors.
 
-- **After installing or updating Linger**, it now adds itself to tabs that were already open, so you don't have to reload them. If a page still shows **"Linger was updated. Reload this page"**, press Reload.
-- **"Linger AI didn't answer this time"** on a card: the AI server was busy or the connection dropped (Linger already retried once). The card shows the dictionary meaning instead. Click the word again to retry.
-- **Turning Linger off everywhere**: use the **Linger** switch at the top of the menu. **On this site** only turns it off for the site you're on, so Linger comes back on other sites.
-- **Turning Linger off** on `chrome://extensions` now also clears it from tabs that were already open within a couple of seconds (underlines, swapped words and the ✦ button), instead of the old copy carrying on.
-- **No ✦ Ask Linger button**: it only shows when **AI explanations**, **Ask Linger button** and **On this site** are all on. The Linger menu now says which one is off. If a site removes the button, Linger puts it back within a couple of seconds. If the menu says **Reload this page to use the new version**, that tab still runs an older copy.
+## Troubleshooting
 
-## Pair with the phone
-
-In the Linger phone app, open **Words → Turn on live sync** and type the 12-character code into the extension's **Your phone** box.
-The menu says what went wrong: not 12 letters and numbers, a letter Linger codes never use (0, O, 1, I, L), no internet, or Linger's server not answering. A code nobody has saved a word with yet can't be told apart from a typo (codes never expire), so Linger connects and says to check the code if words don't arrive.
-
-## When something's off
-
-- **Update available:** the menu checks the published `extension/manifest.json` on the Linger website (at most every 6 hours, silently skipped offline) and offers the download page when there's a newer version.
-- **PDFs:** Chrome's PDF viewer doesn't let extensions in. The menu says so and offers **Open Linger to paste the text** (the app's Paste screen).
-- **Not working on this site?** (menu, under Explain this page): a short report to the Linger team (the site's name, Linger version and an optional note, saved in Firestore `feedback`), and a reminder that highlighting text and clicking ✦ Explain still works.
-- **How many words to underline:** Fewer (long rare words and formal words outside the top 6,000), Normal, or More (also shorter rare words, and long words from the rarest part of the 10,000 list). The first page with more than 40 underlines shows a one-time tip about it.
+- **"Linger was updated. Reload this page"**: press Reload.
+- **"Linger AI didn't answer this time"**: the card shows the dictionary meaning; click the word again to retry.
+- **No ✦ button**: needs AI explanations, Ask Linger button and On this site all on. The menu says which is off.
+- **PDFs**: Chrome's PDF viewer blocks extensions. The menu offers **Open Linger to paste the text**.
+- **Updates**: the menu checks the published manifest at most every 6 hours and links to the new version.
 
 ## Limits
 
-- Doesn't run on Chrome's built-in PDF viewer, Google Docs (text is drawn, not real text) or Chrome's own pages.
-- Webcam eye tracking is about as accurate as a finger pointing: good enough to tell which line you're on with normal text, not which letter. More space between lines helps.
-- Hand gestures need good light and your hand inside the camera's view (roughly the middle of the picture). They were tested with recorded hand shapes and in the browser with simulated tracker data, not yet with many people.
-- Meanings come from Linger's word list and Wiktionary, synonyms from Linger's list and the Datamuse thesaurus, not AI. "Explain this page" swaps formal words for plain ones in the important sentences.
-- Whole-page translation translates each piece of text separately, so a sentence split by a link or bold word can read a little choppy, and content a page adds after translating (infinite scroll, new emails) stays in the original language. Chrome's translator picks one meaning for a single word; the translated sentence under it shows the sense used here.
-- Common-word list: google-10000-english (Google Web Trillion Word Corpus), permitted for educational use.
+- Doesn't run in Chrome's PDF viewer, Google Docs or Chrome's own pages.
+- Dictionary meanings come from Linger's word list and Wiktionary, synonyms from Datamuse.
+- Page translation works piece by piece, so text split by links can read choppy, and content added later stays untranslated.
+- Common-word list: google-10000-english, permitted for educational use.
 
 ## Files
 
-- `manifest.json`: extension setup (Manifest V3)
-- `content.js`: underlining, word card, Explain this page (runs on every page)
-- `tracker.html/js`: the camera page for eye tracking and hand gestures (MediaPipe face/iris and hand models), one hidden page for the whole browser
-- `calibrate.html/css/js`: the eye tracking setup page
-- `gazemodel.mjs`: the gaze math (features, calibration fit, smoothing)
-- `gaze.js`: on every page; turns the gaze point into "Want help with this word?" prompts and answers them on a hand swipe
-- `gestures.mjs`: hand poses (point, open hand, pinch), swipes, scrolling, pinch-zoom and the pointer, from MediaPipe hand landmarks
-- `hand.js`: on every page; hand gestures (pointer, "Want help with this word?" after holding on a word, swipe answers, scrolling, zoom)
-- `hands.html/js`: the Practice hand gestures page (allows the camera, ticks off each gesture)
-- `vendor/mediapipe/`: MediaPipe Tasks Vision 0.10.35 and the face and hand landmarker models (Apache 2.0)
-- `background.js`: Wiktionary lookups, Datamuse synonyms, saving, sending words to Firestore
-- `dict.js`: picks a short meaning and an example sentence from a Wiktionary entry
+- `manifest.json`: Manifest V3 setup
+- `content.js`: underlines, word cards, Explain, Ask Linger and page translation (every page)
+- `background.js`: Wiktionary, Datamuse, AI requests, saving and Firestore sync
 - `popup.html/css/js`: the toolbar menu
-- `langs.js`: the languages Linger can translate into (shared by the menu and the page script)
-- `words.js`: word data generated from the phone app; `cities.js`: city slang
-- `test.html`, `gaze-sim.js`: test page and a noisy-gaze simulation (not included in the zip)
+- `dict.js`: picks a meaning and example from a Wiktionary entry
+- `langs.js`: supported languages
+- `words.js`, `cities.js`: word data and city slang from the phone app
+- `test.html`: test page that loads `content.js` without extension features (not in the zip)

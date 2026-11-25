@@ -61,7 +61,7 @@
   }
 
   // ---------- settings ----------
-  const S = { off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '', density: 'normal' };
+  const S = { off: false, highlight: false, paused: [], bigger: false, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '', density: 'normal' };
   // AI explanations (Claude) are off until the reader explicitly allows them. aiConsent records that choice ('yes' or
   // 'no') separately from the on/off switch (aiOn): an older aiOn: true is not consent. Nothing goes to Claude without both.
   const aiOK = () => S.aiConsent === 'yes' && S.aiOn === true;
@@ -86,8 +86,6 @@
     .linger-w.linger-swapped { text-decoration: underline solid #1F8A57 2px !important; text-underline-offset: 3px !important; background: rgba(189, 232, 215, 0.35) !important; }
     .linger-nounder .linger-w:not(.linger-swapped) { text-decoration: none !important; cursor: inherit !important; background: none !important; }
     .linger-big .linger-w { font-size: 1.25em !important; padding: 0 2px !important; }
-    .linger-spread p, .linger-spread li, .linger-spread dd, .linger-spread td, .linger-spread blockquote { line-height: 2.1 !important; }
-    .linger-line { background: rgba(255, 217, 138, 0.28) !important; box-shadow: 0 0 0 3px rgba(255, 190, 70, 0.25) !important; border-radius: 4px; }
     ::highlight(linger-sel) { background-color: rgba(255, 217, 138, 0.55); }`;
   (document.head || document.documentElement).appendChild(style);
 
@@ -587,7 +585,7 @@
     }
   }
   // Open the card for an underlined word (or any word picked with a double-click).
-  async function openCard(sp, why) {
+  async function openCard(sp) {
     if (dead) return;
     attach(); closeCard();
     cardSpan = sp; sp.classList.add('linger-on'); ink(sp.getClientRects());
@@ -706,7 +704,7 @@
     if (!aiOK() && aiUndecided()) consentPrompt(card.querySelector('#ai'), () => {
       if (card && cardSpan === sp && card.classList.contains('wc-missing')) {
         const opener = cardOpener; // opened from the keyboard: keep focus in the new card
-        openCard(sp, why).catch(() => {}); if (opener) { cardOpener = opener; focusCard(); }
+        openCard(sp).catch(() => {}); if (opener) { cardOpener = opener; focusCard(); }
         return;
       }
       allowP = askAI('word', raw, sentence); allowP.then(useAI);
@@ -800,7 +798,7 @@
   function hideChip() { clearTimeout(chipT); if (chip) chip.remove(); chip = null; }
   const selOk = (node) => {
     for (let el = node && (node.nodeType === 1 ? node : node.parentElement); el; el = el.parentElement) {
-      if (/^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName) || el.isContentEditable || el.id === 'linger-ui' || el.id === 'linger-gaze') return false;
+      if (/^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName) || el.isContentEditable || el.id === 'linger-ui') return false;
     }
     return !!node;
   };
@@ -1232,7 +1230,7 @@
   const TR_SKIP = new Set([...SKIP].filter((t) => !['A', 'LABEL', 'BUTTON'].includes(t)));
   const trOk = (n) => {
     for (let el = n.parentElement; el; el = el.parentElement) {
-      if (TR_SKIP.has(el.tagName) || el.isContentEditable || el.id === 'linger-ui' || el.id === 'linger-gaze' || el.hasAttribute('data-linger-skip') || el.getAttribute('translate') === 'no') return false;
+      if (TR_SKIP.has(el.tagName) || el.isContentEditable || el.id === 'linger-ui' || el.hasAttribute('data-linger-skip') || el.getAttribute('translate') === 'no') return false;
     }
     return true;
   };
@@ -1507,7 +1505,6 @@
   // ---------- settings and messages ----------
   function apply() {
     document.documentElement.classList.toggle('linger-big', !!S.bigger);
-    document.documentElement.classList.toggle('linger-spread', !!S.spread);
     document.documentElement.classList.toggle('linger-nounder', !S.highlight);
     document.querySelectorAll('.linger-w').forEach((sp) => kbdWord(sp, S.highlight || sp.classList.contains('linger-swapped')));
     if (active()) { scan(document.body); mo.observe(document.body, { childList: true, subtree: true }); }
@@ -1516,57 +1513,37 @@
     showFab();
   }
   if (api) {
-    chrome.storage.local.get({ off: false, highlight: false, paused: [], bigger: false, pauseSecs: 3, showGaze: true, spread: false, handSwipe: true, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '', density: 'normal' }, (v) => { Object.assign(S, v); apply(); });
+    chrome.storage.local.get({ off: false, highlight: false, paused: [], bigger: false, aiOn: null, aiConsent: '', assistant: true, transLang: '', swap: '', density: 'normal' }, (v) => { Object.assign(S, v); apply(); });
     chrome.storage.onChanged.addListener((ch) => {
       if (dead) return;
       const was = active();
       Object.keys(ch).forEach((key) => { if (key in S) S[key] = ch[key].newValue; });
       // A new density: take the underlines off and find the hard words again with the new line.
       if (ch.density && was && active()) { closeCard(); unwrapAll(); apply(); }
-      else if (active() !== was || ch.bigger || ch.spread || ch.highlight) apply();
+      else if (active() !== was || ch.bigger || ch.highlight) apply();
       else if (ch.swap || ch.transLang) scheduleSwap();
       if (ch.assistant || ch.aiOn || ch.aiConsent || ch.paused || ch.off || ch.highlight) showFab();
     });
     chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (dead) return;
       if (msg.type === 'explain') { explainPage(); reply({ ok: true }); }
-      if (msg.type === 'status') reply({ ok: true, words: count, eye: !!(window.__lingerGaze && window.__lingerGaze.on), translated: !!pageTr, ask: askWhy(), version: VERSION });
+      // "Ask Linger" in the toolbar menu: open the chat here, even if the ✦ button is hidden. Settings are read fresh,
+      // since the menu may have just turned AI on.
+      if (msg.type === 'ask') {
+        if (window !== window.top) return;
+        chrome.storage.local.get({ aiOn: null, aiConsent: '', off: false }, (v) => {
+          Object.assign(S, v);
+          if (!aiOK()) return reply({ ok: false, why: 'ai-off' });
+          if (!askBox) openAsk();
+          reply({ ok: true });
+        });
+        return true;
+      }
+      if (msg.type === 'status') reply({ ok: true, words: count, translated: !!pageTr, ask: askWhy(), version: VERSION });
       if (msg.type === 'page-lang') { pageLang().then((from) => reply({ from, to: pageTarget(from, msg.lang) })); return true; }
       if (msg.type === 'translate-page') { if (window !== window.top) return; translatePage(msg.lang).then(reply); return true; }
     });
   } else apply();
 
-  // Shared with gaze.js (eye tracking), which runs in this same isolated world.
-  // Hand gestures (hand.js): the word under a point on the screen, and its card. Works on any word, like
-  // double-clicking: an underlined word opens its own card; another word is wrapped the same way first.
-  const WCH = /[A-Za-z'’-]/;
-  function wordAt(x, y) {
-    if (dead || offHere() || pageTr || !document.caretRangeFromPoint) return null;
-    const r = document.caretRangeFromPoint(x, y);
-    if (!r || !r.startContainer || r.startContainer.nodeType !== 3) return null;
-    const node = r.startContainer, text = node.data;
-    let i = Math.min(r.startOffset, text.length);
-    if (!WCH.test(text[i] || '')) { if (i > 0 && WCH.test(text[i - 1])) i--; else return null; }
-    let a = i, b = i + 1;
-    while (a > 0 && WCH.test(text[a - 1])) a--;
-    while (b < text.length && WCH.test(text[b])) b++;
-    while (a < b && /['’-]/.test(text[a])) a++;
-    while (b > a && /['’-]/.test(text[b - 1])) b--;
-    const word = text.slice(a, b);
-    if (!/^[A-Za-z][A-Za-z'’-]{1,30}$/.test(word)) return null;
-    const range = document.createRange(); range.setStart(node, a); range.setEnd(node, b);
-    const rect = range.getBoundingClientRect();
-    if (!rect.width || x < rect.left - 6 || x > rect.right + 6 || y < rect.top - 6 || y > rect.bottom + 6) return null;
-    const span = node.parentElement && node.parentElement.closest('.linger-w');
-    if (!span && !okParent(node)) return null;
-    return { word: span ? (span.dataset.orig || span.textContent) : word, rect, range, span };
-  }
-  function openWordAt(x, y, why) {
-    const hit = wordAt(x, y);
-    if (!hit) return false;
-    if (hit.span) { openCard(hit.span, why); return hit.span; }
-    const sp = document.createElement('span'); sp.className = 'linger-w'; sp.dataset.kind = classify(hit.word, true) || 'common'; sp.dataset.k = keyOf(hit.word);
-    try { hit.range.surroundContents(sp); kbdWord(sp, S.highlight); openCard(sp, why); return sp; } catch { return false; }
-  }
-  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf, translatePage, restorePage, alive: () => !dead && alive(), retire, version: VERSION, prefetch, wordAt, openWordAt };
+  window.__lingerAPI = { openCard, closeCard, explainPage, settings: S, keyOf, translatePage, restorePage, alive: () => !dead && alive(), retire, version: VERSION, prefetch };
 })();

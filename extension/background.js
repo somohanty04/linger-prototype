@@ -1,5 +1,4 @@
-// Linger background worker: dictionary lookups, saving words, sending them to the phone (Firestore REST),
-// and running eye tracking (one hidden tracker page for the whole browser, plus the setup page).
+// Linger background worker: dictionary lookups, AI requests, saving words and sending them to the phone (Firestore REST).
 const FIREBASE = { projectId: 'linger-f41a7', apiKey: 'AIzaSyDxWUp1eTp8bXZV-GV13XQAHI_Q4fL0GCU' };
 const DOC = (code) => `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/pairs/${code}`;
 
@@ -50,7 +49,7 @@ async function postAI(body, ms) {
   }
 }
 // Nothing goes to Claude unless the reader explicitly allowed it (aiConsent: 'yes', asked on a word card or in the menu)
-// AND the AI explanations switch is on. Every AI request (cards, hover prefetch, eye tracking, swaps, translation, the
+// AND the AI explanations switch is on. Every AI request (cards, hover prefetch, swaps, translation, the
 // menu's own translation, Ask Linger) passes through askAI or askPage, so this is the one place that enforces it.
 async function aiAllowed() {
   const { aiOn, aiConsent } = await chrome.storage.local.get({ aiOn: false, aiConsent: '' });
@@ -254,64 +253,11 @@ async function sendSiteReport(site, note) {
   return r.ok ? { ok: true } : { ok: false, why: 'error', status: r.status };
 }
 
-// ---------- eye tracker page ----------
-let creating = null;
-async function hasTracker() { return (await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] })).length > 0; }
-async function ensureTracker() {
-  if (await hasTracker()) return;
-  if (!creating) creating = chrome.offscreen.createDocument({ url: 'tracker.html', reasons: ['USER_MEDIA'], justification: 'Webcam eye tracking and hand gestures that offer help with words' }).finally(() => { creating = null; });
-  await creating;
-}
-async function closeTracker() { if (await hasTracker()) await chrome.offscreen.closeDocument().catch(() => {}); }
-// The camera runs while eye tracking or hand gestures is on (and Linger isn't switched off everywhere).
-async function syncTracker() {
-  const { eyeOn, handOn, off } = await chrome.storage.local.get({ eyeOn: false, handOn: false, off: false });
-  if ((eyeOn || handOn) && !off) await ensureTracker(); else await closeTracker();
-}
-// Hand gestures: Chrome's own zoom steps for this tab.
-const ZOOMS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
-async function zoomTab(tabId, dir) {
-  const now = await chrome.tabs.getZoom(tabId);
-  let i = ZOOMS.findIndex((z) => z >= now - 0.01);
-  if (i < 0) i = ZOOMS.length - 1;
-  const next = dir === 'reset' ? 1 : ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, i + (dir === 'in' ? (ZOOMS[i] > now + 0.01 ? 0 : 1) : -1)))];
-  if (Math.abs(next - now) > 0.001) await chrome.tabs.setZoom(tabId, next);
-  return next;
-}
-// The hand gestures page: asks for the camera once, and lets people practise each gesture.
-async function openHands() {
-  const url = chrome.runtime.getURL('hands.html');
-  const { handsTab } = await chrome.storage.session.get({ handsTab: null });
-  const open = handsTab && await chrome.tabs.get(handsTab).catch(() => null);
-  if (open && (open.url || open.pendingUrl || '').startsWith(url)) { await chrome.tabs.update(open.id, { active: true }); return; }
-  const tab = await chrome.tabs.create({ url });
-  await chrome.storage.session.set({ handsTab: tab.id });
-}
-async function openSetup(fromTab) {
-  await chrome.storage.session.set({ setupFrom: fromTab || null });
-  // Reuse the setup tab if it's still open. (Don't find it with tabs.query({ url }): without the "tabs"
-  // permission Chrome ignores the url filter and returns every tab, so it would just switch to some other tab.)
-  const { setupTab } = await chrome.storage.session.get({ setupTab: null });
-  const open = setupTab && await chrome.tabs.get(setupTab).catch(() => null);
-  if (open && (open.url || open.pendingUrl || '').includes('/calibrate.html')) {
-    await chrome.tabs.update(open.id, { active: true });
-    await chrome.windows.update(open.windowId, { focused: true }).catch(() => {});
-    return;
-  }
-  const tab = await chrome.tabs.create({ url: chrome.runtime.getURL('calibrate.html') });
-  await chrome.storage.session.set({ setupTab: tab.id });
-}
-// The reading test page (Task A / Task B on a letter). Reuse the tab if it came from there.
-async function openPractice(fromTab) {
-  const url = chrome.runtime.getURL('practice.html');
-  const t = fromTab && await chrome.tabs.get(fromTab).catch(() => null);
-  if (t && (t.url || t.pendingUrl || '').startsWith(url)) return chrome.tabs.update(t.id, { active: true });
-  await chrome.tabs.create({ url });
-}
-// Keep eye tracking on after Chrome restarts.
-const resume = async () => { const { off } = await chrome.storage.local.get({ off: false }); offBadge(off); syncTracker(); };
+// Settings left over from the removed eye tracking and hand gestures (including the saved gaze model).
+const OLD_KEYS = ['eyeOn', 'handOn', 'gazeModel', 'gazeProblem', 'gazeEnv', 'gazeSnooze', 'pauseSecs', 'showGaze', 'spread', 'handSwipe', 'handSecs', 'handLog', 'gazeLog'];
+const resume = async () => { const { off } = await chrome.storage.local.get({ off: false }); offBadge(off); };
 chrome.runtime.onStartup.addListener(resume);
-// The main Linger switch (off on every website): mark the toolbar icon, and turn the camera off while Linger is off.
+// The main Linger switch (off on every website): mark the toolbar icon.
 function offBadge(off) {
   chrome.action.setBadgeText({ text: off ? 'OFF' : '' }).catch(() => {});
   if (off) chrome.action.setBadgeBackgroundColor({ color: '#6B6F80' }).catch(() => {});
@@ -319,11 +265,10 @@ function offBadge(off) {
 chrome.storage.onChanged.addListener(async (ch, area) => {
   if (area !== 'local') return;
   if (ch.off) offBadge(!!ch.off.newValue);
-  if (ch.off || ch.handOn) syncTracker();
 });
 // Chrome only adds content scripts to pages loaded after Linger is installed or updated. Tabs that were already open
 // either had no Linger at all ("works on some tabs, not others") or kept an old copy that can't reach the extension.
-// Put a fresh copy into every open web page; content.js and gaze.js make the old copy step aside.
+// Put a fresh copy into every open web page; content.js makes the old copy step aside.
 async function injectOpenTabs() {
   const files = chrome.runtime.getManifest().content_scripts[0].js;
   const tabs = await chrome.tabs.query({});
@@ -338,6 +283,7 @@ async function underlineDefault(reason) {
 }
 chrome.runtime.onInstalled.addListener(async (d) => {
   resume();
+  if (d.reason === 'update') chrome.storage.local.remove(OLD_KEYS);
   if (d.reason === 'install' || d.reason === 'update') { await underlineDefault(d.reason); injectOpenTabs(); }
   chrome.storage.local.get({ off: false }).then((v) => offBadge(v.off));
 });
@@ -361,39 +307,6 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg.type === 'check-code') return reply({ result: await checkCode(msg.code) });
     if (msg.type === 'site-report') return reply(await sendSiteReport(msg.site, msg.note));
     if (msg.type && msg.type.startsWith('acct-')) return reply(await acctMessage(msg));
-    // ---------- eye tracking ----------
-    if (msg.type === 'eye-on') {
-      const { gazeModel } = await chrome.storage.local.get({ gazeModel: null });
-      if (!gazeModel) { await openSetup(msg.tabId); return reply({ ok: true, setup: true }); }
-      await chrome.storage.local.set({ eyeOn: true, gazeProblem: null });
-      await ensureTracker();
-      return reply({ ok: true });
-    }
-    if (msg.type === 'eye-off') { await chrome.storage.local.set({ eyeOn: false }); await syncTracker(); return reply({ ok: true }); }
-    // ---------- hand gestures ----------
-    if (msg.type === 'hand-zoom') { if (!sender.tab) return reply({ ok: false }); return reply({ ok: true, zoom: await zoomTab(sender.tab.id, msg.dir) }); }
-    if (msg.type === 'hand-setup') { await openHands(); return reply({ ok: true }); }
-    if (msg.type === 'hand-ensure') { await syncTracker(); return reply({ ok: true }); }
-    if (msg.type === 'open-practice') { await openPractice(null); return reply({ ok: true }); }
-    if (msg.type === 'eye-recal') { await openSetup(msg.tabId || (sender.tab && sender.tab.id)); return reply({ ok: true }); }
-    if (msg.type === 'eye-ensure') { const { eyeOn, off } = await chrome.storage.local.get({ eyeOn: false, off: false }); if (eyeOn && !off) await ensureTracker(); return reply({ ok: true }); }
-    if (msg.type === 'camera-ready') { await closeTracker(); await syncTracker(); return reply({ ok: true }); } // camera just allowed: restart
-    if (msg.type === 'eye-start') { if (msg.restart) await closeTracker(); await ensureTracker(); return reply({ ok: true }); }
-    if (msg.type === 'get-model') { const { gazeModel } = await chrome.storage.local.get({ gazeModel: null }); return reply({ model: gazeModel }); }
-    if (msg.type === 'save-model') { await chrome.storage.local.set({ gazeModel: msg.model }); return reply({ ok: true }); }
-    // Light and faces in the camera picture (tracker.js runs in an offscreen page, which can't use chrome.storage).
-    if (msg.type === 'gaze-env') { await chrome.storage.local.set({ gazeEnv: { t: Date.now(), dark: !!msg.dark, faces: Number(msg.faces) || 0 } }); return reply({ ok: true }); }
-    if (msg.type === 'gaze-problem') { await chrome.storage.local.set({ gazeProblem: { t: Date.now(), site: 'eye tracking', why: msg.why } }); return reply({ ok: true }); }
-    if (msg.type === 'calib-done' || msg.type === 'calib-cancel') {
-      if (msg.type === 'calib-done') await chrome.storage.local.set({ gazeModel: msg.model, eyeOn: true, gazeProblem: null });
-      await syncTracker();
-      // Go back to the page the person came from (or open the reading test, if they picked that).
-      const { setupFrom } = await chrome.storage.session.get({ setupFrom: null });
-      if (msg.practice) await openPractice(setupFrom);
-      else if (setupFrom) chrome.tabs.update(setupFrom, { active: true }).catch(() => {});
-      if (sender.tab) chrome.tabs.remove(sender.tab.id).catch(() => {});
-      return reply({ ok: true });
-    }
     reply({ ok: false });
   })().catch((e) => reply({ ok: false, error: String(e) }));
   return true; // keep the channel open for the async reply
