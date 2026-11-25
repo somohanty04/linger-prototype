@@ -14,8 +14,11 @@ struct LingerApp: App {
             }
             .preferredColorScheme(.light)
             .onOpenURL { web.open($0) }
-            // If the Share extension couldn't open the app itself, pick up what it saved when the app comes forward.
-            .onChange(of: phase) { _, p in if p == .active { web.checkInbox() } }
+            // Coming forward: load a newer version of the page if there is one, then pick up anything the Share
+            // extension saved (if it couldn't open the app itself). A reload holds the item until the page is ready.
+            .onChange(of: phase) { _, p in
+                if p == .active { Task { @MainActor in await web.refreshIfOutdated(); web.checkInbox() } }
+            }
         }
     }
 }

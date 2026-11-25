@@ -21,6 +21,8 @@ final class WebModel: NSObject, ObservableObject {
     @Published var retrying = false      // a retry is loading behind the offline screen
     let webView: WKWebView
     private var pageReady = false
+    private var triedCache = false        // offline: the saved copy of the page was already tried
+    private var lastDelivery = Date.distantPast // when a Share item last went to the page
     private var waiting: Inbox.Item?
     private var watchdog: Task<Void, Never>?
     private let network = NWPathMonitor()
@@ -77,12 +79,16 @@ final class WebModel: NSObject, ObservableObject {
     /// Try again. The offline screen stays up (showing progress) until the page says ready, so it doesn't flash blank.
     func reload() {
         retrying = failed
+        triedCache = false
         loadHome()
     }
 
-    private func loadHome() {
+    /// Asks the server each time whether the page changed (a quick check; an unchanged page still comes from the
+    /// cache), so a new version shows up on the next open instead of after the server's 10-minute cache time.
+    /// Offline, the saved copy is tried before the offline screen.
+    private func loadHome(fromCache: Bool = false) {
         pageReady = false
-        webView.load(URLRequest(url: Self.home))
+        webView.load(URLRequest(url: Self.home, cachePolicy: fromCache ? .returnCacheDataDontLoad : .reloadRevalidatingCacheData))
         watchdog?.cancel()
         watchdog = Task { [weak self] in
             try? await Task.sleep(for: Self.readyTimeout)
@@ -99,6 +105,32 @@ final class WebModel: NSObject, ObservableObject {
 
     private func networkIsBack() {
         if failed && !retrying { reload() }
+    }
+
+    fileprivate func loadFailedOrTryCache() {
+        if !triedCache { triedCache = true; loadHome(fromCache: true); return }
+        loadFailed()
+    }
+
+    /// Coming back to the app: the page doesn't reload by itself, so if the server has a newer version (a different
+    /// app.js?v= number), load it. If nothing changed, nothing happens and you stay where you were. Skipped right after
+    /// a Share item was handed over, so it isn't lost; the update then loads the next time.
+    func refreshIfOutdated() async {
+        guard pageReady, !failed, Date().timeIntervalSince(lastDelivery) > 10 else { return }
+        let request = URLRequest(url: Self.home, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 4)
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let server = Self.pageVersion(String(decoding: data, as: UTF8.self)) else { return }
+        let js = "(document.querySelector('script[src*=\"app.js?v=\"]') || {}).src || ''"
+        guard let src = (try? await webView.evaluateJavaScript(js)) as? String, let loaded = Self.pageVersion(src) else { return }
+        if server != loaded, pageReady, !failed, Date().timeIntervalSince(lastDelivery) > 10 {
+            triedCache = false
+            loadHome()
+        }
+    }
+
+    /// "app.js?v=57" in the page's HTML or a script's address: the page's version.
+    private static func pageVersion(_ text: String) -> String? {
+        text.range(of: #"app\.js\?v=\d+"#, options: .regularExpression).map { String(text[$0]) }
     }
 
     /// The app's own page in Settings, where camera (and microphone) access can be turned back on.
@@ -127,6 +159,7 @@ final class WebModel: NSObject, ObservableObject {
         }
         guard let json = try? JSONSerialization.data(withJSONObject: message),
               let arg = String(data: json, encoding: .utf8) else { return }
+        lastDelivery = Date()
         webView.evaluateJavaScript("window.LingerNative && LingerNative.receive(\(arg))")
     }
 
@@ -143,6 +176,7 @@ final class WebModel: NSObject, ObservableObject {
 
     fileprivate func pageSaidReady() {
         pageReady = true
+        triedCache = false
         watchdog?.cancel()
         // A load that worked (after a retry, or a slow one that beat the timeout late) hides the offline screen.
         failed = false
@@ -177,7 +211,7 @@ extension WebModel: WKNavigationDelegate, WKUIDelegate {
         if e.domain == NSURLErrorDomain && e.code == NSURLErrorCancelled { return }
         // WebKit's "frame load interrupted" (102): the load was handed elsewhere by a policy decision, also not a failure.
         if e.domain == "WebKitErrorDomain" && e.code == 102 { return }
-        loadFailed()
+        loadFailedOrTryCache()
     }
 
     // target="_blank" links
