@@ -9,144 +9,117 @@
 <header class="top">
   <img class="rings" src="icons/popup/rings.svg" width="252.51" height="252.51" alt="">
   <h1 translate="no">Linger</h1>
-  <button type="button" class="glass" id="recal"><img src="icons/popup/recalibrate.svg" width="18.818" height="19.004" alt=""> Recalibrate</button>
+  <label class="power" title="Linger on every website"><span class="power-txt" id="powerTxt">On</span><input type="checkbox" id="power" aria-label="Linger on every website"><i></i></label>
 </header>
 
 <main>
   <div class="notice" id="update" hidden>
     <p id="updateText" role="status">A newer Linger is available</p>
-    <p class="notice-sub">Download it from the Linger website, then load it on chrome://extensions like the first time.</p>
-    <div class="notice-btns"><button type="button" class="link" id="updateX">Not now</button><a class="btn primary" id="updateGo" href="https://somohanty04.github.io/linger-prototype/" target="_blank" rel="noopener">Get the new version</a></div>
+    <p class="notice-sub">Download it, then load it on chrome://extensions like the first time.</p>
+    <div class="notice-btns"><button type="button" class="link" id="updateX">Not now</button><a class="btn primary sm" id="updateGo" href="https://somohanty04.github.io/linger-prototype/" target="_blank" rel="noopener">Get the new version</a></div>
   </div>
 
-  <section class="fixview" id="fixView" aria-labelledby="fixH" hidden>
-    <h2 id="fixH" tabindex="-1">Fix eye tracking</h2>
-    <p class="problem" id="fixProblem" hidden></p>
-    <p class="warn" id="fixEnv" hidden></p>
-    <ul class="check" aria-label="Things to check">
-      <li><b>Light in front of you.</b> A lamp or window in front of you, not behind you. A dark room makes your eyes hard to see.</li>
-      <li><b>Face the screen.</b> Sit about an arm’s length away, like you did when you set it up.</li>
-      <li><b>Glasses glare.</b> If your glasses reflect the screen or a lamp, tilt them slightly or move the light.</li>
-      <li><b>Only one face in view.</b> Linger follows one person. Someone next to you can confuse it.</li>
-      <li><b>Camera not in use.</b> Close Zoom, Teams, FaceTime or other apps that might be using the camera.</li>
-    </ul>
-    <p class="hint">Still off after checking these? Recalibrate: follow the dot for about 35 seconds.</p>
-    <button type="button" class="btn primary wide" id="fixRecal">Recalibrate</button>
-    <button type="button" class="btn wide white" id="fixBack">Back to the menu</button>
-  </section>
-
   <div class="blocked pdf" id="pdf" hidden>
-    <p><b>This is a PDF.</b> Linger can’t read inside Chrome’s PDF viewer, so there are no underlines or word cards here.</p>
+    <p><b>This is a PDF.</b> Linger can’t read inside Chrome’s PDF viewer.</p>
     <a class="btn primary wide" id="pdfGo" href="https://somohanty04.github.io/linger-prototype/?lens=paste" target="_blank" rel="noopener">Open Linger to paste the text</a>
     <p class="tip" id="pdfTip">Select all (Ctrl+A), copy, then paste.</p>
   </div>
-  <p class="blocked" id="blocked" hidden>Linger can’t run on this page (browser settings or the Chrome Web Store). Try a normal website.</p>
+  <p class="blocked" id="blocked" hidden>Linger can’t run on this page. Try a normal website.</p>
 
-  <section>
-    <h2>Reading help</h2>
-    <div class="rows">
-      <label class="sw"><span><b>Linger</b><small>On every website</small></span><input type="checkbox" id="power"><i></i></label>
-      <label class="sw"><span><b>On this site</b><small id="siteLabel" translate="no">this page</small></span><input type="checkbox" id="site"><i></i></label>
-      <label class="sw"><span><b>Underline hard words</b><small>On every website</small></span><input type="checkbox" id="highlight"><i></i></label>
-      <label class="pick"><span><b>How many words to underline</b><small class="w207" id="densityHint">Normal: words outside the 10,000 most common</small></span>
-        <select id="density"><option value="fewer">Fewer</option><option value="normal">Normal</option><option value="more">More</option></select></label>
-      <label class="pick"><span><b>Hard words show as</b><small class="w207">Swaps them right in the text. Shortcut on any page: Alt+Shift+L</small></span>
-        <select id="swap"><option value="">The original words</option><option value="easy">Easier English</option><option value="mine" id="swapMine">My language</option></select></label>
-      <label class="sw"><span><b>Bigger words</b><small>Larger underlined words, easier to tap</small></span><input type="checkbox" id="bigger"><i></i></label>
-      <label class="sw"><span><b>AI explanations</b><small class="w207">Meaning in context from Claude. Off until you allow it. Sends the text you select and the paragraph around it, and page text when you use Ask Linger or translation.</small></span><input type="checkbox" id="aiOn"><i></i></label>
-      <label class="sw"><span><b>Ask Linger button</b><small class="w207">A small ✦ button in the corner to ask about the page or get help deciding. Needs AI explanations.</small></span><input type="checkbox" id="assistant"><i></i></label>
-    </div>
+  <!-- The two things people open the menu for -->
+  <div class="actions">
+    <button type="button" class="act primary" id="explain">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11M4 10h16M4 15h9M4 20h6"/><path d="M18.5 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" fill="currentColor"/></svg>
+      <span>Explain this page</span>
+    </button>
+    <button type="button" class="act" id="askOpen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.1A8 8 0 1 1 20 12z"/><path d="M12 8.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" fill="currentColor"/></svg>
+      <span>Ask Linger</span>
+    </button>
+  </div>
+  <p class="hint askwhy" id="askWhy" role="status" hidden></p>
+
+  <section class="card dims" aria-labelledby="aiH">
+    <h2 id="aiH">AI &amp; translation</h2>
+    <label class="row sw">
+      <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></span>
+      <span class="txt"><b>AI explanations</b><small>Meaning in context, from Claude</small></span><input type="checkbox" id="aiOn"><i></i>
+    </label>
     <div class="consent" id="aiAsk" role="group" aria-labelledby="aiAskText" hidden>
       <p id="aiAskText"><b>Turn on AI explanations?</b> Linger will send text to Claude (an AI by Anthropic): the text you select and the paragraph around it, and, when you use Ask Linger, translate a page or switch hard words into your language, text from the page (for Ask Linger, also its title and website). Nothing is sent unless you allow it, and you can turn it off here at any time.</p>
-      <div class="consent-btns"><button type="button" class="btn" id="aiNo">Not now</button><button type="button" class="btn primary" id="aiYes">Allow</button></div>
+      <div class="consent-btns"><button type="button" class="btn sm" id="aiNo">Not now</button><button type="button" class="btn primary sm" id="aiYes">Allow</button></div>
     </div>
-    <p class="hint askwhy" id="askWhy" role="status" hidden></p>
-    <button type="button" class="btn primary wide" id="explain">Explain this page</button>
+    <label class="row pick">
+      <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+      <span class="txt"><b>My language</b></span>
+      <select id="transLang"><option value="">Off</option></select>
+    </label>
+    <label class="row sw">
+      <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z" fill="currentColor"/></svg></span>
+      <span class="txt"><b>✦ button on pages</b><small>Ask Linger from any page</small></span><input type="checkbox" id="assistant"><i></i>
+    </label>
+    <button type="button" class="btn wide" id="translatePage" disabled>Translate this page</button>
+    <p class="hint tmsg" id="transMsg" role="status"></p>
+  </section>
+
+  <section class="card dims read" aria-labelledby="readH">
+    <h2 id="readH">Reading help</h2>
+    <label class="row sw">
+      <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></span>
+      <span class="txt"><b>On this site</b><small id="siteLabel" translate="no">this page</small></span><input type="checkbox" id="site"><i></i>
+    </label>
+    <label class="row sw">
+      <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v7a5 5 0 0 0 10 0V4"/><path d="M5 20h14"/></svg></span>
+      <span class="txt"><b>Underline hard words</b></span><input type="checkbox" id="highlight"><i></i>
+    </label>
+    <label class="row sw">
+      <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19l5-14 5 14M6 14h6"/><path d="M15 19l3-8 3 8M16 16.5h4"/></svg></span>
+      <span class="txt"><b>Bigger words</b></span><input type="checkbox" id="bigger"><i></i>
+    </label>
+    <div class="row blank">
+      <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h7"/><path d="M15 15l3 3 3-3M18 18v-8"/></svg></span>
+      <label class="txt fill" for="swap"><b>Show hard words</b>
+        <select id="swap"><option value="">as they are</option><option value="easy">in easier English</option><option value="mine" id="swapMine">in my language</option></select></label>
+    </div>
+    <p class="kbd">Switch on any page: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></p>
     <button type="button" class="link" id="issueOpen" aria-expanded="false" aria-controls="issue" hidden>Not working on this site?</button>
     <div class="issue" id="issue" hidden>
-      <p><b>You can still highlight any text and click ✦ Explain.</b> That works even where underlines don’t.</p>
+      <p><b>You can still highlight any text and click ✦ Explain.</b></p>
       <label class="issue-lbl" for="issueNote">Tell the Linger team (optional)</label>
-      <textarea id="issueNote" maxlength="500" rows="3" placeholder="What went wrong? For example: no underlines, or the card doesn’t open."></textarea>
-      <p class="hint issue-what" id="issueWhat">Sends this site’s name, your Linger version and your note. Nothing else from the page.</p>
+      <textarea id="issueNote" maxlength="500" rows="3" placeholder="What went wrong?"></textarea>
+      <p class="hint issue-what" id="issueWhat">Sends this site’s name, your Linger version and your note.</p>
       <button type="button" class="btn primary wide" id="issueSend">Report this site</button>
       <p class="hint msg" id="issueMsg" role="status"></p>
     </div>
   </section>
 
-  <section>
-    <h2>Translation</h2>
-    <div class="rows">
-      <label class="pick"><span><b>My language</b><small class="w207">Word and highlight cards also show the meaning in this language</small></span>
-        <select id="transLang"><option value="">Off</option></select></label>
-    </div>
-    <button type="button" class="btn wide" id="translatePage" disabled>Translate this page</button>
-    <p class="hint tmsg" id="transMsg" role="status"></p>
-  </section>
-
-  <section>
-    <h2>Eye tracking</h2>
-    <div class="rows">
-      <label class="sw"><span><b>Offer help when I pause</b><small class="w207">On every tab. Uses your webcam; video stays on this laptop.</small></span><input type="checkbox" id="eye"><i></i></label>
-      <label class="slider"><span>Pause after <output id="secsOut" translate="no">3</output> s on one line</span><input type="range" id="secs" aria-label="Seconds to pause on one line before Linger offers help" min="1.5" max="6" step="0.5" value="3"></label>
-      <label class="sw"><span><b>Show where I’m looking</b><small>A dot where Linger thinks you’re looking</small></span><input type="checkbox" id="showGaze"><i></i></label>
-      <label class="sw"><span><b>Answer with a hand swipe</b><small class="w207">When it asks “Want help with this word?”: swipe right for yes, left for no</small></span><input type="checkbox" id="handSwipe"><i></i></label>
-      <label class="sw"><span><b>More space between lines</b><small>Makes lines easier for the webcam to tell apart</small></span><input type="checkbox" id="spread"><i></i></label>
-    </div>
-    <p class="problem" id="eyeNeed" hidden></p>
-    <div class="problem" id="eyeProblem" hidden><span id="eyeProblemText"></span><button type="button" class="fix" id="eyeFix">Fix it</button></div>
-    <p class="warn" id="eyeEnv" hidden></p>
-    <p class="hint snooze" id="eyeSnooze" hidden><span id="eyeSnoozeText"></span> <button type="button" class="link" id="eyeResume">Resume</button></p>
-    <button type="button" class="btn wide" id="practice">Take the reading test</button>
-  </section>
-
-  <section>
-    <h2>Hand gestures</h2>
-    <div class="rows">
-      <label class="sw"><span><b>Use hand gestures</b><small class="w207">On every tab. Uses your webcam; video stays on this laptop. Works without eye tracking.</small></span><input type="checkbox" id="hand"><i></i></label>
-      <label class="slider"><span>Ask after pointing <output id="handSecsOut" translate="no">2</output> s at a word</span><input type="range" id="handSecs" aria-label="Seconds to point at a word before Linger asks if you want help" min="1" max="4" step="0.5" value="2"></label>
-    </div>
-    <ul class="gest" aria-label="Gestures">
-      <li><b>👆 Point</b> with your index finger to move the pointer. Hold it on a word and Linger asks if you want help.</li>
-      <li><b>✋ Swipe</b> an open hand right for yes, left for no.</li>
-      <li><b>✋ Swipe</b> an open hand up or down to scroll.</li>
-      <li><b>🤏 Pinch</b> your thumb and index finger, hold, then move up to zoom in or down to zoom out.</li>
-    </ul>
-    <button type="button" class="btn wide" id="handPractice">Practice hand gestures</button>
-  </section>
-
-  <section id="acctSec">
-    <div class="head">
-      <h2>Your Linger account</h2>
-      <p class="hint" id="acctHint"><span>Sign in with the same account as the phone app, and every word you save here shows up in Words on your phone.</span></p>
-    </div>
+  <section class="card" aria-labelledby="syncH">
+    <h2 id="syncH">Sync with your phone</h2>
+    <p class="hint" id="acctHint">Sign in with your Linger app account.</p>
     <form id="acctForm" class="acct-form">
       <input id="acctEmail" type="email" autocomplete="email" placeholder="Email" aria-label="Email" required>
       <input id="acctPw" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" aria-label="Password" required minlength="6">
-      <div class="acct-btns"><button type="submit" class="btn primary" id="acctIn">Sign in</button><button type="button" class="btn white" id="acctUp">Create account</button></div>
-      <button type="button" class="link" id="acctReset">Forgot password?</button>
+      <div class="acct-btns"><button type="submit" class="btn primary" id="acctIn">Sign in</button><button type="button" class="btn" id="acctUp">Create account</button></div>
+      <div class="acct-links"><button type="button" class="link" id="acctReset">Forgot password?</button><button type="button" class="link" id="codeOpen" aria-expanded="false" aria-controls="codeBox">Use a code instead</button></div>
     </form>
     <p class="hint msg" id="acctMsg" role="status"></p>
     <div id="acctOn" class="paired" hidden><p class="ok"><span class="dot"></span><span>Saving to <span id="acctShow" translate="no"></span></span></p><button type="button" class="link" id="acctOut">Sign out</button></div>
-  </section>
 
-  <section>
-    <div class="head">
-      <h2>Or connect with a code</h2>
-      <p class="hint" id="pairHint">Signed in above with the same account as the app? <span>Your words already sync, no code needed. If they don’t show up, in the Linger app tap your profile picture → Get a code, and type it here.</span></p>
-      <p class="hint" id="pairShare"><span>Your saved words, meanings, and example sentences will sync between devices, along with the website and date you saved each one. Anyone with the code can see them.</span></p>
+    <div class="codebox" id="codeBox" hidden>
+      <p class="hint" id="pairHint">In the app: profile picture → Get a code. Anyone with the code can see your saved words.</p>
+      <form id="pairForm" class="pair">
+        <input id="code" placeholder="xxxx-xxxx-xxxx" autocomplete="off" spellcheck="false" aria-label="Code from the Linger app">
+        <button type="submit" class="btn primary">Connect</button>
+      </form>
     </div>
-    <form id="pairForm" class="pair">
-      <input id="code" placeholder="xxxx-xxxx-xxxx" autocomplete="off" spellcheck="false" aria-label="Code from the Linger app">
-      <button type="submit" class="btn primary">Connect</button>
-    </form>
     <p class="hint msg" id="pairMsg" role="status"></p>
     <div id="paired" class="paired" hidden><p class="ok"><span class="dot"></span>Saving to your phone · <span id="codeShow" translate="no"></span></p><button type="button" class="link" id="unpair">Disconnect</button></div>
   </section>
 
-  <section>
-    <h2 class="saved-h">Saved <span class="count" id="savedCount" translate="no">0</span></h2>
+  <section class="card" aria-labelledby="savedH">
+    <h2 class="saved-h" id="savedH">Saved <span class="count" id="savedCount" translate="no">0</span></h2>
     <ul id="saved" translate="no"></ul>
-    <a class="btn wide white" href="https://somohanty04.github.io/linger-prototype/" target="_blank" rel="noopener">Open the Linger app</a>
+    <a class="btn wide" href="https://somohanty04.github.io/linger-prototype/" target="_blank" rel="noopener">Open the Linger app ↗</a>
   </section>
 </main>
 <script src="langs.js"></script>

@@ -10,7 +10,6 @@ You can use it in several ways:
 - **Translate:** see meanings in your own language, or translate a whole page.
 - **Listen:** Linger can read text and answers out loud.
 - **Save and practice** the words you meet. Your words, setup and progress stay in your account, so they're the same on your phone and laptop.
-- **Eye tracking (optional):** Linger notices when you pause on a line and asks "Want help with this word?". You can answer with a hand swipe.
 
 There are two parts: a phone web app and a Chrome extension.
 
@@ -51,7 +50,7 @@ The beta's files are `beta/index.html`, `beta/manifest.webmanifest` and `beta.js
 
 **How to open it:** on the website above, click **Get the Chrome extension** and follow the steps: download, unzip, then in `chrome://extensions` turn on Developer mode and click **Load unpacked**.
 
-**Which device:** a laptop or desktop computer with Google Chrome. Eye tracking also needs a webcam.
+**Which device:** a laptop or desktop computer with Google Chrome.
 
 **What to try:**
 
@@ -59,15 +58,12 @@ The beta's files are `beta/index.html`, `beta/manifest.webmanifest` and `beta.js
 - Pick **My language** in the Linger menu to see an "In your language" box on every card. You can also translate the whole page.
 - Turn on **Underline hard words** to mark hard words on any page. Click one to see what it means in that sentence.
 - Click the ✦ button in the corner to ask questions about the page.
-- Sign in under **Your Linger account** in the Linger menu (the same account as the phone app). Then click the bookmark on a card, and the word shows up in Words on your phone.
-- **Eye tracking (optional):** turn on **Offer help when I pause**. After a short setup, Linger uses the webcam to notice when you pause on a line, and asks if you want help.
-- **Hand gestures (optional):** turn on **Use hand gestures** and try them on the practice page. Point at a word and hold to get asked if you want help, swipe an open hand right or left to answer, swipe up or down to scroll, and pinch, hold and move up or down to zoom.
+- Sign in under **Sync with your phone** in the Linger menu (the same account as the phone app). Then click the bookmark on a card, and the word shows up in Words on your phone.
 
 ## What's real and what's faked
 
 **Real (working):**
 
-- Webcam eye tracking and hand gestures in the extension. The video stays on the laptop.
 - AI explanations, translation and the ✦ assistant. They use Claude through a small server we set up.
 - Reading text from camera photos.
 - Accounts: your words, setup and progress sync between devices.
@@ -80,10 +76,6 @@ The beta's files are `beta/index.html`, `beta/manifest.webmanifest` and `beta.js
 - **Letter summaries in the phone app** are made by simple rules, not AI.
 - **Sample content:** it's set in Pittsburgh.
 - **Learning model and English check:** they work, but they haven't been tested with real learners yet.
-
-**Known issues:**
-
-- **Eye tracking accuracy:** it works, but it isn't always accurate. A normal webcam can't see your eyes as precisely as a real eye tracker. It works best in good lighting, sitting still, with the laptop at eye level. If it drifts, click Recalibrate in the Linger menu.
 
 ## What changed since v1
 

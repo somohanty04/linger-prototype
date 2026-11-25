@@ -1,18 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Linger",
-  "version": "0.8.6",
-  "description": "Underlines hard English words on any page, explains them in plain words, and saves them to your Linger phone app. Translates words, sentences or the whole page into your language.",
+  "version": "0.9.0",
+  "description": "Explains hard English words on any website in plain words, translates them into your language, and saves them to your Linger app.",
   "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
   "action": { "default_title": "Linger", "default_popup": "popup.html", "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png" } },
   "background": { "service_worker": "background.js" },
-  "permissions": ["storage", "scripting", "activeTab", "offscreen", "alarms"],
+  "permissions": ["storage", "scripting", "activeTab", "alarms"],
   "host_permissions": ["<all_urls>"],
   "content_scripts": [{
     "matches": ["http://*/*", "https://*/*", "file:///*"],
-    "js": ["words.js", "cities.js", "dict.js", "langs.js", "content.js", "gaze.js", "hand.js"],
+    "js": ["words.js", "cities.js", "dict.js", "langs.js", "content.js"],
     "run_at": "document_idle"
   }],
-  "content_security_policy": { "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'" },
   "web_accessible_resources": [{ "resources": ["icons/icon-32.png", "icons/card/*.svg", "icons/ask/*.svg", "fonts/*.woff2"], "matches": ["<all_urls>"] }]
 }
