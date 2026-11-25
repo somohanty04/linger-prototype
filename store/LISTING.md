@@ -89,6 +89,11 @@ Adds Linger to tabs that were already open when the extension is installed or up
 Lets Explain this page and the Linger menu read the text of the page the user is on when they ask for it.
 ```
 
+`alarms`
+```
+Checks for new saved words from the Linger phone app about once a minute, so words saved on the phone show up in the extension, and the other way round.
+```
+
 Host permission (`<all_urls>`)
 ```
 Linger's core feature is explaining hard words on whatever website the user is reading: news, government sites, bills, leases, job applications. It can't know in advance which sites those are, so it needs to run on all of them. Users can turn Linger off for a single site, or for every site, from the menu.
